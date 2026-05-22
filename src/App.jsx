@@ -1,14 +1,21 @@
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 const defaultMenus = [
   { id: 1, name: '생태탕', price: 12000, category: '식사류', emoji: '🍲', image: '', soldOut: false },
   { id: 2, name: '애호박찌개', price: 10000, category: '식사류', emoji: '🥘', image: '', soldOut: false },
-  { id: 3, name: '소주', price: 5000, category: '주류', emoji: '🍶', image: '', soldOut: false }
+  { id: 3, name: '소주', price: 5000, category: '주류', emoji: '🍶', image: '', soldOut: false },
+  { id: 4, name: '콜라', price: 2000, category: '음료', emoji: '🥤', image: '', soldOut: false },
+];
+
+const defaultCategories = [
+  { id: 'cat-1', name: '식사류', order: 1 },
+  { id: 'cat-2', name: '주류', order: 2 },
+  { id: 'cat-3', name: '음료', order: 3 },
 ];
 
 const paymentList = ['현금', '카드', '카드+현금', '상품권', '기타', '외상'];
-const emojiList = ['🍲','🥘','🍽️','🍚','🍜','🐟','🥩','🍗','🍶','🍺','🥤','🧃','☕','🍱'];
+const emojiList = ['🍲','🥘','🍜','🍚','🍱','🍖','🍗','🍶','🍺','🥤','☕','🍽️','🧃','🍳','🍛','🍤'];
 
 function load(key, fallback) {
   try {
@@ -19,166 +26,181 @@ function load(key, fallback) {
   }
 }
 
-function save(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+function saveFile(filename, text) {
+  const blob = new Blob([text], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
 }
 
-function resizeImageFile(file, maxSize = 600, quality = 0.75) {
+function todayString() { return new Date().toLocaleDateString(); }
+
+function makeCSV(rows) {
+  return rows.map(row => row.map(v => `"${String(v ?? '').replaceAll('"','""')}"`).join(',')).join('\n');
+}
+
+async function resizeImage(file, maxSize = 500, quality = 0.75) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = reject;
     reader.onload = () => {
       const img = new Image();
-      img.onerror = reject;
       img.onload = () => {
-        const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
-        const width = Math.round(img.width * ratio);
-        const height = Math.round(img.height * ratio);
+        let w = img.width, h = img.height;
+        if (w > h && w > maxSize) { h = Math.round(h * maxSize / w); w = maxSize; }
+        if (h >= w && h > maxSize) { w = Math.round(w * maxSize / h); h = maxSize; }
         const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = w; canvas.height = h;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
+        ctx.drawImage(img, 0, 0, w, h);
         resolve(canvas.toDataURL('image/jpeg', quality));
       };
+      img.onerror = reject;
       img.src = reader.result;
     };
+    reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
 
-function formatWon(n) {
-  return Number(n || 0).toLocaleString() + '원';
-}
-
 export default function App() {
   const [menus, setMenus] = useState(() => {
-    const loaded = load('menus', defaultMenus);
-    return loaded.map(m => ({ soldOut: false, image: '', emoji: '🍽️', ...m, category: m.category || m.group || '식사류' }));
+    const m = load('menus', defaultMenus);
+    return m.map(x => ({...x, soldOut: !!x.soldOut, category: x.category || x.group || '식사류'}));
   });
+  const [categories, setCategories] = useState(() => load('categories', defaultCategories));
   const [orders, setOrders] = useState(() => load('orders', {}));
   const [salesHistory, setSalesHistory] = useState(() => load('salesHistory', []));
   const [selectedTable, setSelectedTable] = useState(1);
   const [tableCount, setTableCount] = useState(() => load('tableCount', 12));
-  const [paymentType, setPaymentType] = useState(() => load('paymentType', {}));
-  const [creditGroup, setCreditGroup] = useState(() => load('creditGroup', {}));
+  const [paymentType, setPaymentType] = useState({});
+  const [creditGroup, setCreditGroup] = useState({});
+  const [creditContact, setCreditContact] = useState({});
+  const [creditMemo, setCreditMemo] = useState({});
+  const [creditProfiles, setCreditProfiles] = useState(() => load('creditProfiles', {}));
   const [warning, setWarning] = useState('');
+  const [adminMode, setAdminMode] = useState(false);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPassword, setAdminPassword] = useState(() => load('adminPassword', '1234'));
   const [passwordInput, setPasswordInput] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [eatType, setEatType] = useState(() => load('eatType', {}));
+  const [eatType, setEatType] = useState({});
   const [popularPeriod, setPopularPeriod] = useState('7');
   const [popularLimit, setPopularLimit] = useState(() => load('popularLimit', 5));
   const [checkedCredit, setCheckedCredit] = useState({});
   const [partialAmount, setPartialAmount] = useState({});
-  const [expandedCreditGroups, setExpandedCreditGroups] = useState({});
-  const [showCreditDrawer, setShowCreditDrawer] = useState(false);
-  const [showStatsDrawer, setShowStatsDrawer] = useState(false);
-  const [statsStart, setStatsStart] = useState('');
-  const [statsEnd, setStatsEnd] = useState('');
-  const [receiptPrintEnabled, setReceiptPrintEnabled] = useState(() => load('receiptPrintEnabled', true));
+  const [showCreditPanel, setShowCreditPanel] = useState(false);
+  const [showStatsPanel, setShowStatsPanel] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState({});
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [serviceOptions, setServiceOptions] = useState(() => load('serviceOptions', {
-    dine: { label: '', amount: 0 },
-    takeout: { label: '포장용기', amount: 0 }
+    '식당식사': { label: '', price: 0 },
+    '포장': { label: '포장용기', price: 0 },
   }));
+  const [newCategory, setNewCategory] = useState({ name: '', order: '' });
+  const [resetText, setResetText] = useState('');
   const [newMenu, setNewMenu] = useState({
-    id: null, name: '', price: '', category: '식사류', emoji: '🍽️', image: '', soldOut: false
+    name: '', price: '', category: '식사류', emoji: '🍽️', image: '', soldOut: false
   });
-  const restoreRef = useRef(null);
 
-  useEffect(() => save('menus', menus), [menus]);
-  useEffect(() => save('orders', orders), [orders]);
-  useEffect(() => save('salesHistory', salesHistory), [salesHistory]);
-  useEffect(() => save('tableCount', tableCount), [tableCount]);
-  useEffect(() => save('paymentType', paymentType), [paymentType]);
-  useEffect(() => save('creditGroup', creditGroup), [creditGroup]);
-  useEffect(() => save('eatType', eatType), [eatType]);
-  useEffect(() => save('popularLimit', popularLimit), [popularLimit]);
-  useEffect(() => save('serviceOptions', serviceOptions), [serviceOptions]);
-  useEffect(() => save('adminPassword', adminPassword), [adminPassword]);
-  useEffect(() => save('receiptPrintEnabled', receiptPrintEnabled), [receiptPrintEnabled]);
+  useEffect(() => localStorage.setItem('menus', JSON.stringify(menus)), [menus]);
+  useEffect(() => localStorage.setItem('categories', JSON.stringify(categories)), [categories]);
+  useEffect(() => localStorage.setItem('orders', JSON.stringify(orders)), [orders]);
+  useEffect(() => localStorage.setItem('salesHistory', JSON.stringify(salesHistory)), [salesHistory]);
+  useEffect(() => localStorage.setItem('tableCount', JSON.stringify(tableCount)), [tableCount]);
+  useEffect(() => localStorage.setItem('popularLimit', JSON.stringify(popularLimit)), [popularLimit]);
+  useEffect(() => localStorage.setItem('serviceOptions', JSON.stringify(serviceOptions)), [serviceOptions]);
+  useEffect(() => localStorage.setItem('adminPassword', JSON.stringify(adminPassword)), [adminPassword]);
+  useEffect(() => localStorage.setItem('creditProfiles', JSON.stringify(creditProfiles)), [creditProfiles]);
 
   const currentOrders = orders[selectedTable] || [];
   const currentEat = eatType[selectedTable] || '식당식사';
-  const autoOption = currentEat === '포장' ? serviceOptions.takeout : serviceOptions.dine;
-  const autoCharge = Number(autoOption?.amount || 0);
-  const autoLabel = autoOption?.label?.trim() || '';
+  const selectedService = serviceOptions[currentEat] || { label: '', price: 0 };
+  const serviceAmount = selectedService.label ? Number(selectedService.price || 0) : 0;
 
-  const subtotal = useMemo(() => currentOrders.reduce((sum, item) => sum + item.price * item.qty, 0), [currentOrders]);
-  const total = subtotal + (autoLabel || autoCharge ? autoCharge : 0);
+  const total = useMemo(() => {
+    const base = currentOrders.reduce((sum, item) => sum + item.price * item.qty, 0);
+    return base + serviceAmount;
+  }, [currentOrders, serviceAmount]);
 
-  const tableColumns = Math.ceil(Number(tableCount || 1) / 2);
-
-  const groupedMenus = useMemo(() => menus.reduce((acc, menu) => {
-    const cat = menu.category || '기타';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(menu);
+  const sortedCategories = useMemo(() => [...categories].sort((a,b)=>Number(a.order)-Number(b.order)), [categories]);
+  const groupedMenus = useMemo(() => {
+    const acc = {};
+    sortedCategories.forEach(c => acc[c.name] = []);
+    menus.forEach(menu => {
+      const c = menu.category || '식사류';
+      if (!acc[c]) acc[c] = [];
+      acc[c].push(menu);
+    });
     return acc;
-  }, {}), [menus]);
+  }, [menus, sortedCategories]);
 
   const popularMenus = useMemo(() => {
     const days = Number(popularPeriod);
     const now = Date.now();
+    const filtered = salesHistory.filter(x => now - (x.timestamp || 0) < days * 24 * 60 * 60 * 1000);
     const count = {};
-    salesHistory
-      .filter(x => now - Number(x.timestamp || 0) < days * 24 * 60 * 60 * 1000)
-      .forEach(sale => sale.items.forEach(item => {
-        count[item.name] = (count[item.name] || 0) + item.qty;
-      }));
-    return Object.entries(count).sort((a, b) => b[1] - a[1]).slice(0, Number(popularLimit || 5));
+    filtered.forEach(sale => (sale.items || []).forEach(item => {
+      count[item.name] = (count[item.name] || 0) + item.qty;
+    }));
+    return Object.entries(count).sort((a,b)=>b[1]-a[1]).slice(0, Number(popularLimit || 5));
   }, [salesHistory, popularPeriod, popularLimit]);
 
   const unpaidCredits = salesHistory.filter(x => x.payment === '외상');
   const groupedCredits = useMemo(() => {
-    const acc = {};
-    unpaidCredits.forEach(item => {
+    const sorted = [...unpaidCredits].sort((a,b) => {
+      if (!!a.paid !== !!b.paid) return a.paid ? 1 : -1; // 완납 맨 아래
+      return (b.timestamp || 0) - (a.timestamp || 0);
+    });
+    return sorted.reduce((acc, item) => {
       const key = item.credit || '미지정';
       if (!acc[key]) acc[key] = [];
       acc[key].push(item);
-    });
-    Object.values(acc).forEach(list => list.sort((a, b) => {
-      if (a.paid !== b.paid) return a.paid ? 1 : -1;
-      return Number(b.timestamp || 0) - Number(a.timestamp || 0);
-    }));
-    return acc;
-  }, [unpaidCredits]);
+      return acc;
+    }, {});
+  }, [salesHistory]);
 
-  const filteredSales = useMemo(() => {
-    return salesHistory.filter(s => {
-      if (!statsStart && !statsEnd) return true;
-      const t = Number(s.timestamp || 0);
-      const start = statsStart ? new Date(statsStart).setHours(0, 0, 0, 0) : 0;
-      const end = statsEnd ? new Date(statsEnd).setHours(23, 59, 59, 999) : Date.now();
-      return t >= start && t <= end;
-    });
-  }, [salesHistory, statsStart, statsEnd]);
+  const filteredSales = useMemo(() => salesHistory.filter(s => {
+    if (!startDate && !endDate) return true;
+    const d = new Date(s.timestamp || Date.now());
+    if (startDate) {
+      const st = new Date(startDate); st.setHours(0,0,0,0);
+      if (d < st) return false;
+    }
+    if (endDate) {
+      const en = new Date(endDate); en.setHours(23,59,59,999);
+      if (d > en) return false;
+    }
+    return true;
+  }), [salesHistory, startDate, endDate]);
 
   const stats = useMemo(() => {
     const payment = {}, eat = {}, menu = {}, hour = {};
     filteredSales.forEach(s => {
       payment[s.payment] = (payment[s.payment] || 0) + s.total;
-      eat[s.eatType || '식당식사'] = (eat[s.eatType || '식당식사'] || 0) + s.total;
+      eat[s.eatType] = (eat[s.eatType] || 0) + s.total;
       const h = new Date(s.timestamp).getHours();
       hour[h] = (hour[h] || 0) + s.total;
-      s.items.forEach(i => {
-        if (!menu[i.name]) menu[i.name] = { qty: 0, amount: 0 };
+      (s.items || []).forEach(i => {
+        if (!menu[i.name]) menu[i.name] = { qty: 0, total: 0 };
         menu[i.name].qty += i.qty;
-        menu[i.name].amount += i.price * i.qty;
+        menu[i.name].total += i.price * i.qty;
       });
-      if (s.serviceCharge?.label) {
-        if (!menu[s.serviceCharge.label]) menu[s.serviceCharge.label] = { qty: 1, amount: 0 };
-        menu[s.serviceCharge.label].amount += Number(s.serviceCharge.amount || 0);
+      if (s.serviceLabel && s.serviceAmount) {
+        if (!menu[s.serviceLabel]) menu[s.serviceLabel] = { qty: 0, total: 0 };
+        menu[s.serviceLabel].qty += 1;
+        menu[s.serviceLabel].total += s.serviceAmount;
       }
     });
     return { payment, eat, menu, hour };
   }, [filteredSales]);
 
+  const todaySales = salesHistory.filter(x => x.date === todayString()).reduce((sum, x) => sum + Number(x.total || 0), 0);
+  const totalSales = salesHistory.reduce((sum, x) => sum + Number(x.total || 0), 0);
+
   function addMenu(menu) {
-    if (!menu || menu.soldOut) {
-      alert('품절 메뉴입니다');
-      return;
-    }
+    if (menu.soldOut) { alert('품절 메뉴입니다'); return; }
     setOrders(prev => {
       const tableOrders = [...(prev[selectedTable] || [])];
       const find = tableOrders.find(x => x.id === menu.id);
@@ -191,415 +213,512 @@ export default function App() {
   function changeQty(id, diff) {
     setOrders(prev => ({
       ...prev,
-      [selectedTable]: (prev[selectedTable] || [])
-        .map(item => item.id === id ? { ...item, qty: item.qty + diff } : item)
-        .filter(item => item.qty > 0)
+      [selectedTable]: (prev[selectedTable] || []).map(item =>
+        item.id === id ? { ...item, qty: item.qty + diff } : item
+      ).filter(item => item.qty > 0)
     }));
   }
 
-  function createSale() {
+  function changeEat(type) {
+    setEatType(prev => ({ ...prev, [selectedTable]: type }));
+  }
+
+  function applyCreditProfile(name) {
+    const profile = creditProfiles[name] || {};
+    setCreditGroup(prev => ({...prev, [selectedTable]: name}));
+    setCreditContact(prev => ({...prev, [selectedTable]: profile.contact || ''}));
+    setCreditMemo(prev => ({...prev, [selectedTable]: profile.memo || ''}));
+  }
+
+  function completePayment(printReceipt = false) {
     const payment = paymentType[selectedTable] || '현금';
-    if (payment === '외상' && !(creditGroup[selectedTable] || '').trim()) {
-      setWarning('⚠️ 단체명을 입력 또는 선택해주세요 ⚠️');
-      return null;
-    }
-    if (currentOrders.length === 0 && !autoCharge) {
+    const credit = (creditGroup[selectedTable] || '').trim();
+
+    if (currentOrders.length === 0) {
       alert('주문내역이 없습니다');
-      return null;
+      return;
     }
-    const now = new Date();
-    return {
+    if (payment === '외상' && !credit) {
+      setWarning('⚠️ 단체명을 입력 또는 선택해주세요 ⚠️');
+      return;
+    }
+
+    const contact = creditContact[selectedTable] || '';
+    const memo = creditMemo[selectedTable] || '';
+    if (payment === '외상' && credit) {
+      setCreditProfiles(prev => ({
+        ...prev,
+        [credit]: { contact, memo }
+      }));
+    }
+
+    const sale = {
       id: Date.now(),
       table: selectedTable,
       eatType: currentEat,
       payment,
-      credit: creditGroup[selectedTable] || '',
+      credit,
+      creditContact: contact,
+      creditMemo: memo,
       total,
       remainingAmount: payment === '외상' ? total : 0,
       items: currentOrders,
-      serviceCharge: autoLabel || autoCharge ? { label: autoLabel || currentEat + ' 추가금', amount: autoCharge } : null,
       paid: payment !== '외상',
       partialPayments: [],
-      timestamp: now.getTime(),
-      date: now.toLocaleDateString(),
-      time: now.toLocaleTimeString()
+      serviceLabel: selectedService.label || '',
+      serviceAmount,
+      timestamp: Date.now(),
+      date: todayString(),
+      time: new Date().toLocaleTimeString()
     };
-  }
 
-  function completePayment(printReceipt = false) {
-    const sale = createSale();
-    if (!sale) return;
     setSalesHistory(prev => [sale, ...prev]);
     setOrders(prev => ({ ...prev, [selectedTable]: [] }));
     setWarning('');
-    setCreditGroup(prev => ({ ...prev, [selectedTable]: '' }));
-    if (printReceipt || receiptPrintEnabled) setTimeout(() => printReceiptWindow(sale), 100);
-    alert('결제완료');
+
+    if (printReceipt) setTimeout(() => printSaleReceipt(sale), 50);
   }
 
-  function printReceiptWindow(sale) {
-    const lines = [
-      '식당 POS 영수증',
-      '------------------------------',
-      `날짜: ${sale.date} ${sale.time}`,
-      `테이블: ${sale.table}번`,
-      `구분: ${sale.eatType}`,
-      `결제: ${sale.payment}`,
-      '------------------------------',
-      ...sale.items.map(i => `${i.name} x${i.qty}  ${formatWon(i.price * i.qty)}`),
-      ...(sale.serviceCharge ? [`${sale.serviceCharge.label}  ${formatWon(sale.serviceCharge.amount)}`] : []),
-      '------------------------------',
-      `합계: ${formatWon(sale.total)}`,
-      '감사합니다'
-    ].join('\n');
-    const win = window.open('', '_blank', 'width=360,height=600');
-    if (!win) return alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.');
-    win.document.write(`<html><head><title>영수증</title><style>body{font-family:monospace;font-size:14px;padding:12px;white-space:pre-wrap}</style></head><body>${lines}</body></html>`);
-    win.document.close();
-    win.focus();
-    win.print();
+  function printSaleReceipt(sale) {
+    const rows = (sale.items || []).map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${(i.price*i.qty).toLocaleString()}원</td></tr>`).join('');
+    const service = sale.serviceLabel ? `<tr><td>${sale.serviceLabel}</td><td>1</td><td>${Number(sale.serviceAmount||0).toLocaleString()}원</td></tr>` : '';
+    const html = `
+      <html><head><title>영수증</title><style>
+      body{font-family:monospace;width:80mm;padding:10px;font-size:14px} h2{text-align:center} table{width:100%;border-collapse:collapse} td{padding:4px 0;border-bottom:1px dashed #ccc} .total{font-size:20px;font-weight:bold;text-align:right;margin-top:10px}
+      </style></head><body>
+      <h2>식당 POS</h2>
+      <div>${sale.date} ${sale.time}</div><div>${sale.table}번 / ${sale.eatType} / ${sale.payment}</div>
+      <table>${rows}${service}</table>
+      <div class="total">합계 ${sale.total.toLocaleString()}원</div>
+      <script>window.print(); setTimeout(()=>window.close(), 500);</script>
+      </body></html>`;
+    const w = window.open('', '_blank', 'width=420,height=700');
+    if (w) { w.document.write(html); w.document.close(); }
   }
 
-  async function handleMenuImage(file) {
+  async function handleImage(e) {
+    const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const image = await resizeImageFile(file, 600, 0.75);
-      setNewMenu(prev => ({ ...prev, image }));
+      const resized = await resizeImage(file, 500, 0.72);
+      setNewMenu(prev => ({ ...prev, image: resized }));
     } catch {
-      alert('이미지 처리 중 오류가 발생했습니다');
+      alert('이미지 처리에 실패했습니다');
     }
   }
 
   function addNewMenu() {
-    if (!newMenu.name || !newMenu.price) return alert('메뉴명과 가격을 입력해주세요');
-    if (newMenu.id) {
-      setMenus(prev => prev.map(m => m.id === newMenu.id ? { ...newMenu, price: Number(newMenu.price), id: newMenu.id } : m));
-    } else {
-      setMenus(prev => [...prev, { ...newMenu, id: Date.now(), price: Number(newMenu.price) }]);
+    if (!newMenu.name || !newMenu.price) {
+      alert('메뉴명과 가격을 입력해주세요');
+      return;
     }
-    setNewMenu({ id: null, name: '', price: '', category: '식사류', emoji: '🍽️', image: '', soldOut: false });
+    setMenus(prev => [...prev, {
+      id: Date.now(),
+      name: newMenu.name,
+      price: Number(newMenu.price),
+      category: newMenu.category,
+      emoji: newMenu.emoji,
+      image: newMenu.image,
+      soldOut: false
+    }]);
+    setNewMenu({ name: '', price: '', category: sortedCategories[0]?.name || '식사류', emoji: '🍽️', image: '', soldOut: false });
   }
 
-  function payCreditItem(item, amount) {
-    const pay = Number(amount || 0);
-    if (pay <= 0) return alert('결제금액을 입력해주세요');
-    setSalesHistory(prev => prev.map(x => {
-      if (x.id !== item.id) return x;
-      const remain = Number(x.remainingAmount || x.total || 0) - pay;
-      return {
-        ...x,
-        remainingAmount: remain > 0 ? remain : 0,
-        paid: remain <= 0,
-        partialPayments: [...(x.partialPayments || []), { amount: pay, date: new Date().toLocaleString() }]
-      };
-    }));
-    setPartialAmount(prev => ({ ...prev, [item.id]: '' }));
+  function updateMenu(id, patch) {
+    setMenus(prev => prev.map(m => m.id === id ? { ...m, ...patch } : m));
   }
 
-  function paySelectedCredits() {
-    const ids = Object.keys(checkedCredit).filter(id => checkedCredit[id]);
-    if (ids.length === 0) return alert('선택된 외상내역이 없습니다');
-    setSalesHistory(prev => prev.map(x => ids.includes(String(x.id)) ? {
-      ...x,
-      remainingAmount: 0,
-      paid: true,
-      partialPayments: [...(x.partialPayments || []), { amount: Number(x.remainingAmount || x.total || 0), date: new Date().toLocaleString(), memo: '완납' }]
-    } : x));
-    setCheckedCredit({});
+  function addCategory() {
+    if (!newCategory.name) return;
+    if (categories.some(c=>c.name===newCategory.name)) return alert('이미 있는 메뉴구분입니다');
+    setCategories(prev => [...prev, { id: Date.now().toString(), name: newCategory.name, order: Number(newCategory.order || prev.length + 1) }]);
+    setNewCategory({ name: '', order: '' });
   }
 
   function exportCSV() {
-    const rows = [['날짜','시간','테이블','구분','결제','메뉴','수량','금액','총액']];
-    filteredSales.forEach(s => {
-      s.items.forEach(i => rows.push([s.date, s.time, s.table, s.eatType, s.payment, i.name, i.qty, i.price * i.qty, s.total]));
-      if (s.serviceCharge) rows.push([s.date, s.time, s.table, s.eatType, s.payment, s.serviceCharge.label, 1, s.serviceCharge.amount, s.total]);
-    });
-    downloadText(rows.map(r => r.join(',')).join('\n'), '매출통계.csv', 'text/csv;charset=utf-8;');
+    const rows = [
+      ['날짜','시간','테이블','식사방식','결제','단체명','연락처','메모','금액'],
+      ...salesHistory.map(x => [x.date,x.time,x.table,x.eatType,x.payment,x.credit,x.creditContact,x.creditMemo,x.total])
+    ];
+    const blob = new Blob([makeCSV(rows)], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a'); link.href = url; link.download = '매출통계.csv'; link.click(); URL.revokeObjectURL(url);
   }
 
-  function backupData() {
-    const data = { menus, orders, salesHistory, tableCount, paymentType, creditGroup, eatType, serviceOptions, popularLimit, adminPassword, receiptPrintEnabled, exportedAt: new Date().toISOString() };
-    return JSON.stringify(data, null, 2);
-  }
-
-  function downloadBackup() {
-    downloadText(backupData(), 'pos-backup.json', 'application/json');
-  }
-
-  async function shareBackup() {
-    const file = new File([backupData()], 'pos-backup.json', { type: 'application/json' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: 'POS 백업파일' });
+  function backupData(share=false) {
+    const data = { menus, orders, salesHistory, tableCount, serviceOptions, categories, popularLimit, creditProfiles, backupAt: new Date().toISOString() };
+    const text = JSON.stringify(data, null, 2);
+    const file = new File([text], 'pos-backup.json', { type: 'application/json' });
+    if (share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: 'POS 백업파일' });
     } else {
-      downloadBackup();
-      alert('이 기기는 공유창을 지원하지 않아 백업파일을 다운로드했습니다');
+      saveFile('pos-backup.json', text);
     }
   }
 
-  function downloadText(text, filename, type) {
-    const blob = new Blob([text], { type });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url; link.download = filename; link.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function restoreBackup(file) {
+  function restoreData(e) {
+    const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result);
-        if (!confirm('백업파일을 불러오면 현재 데이터가 바뀝니다. 진행할까요?')) return;
-        setMenus(data.menus || defaultMenus);
-        setOrders(data.orders || {});
-        setSalesHistory(data.salesHistory || []);
-        setTableCount(data.tableCount || 12);
-        setPaymentType(data.paymentType || {});
-        setCreditGroup(data.creditGroup || {});
-        setEatType(data.eatType || {});
-        setServiceOptions(data.serviceOptions || { dine: {label:'', amount:0}, takeout:{label:'포장용기', amount:0} });
-        setPopularLimit(data.popularLimit || 5);
-        alert('복구완료');
+        if (data.menus) setMenus(data.menus);
+        if (data.orders) setOrders(data.orders);
+        if (data.salesHistory) setSalesHistory(data.salesHistory);
+        if (data.tableCount) setTableCount(data.tableCount);
+        if (data.serviceOptions) setServiceOptions(data.serviceOptions);
+        if (data.categories) setCategories(data.categories);
+        if (data.popularLimit) setPopularLimit(data.popularLimit);
+        if (data.creditProfiles) setCreditProfiles(data.creditProfiles);
+        alert('복구 완료');
       } catch {
-        alert('백업파일을 읽을 수 없습니다');
+        alert('복구 파일이 올바르지 않습니다');
       }
     };
     reader.readAsText(file);
   }
 
-  function resetWithKeyword(type) {
-    const input = prompt('정말 초기화하시겠습니까?\n계속하려면 "초기화"를 입력하세요.');
-    if (input !== '초기화') return;
-    if (type === 'orders') setOrders({});
-    if (type === 'sales') setSalesHistory([]);
-    if (type === 'all') {
-      setMenus(defaultMenus); setOrders({}); setSalesHistory([]); setTableCount(12);
+  function resetSalesAndCredits() {
+    if (resetText !== '초기화') {
+      alert('"초기화"를 정확히 입력해야 합니다');
+      return;
     }
+    setSalesHistory([]);
+    setResetText('');
+    alert('판매/외상 데이터가 초기화되었습니다');
   }
 
-  const totalSales = filteredSales.reduce((sum, x) => sum + Number(x.total || 0), 0);
-  const todaySales = salesHistory.filter(x => x.date === new Date().toLocaleDateString()).reduce((sum, x) => sum + Number(x.total || 0), 0);
+  function calcTableColumns() {
+    return Math.ceil(Number(tableCount || 12) / 2);
+  }
+
+  function paySelectedCredit(groupName, undo=false) {
+    const selectedIds = Object.entries(checkedCredit).filter(([,v])=>v).map(([id])=>Number(id));
+    if (selectedIds.length === 0) return alert('선택된 외상내역이 없습니다');
+    setSalesHistory(prev => prev.map(x => {
+      if (!selectedIds.includes(x.id)) return x;
+      if (undo) {
+        return { ...x, paid: false, remainingAmount: x.total };
+      }
+      return { ...x, paid: true, remainingAmount: 0, partialPayments: [...(x.partialPayments||[]), { amount: x.remainingAmount || x.total, date: todayString(), memo: '완납처리' }] };
+    }));
+    setCheckedCredit({});
+  }
+
+  function partialPay(item) {
+    const pay = Number(partialAmount[item.id] || 0);
+    if (pay <= 0) return;
+    setSalesHistory(prev => prev.map(x => {
+      if (x.id !== item.id) return x;
+      const remain = Math.max(0, Number(x.remainingAmount || x.total) - pay);
+      return {
+        ...x,
+        remainingAmount: remain,
+        paid: remain <= 0,
+        partialPayments: [...(x.partialPayments || []), { amount: pay, date: todayString(), memo: '일부결제' }]
+      };
+    }));
+    setPartialAmount(prev => ({...prev, [item.id]: ''}));
+  }
+
+  const selectedChecked = Object.entries(checkedCredit).filter(([,v])=>v).map(([id])=>Number(id));
+  const selectedCheckedItems = salesHistory.filter(x => selectedChecked.includes(x.id));
+  const selectedAllPaid = selectedCheckedItems.length > 0 && selectedCheckedItems.every(x => x.paid);
 
   return (
     <div className="app">
-      <div className="header">
-        <div>
-          <div className="title">식당 POS</div>
-          <div className="sub">주문 · 외상장부 · 판매통계 · 관리자</div>
-        </div>
-        <div className="row">
-          <button className="btn black" onClick={() => {
-            if (adminUnlocked) { setAdminUnlocked(false); return; }
-            const pw = prompt('관리자 비밀번호를 입력하세요');
-            if (pw === adminPassword) setAdminUnlocked(true);
-            else if (pw !== null) alert('비밀번호가 틀렸습니다');
-          }}>{adminUnlocked ? '관리자모드 해제' : '관리자모드'}</button>
-          <button className="btn green" onClick={exportCSV}>CSV 다운로드</button>
+      <div className="topbar">
+        <h1>식당 POS</h1>
+        <div className="top-actions">
+          <button onClick={() => {
+            if (adminUnlocked) { setAdminUnlocked(false); setAdminMode(false); return; }
+            setAdminMode(true);
+          }} className="black">{adminUnlocked ? '관리자모드 해제' : '관리자모드'}</button>
+          <button onClick={exportCSV} className="green">CSV 다운로드</button>
         </div>
       </div>
 
-      <div className="table-grid" style={{ gridTemplateColumns: `repeat(${tableColumns}, minmax(0, 1fr))` }}>
-        {Array.from({ length: tableCount }, (_, i) => i + 1).map(n => {
-          const hasOrder = (orders[n] || []).length > 0;
-          return (
-            <button key={n} onClick={() => setSelectedTable(n)}
-              className={`table-btn ${selectedTable === n ? 'selected' : hasOrder ? 'has-order' : ''}`}>
-              {n}번
-            </button>
-          );
-        })}
-      </div>
-
-      {adminUnlocked && (
-        <div className="panel">
-          <h2 className="section-title">관리자모드</h2>
-          <div className="admin-grid">
-            <div className="card">
-              <h3>메뉴추가 / 수정</h3>
-              <input className="input" placeholder="메뉴명" value={newMenu.name} onChange={e => setNewMenu(p => ({...p, name:e.target.value}))} />
-              <input className="input" placeholder="가격" type="number" value={newMenu.price} onChange={e => setNewMenu(p => ({...p, price:e.target.value}))} />
-              <input className="input" placeholder="카테고리" value={newMenu.category} onChange={e => setNewMenu(p => ({...p, category:e.target.value}))} />
-              <div className="label">이모지 선택</div>
-              <div className="row">{emojiList.map(em => <button key={em} className={`btn white ${newMenu.emoji===em?'blue':''}`} onClick={() => setNewMenu(p => ({...p, emoji:em, image:p.image}))}>{em}</button>)}</div>
-              <div className="label">이미지 선택 <span className="small-note">(자동축소)</span></div>
-              <input type="file" accept="image/*" onChange={e => handleMenuImage(e.target.files?.[0])} />
-              {newMenu.image && <img src={newMenu.image} alt="미리보기" className="menu-img" />}
-              <label className="row" style={{marginTop:10}}><input type="checkbox" checked={newMenu.soldOut} onChange={e => setNewMenu(p => ({...p, soldOut:e.target.checked}))}/> 품절 표시</label>
-              <button className="btn blue" onClick={addNewMenu}>{newMenu.id ? '메뉴수정 저장' : '메뉴추가'}</button>
-            </div>
-
-            <div className="card">
-              <h3>현재 메뉴 관리</h3>
-              {menus.map(m => (
-                <div key={m.id} className="order-item">
-                  <div><b>{m.image ? '🖼️' : m.emoji} {m.name}</b><div className="muted">{m.category} / {formatWon(m.price)} {m.soldOut?' / 품절':''}</div></div>
-                  <div className="row">
-                    <label><input type="checkbox" checked={!!m.soldOut} onChange={e => setMenus(prev => prev.map(x => x.id===m.id ? {...x, soldOut:e.target.checked} : x))}/> 품절</label>
-                    <button className="btn gray" onClick={() => setNewMenu(m)}>수정</button>
-                    <button className="btn red" onClick={() => setMenus(prev => prev.filter(x => x.id !== m.id))}>삭제</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="card">
-              <h3>운영 설정</h3>
-              <label className="label">테이블 수</label>
-              <input className="input" type="number" value={tableCount} onChange={e => setTableCount(Number(e.target.value || 1))} />
-              <label className="label">인기메뉴 표시 개수</label>
-              <input className="input" type="number" value={popularLimit} onChange={e => setPopularLimit(Number(e.target.value || 1))} />
-              <label className="label">식당이용 자동추가 내용</label>
-              <input className="input" value={serviceOptions.dine.label} onChange={e => setServiceOptions(p => ({...p, dine:{...p.dine, label:e.target.value}}))} placeholder="예: 상차림비" />
-              <label className="label">식당이용 자동추가 금액</label>
-              <input className="input" type="number" value={serviceOptions.dine.amount} onChange={e => setServiceOptions(p => ({...p, dine:{...p.dine, amount:Number(e.target.value || 0)}}))} />
-              <label className="label">포장 자동추가 내용</label>
-              <input className="input" value={serviceOptions.takeout.label} onChange={e => setServiceOptions(p => ({...p, takeout:{...p.takeout, label:e.target.value}}))} placeholder="예: 포장용기" />
-              <label className="label">포장 자동추가 금액</label>
-              <input className="input" type="number" value={serviceOptions.takeout.amount} onChange={e => setServiceOptions(p => ({...p, takeout:{...p.takeout, amount:Number(e.target.value || 0)}}))} />
-              <label className="row"><input type="checkbox" checked={receiptPrintEnabled} onChange={e => setReceiptPrintEnabled(e.target.checked)} /> 결제완료 후 영수증 인쇄창 자동 열기</label>
-            </div>
-
-            <div className="card">
-              <h3>보안 / 데이터 관리</h3>
-              <input className="input" type="password" placeholder="새 관리자 비밀번호" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
-              <button className="btn black" onClick={() => { if(!newPassword) return; setAdminPassword(newPassword); setNewPassword(''); alert('비밀번호 변경완료'); }}>비밀번호 변경</button>
-              <hr />
-              <button className="btn green" onClick={downloadBackup}>전체백업 다운로드</button>
-              <div className="small-note">메뉴/판매통계/외상장부/설정을 파일로 저장합니다.</div>
-              <button className="btn blue" onClick={shareBackup}>전체백업 공유하기</button>
-              <div className="small-note">지원 기기에서는 카톡/문자/이메일 공유창이 열립니다.</div>
-              <button className="btn gray" onClick={() => restoreRef.current?.click()}>백업파일 불러오기</button>
-              <div className="small-note">저장한 백업파일로 복구합니다.</div>
-              <input ref={restoreRef} type="file" accept="application/json" style={{display:'none'}} onChange={e => restoreBackup(e.target.files?.[0])} />
-              <button className="btn orange" onClick={() => resetWithKeyword('orders')}>테스트 주문 초기화</button>
-              <div className="small-note">현재 주문내역만 삭제합니다.</div>
-              <button className="btn red" onClick={() => resetWithKeyword('sales')}>판매/외상 데이터 초기화</button>
-              <div className="small-note">판매통계와 외상장부를 삭제합니다. 클릭 시 "초기화" 입력 필요.</div>
-              <button className="btn red" onClick={() => resetWithKeyword('all')}>전체 초기화</button>
-              <div className="small-note">메뉴/판매/외상/설정을 모두 삭제합니다.</div>
-            </div>
-          </div>
+      {adminMode && !adminUnlocked && (
+        <div className="admin-login">
+          <b>관리자 비밀번호</b>
+          <input type="password" value={passwordInput} onChange={e=>setPasswordInput(e.target.value)} placeholder="비밀번호 입력" />
+          <button onClick={() => {
+            if (passwordInput === adminPassword) { setAdminUnlocked(true); setPasswordInput(''); }
+            else alert('비밀번호가 틀렸습니다');
+          }}>확인</button>
+          <div className="hint">초기 비밀번호는 1234입니다.</div>
         </div>
       )}
 
-      <div className="popular">
-        <div className="row" style={{justifyContent:'space-between', alignItems:'center'}}>
-          <h2 className="section-title">🔥 인기메뉴</h2>
-          <div className="row">{['1','7','30'].map(v => <button key={v} onClick={() => setPopularPeriod(v)} className={`btn ${popularPeriod===v?'blue':'gray'}`}>{v==='1'?'오늘':v==='7'?'최근7일':'최근30일'}</button>)}</div>
-        </div>
-        <div className="menu-grid">
-          {popularMenus.map(([name, qty]) => {
-            const item = menus.find(x => x.name === name);
-            if (!item) return null;
-            return <button key={name} onClick={() => addMenu(item)} className={`menu-card ${item.soldOut?'sold':''}`}>
-              {item.soldOut && <span className="sold-badge">품절</span>}
-              {item.image ? <img src={item.image} alt="" className="menu-img" /> : <div className="emoji">{item.emoji}</div>}
-              <div className="menu-name">{item.name}</div><div className="price">{qty}개 판매</div>
-            </button>
-          })}
-        </div>
-      </div>
+      <div className="main-layout">
+        <section className="table-panel">
+          <h2>테이블</h2>
+          <div className="table-grid" style={{gridTemplateColumns:`repeat(${calcTableColumns()}, 1fr)`}}>
+            {Array.from({ length: Number(tableCount || 12) }, (_, i) => i + 1).map(n => {
+              const hasOrder = (orders[n] || []).length > 0;
+              return (
+                <button key={n} onClick={() => setSelectedTable(n)}
+                  className={`table-btn ${selectedTable === n ? 'selected' : ''} ${hasOrder ? 'has-order' : ''}`}>
+                  {n}번
+                </button>
+              );
+            })}
+          </div>
+          <div className="legend"><span>□ 빈 테이블</span><span className="busy">■ 주문 있음</span><span className="sel">■ 선택됨</span></div>
+        </section>
 
-      <div className="grid-main">
-        <div>
-          <div className="row" style={{marginBottom:12}}>
-            {['식당식사','포장'].map(t => <button key={t} onClick={() => setEatType(prev => ({...prev, [selectedTable]: t}))} className={`btn ${(currentEat===t)?'blue':'gray'}`}>{t}</button>)}
-            {(autoLabel || autoCharge) && <div className="btn white">{autoLabel || currentEat + ' 추가금'} {formatWon(autoCharge)}</div>}
+        <section className="menu-panel">
+          <div className="popular">
+            <div className="section-title">🔥 인기메뉴</div>
+            <div className="periods">
+              {['1','7','30'].map(v => (
+                <button key={v} onClick={()=>setPopularPeriod(v)} className={popularPeriod === v ? 'active' : ''}>
+                  {v === '1' ? '오늘' : v === '7' ? '최근7일' : '최근30일'}
+                </button>
+              ))}
+            </div>
+            <div className="popular-list">
+              {popularMenus.length === 0 && <span className="muted">결제 후 인기메뉴가 표시됩니다</span>}
+              {popularMenus.map(([name, qty]) => {
+                const item = menus.find(x=>x.name===name);
+                if (!item) return null;
+                return <button key={name} onClick={()=>addMenu(item)} className="popular-item">{item.image ? <img src={item.image}/> : <span>{item.emoji}</span>}<b>{name}</b><small>{qty}개</small></button>
+              })}
+            </div>
+          </div>
+
+          <div className="eat-buttons">
+            {['식당식사','포장'].map(type => (
+              <button key={type} onClick={()=>changeEat(type)} className={currentEat === type ? 'active' : ''}>
+                {type}
+                {serviceOptions[type]?.label ? <small>{serviceOptions[type].label} {Number(serviceOptions[type].price||0).toLocaleString()}원</small> : null}
+              </button>
+            ))}
           </div>
 
           {Object.entries(groupedMenus).map(([category, list]) => (
-            <div key={category} className="panel">
-              <h2 className="section-title">{category}</h2>
+            <div key={category} className="menu-category">
+              <h2>{category}</h2>
               <div className="menu-grid">
-                {list.map(item => <button key={item.id} disabled={item.soldOut} onClick={() => addMenu(item)} className={`menu-card ${item.soldOut?'sold':''}`}>
-                  {item.soldOut && <span className="sold-badge">품절</span>}
-                  {item.image ? <img src={item.image} alt="menu" className="menu-img" /> : <div className="emoji">{item.emoji}</div>}
-                  <div className="menu-name">{item.name}</div>
-                  <div className="price">{formatWon(item.price)}</div>
-                </button>)}
+                {list.map(item => (
+                  <button key={item.id} onClick={()=>addMenu(item)} disabled={item.soldOut}
+                    className={`menu-card ${item.soldOut ? 'soldout' : ''}`}>
+                    <div className="thumb">{item.image ? <img src={item.image} /> : <span>{item.emoji}</span>}</div>
+                    <b>{item.name}</b>
+                    <div>{item.price.toLocaleString()}원</div>
+                    {item.soldOut && <div className="soldout-badge">품절</div>}
+                    {adminUnlocked && <span className="admin-mini">관리자에서 수정 가능</span>}
+                  </button>
+                ))}
               </div>
             </div>
           ))}
-        </div>
+        </section>
 
-        <div className="order-panel">
-          <div className="panel">
-            <h2 className="section-title">주문내역 ({selectedTable}번)</h2>
-            {currentOrders.length === 0 && <div className="muted" style={{textAlign:'center', padding:24}}>메뉴를 선택해주세요</div>}
-            {currentOrders.map(item => <div key={item.id} className="order-item">
-              <div><b>{item.name}</b><div className="muted">{formatWon(item.price)} x {item.qty}</div></div>
-              <div className="row"><button className="qty-btn" onClick={() => changeQty(item.id, -1)}>-</button><button className="qty-btn" onClick={() => changeQty(item.id, 1)}>+</button></div>
-            </div>)}
-            {(autoLabel || autoCharge) && <div className="order-item"><div><b>{autoLabel || currentEat + ' 추가금'}</b><div className="muted">자동추가</div></div><b>{formatWon(autoCharge)}</b></div>}
-
-            <div className="pay-grid">{paymentList.map(type => <button key={type} onClick={() => { setPaymentType(prev => ({...prev, [selectedTable]: type})); setWarning(''); }} className={`pay-btn ${(paymentType[selectedTable] || '현금') === type ? 'active' : ''}`}>{type}</button>)}</div>
-
-            {(paymentType[selectedTable] || '') === '외상' && <div className={warning ? 'warning' : 'card'} style={{marginTop:12}}>
-              <div className="label">외상 단체명 입력 또는 선택</div>
-              <input list="credit-list" value={creditGroup[selectedTable] || ''} onChange={e => setCreditGroup(prev => ({...prev, [selectedTable]: e.target.value}))} placeholder="단체명 입력 또는 선택" className="input" />
-              <datalist id="credit-list">{[...new Set(unpaidCredits.map(x => x.credit).filter(Boolean))].map(name => <option key={name} value={name} />)}</datalist>
-              {warning && <div style={{marginTop:8}}>{warning}</div>}
-            </div>}
-
-            <div className="total-box"><div className="section-title" style={{margin:0}}>총 금액</div><div className="big">{formatWon(total)}</div></div>
-            <button className="btn blue" style={{width:'100%', fontSize:22, padding:18}} onClick={() => completePayment(false)}>결제완료</button>
-            <button className="btn green" style={{width:'100%', fontSize:18, padding:14, marginTop:8}} onClick={() => completePayment(true)}>결제완료 + 영수증 출력</button>
+        <section className="order-panel">
+          <h2>주문내역 ({selectedTable}번)</h2>
+          <div className="order-list">
+            {currentOrders.length === 0 && <div className="empty">메뉴를 선택해주세요</div>}
+            {currentOrders.map(item => (
+              <div key={item.id} className="order-item">
+                <div><b>{item.name}</b><span>{item.price.toLocaleString()}원 x {item.qty}</span></div>
+                <div className="qty"><button onClick={()=>changeQty(item.id,-1)}>-</button><button onClick={()=>changeQty(item.id,1)}>+</button></div>
+              </div>
+            ))}
+            {selectedService.label && (
+              <div className="service-line">{selectedService.label} <b>{Number(serviceAmount).toLocaleString()}원</b></div>
+            )}
           </div>
-        </div>
+
+          <div className="payments">
+            {paymentList.map(type => (
+              <button key={type} onClick={()=>setPaymentType(prev=>({...prev,[selectedTable]:type}))}
+                className={(paymentType[selectedTable] || '현금') === type ? 'active' : ''}>{type}</button>
+            ))}
+          </div>
+
+          {(paymentType[selectedTable] || '') === '외상' && (
+            <div className={`credit-box ${warning ? 'warn' : ''}`}>
+              <b>외상 단체명 입력 또는 선택</b>
+              <input list="credit-list" value={creditGroup[selectedTable] || ''} onChange={e=>{
+                const name = e.target.value;
+                if (creditProfiles[name]) applyCreditProfile(name);
+                else setCreditGroup(prev=>({...prev,[selectedTable]:name}));
+              }} placeholder="단체명" />
+              <datalist id="credit-list">{Object.keys(creditProfiles).map(name=><option key={name} value={name}/>)}</datalist>
+              <input value={creditContact[selectedTable] || ''} onChange={e=>setCreditContact(prev=>({...prev,[selectedTable]:e.target.value}))} placeholder="연락처 선택 입력" />
+              <input value={creditMemo[selectedTable] || ''} onChange={e=>setCreditMemo(prev=>({...prev,[selectedTable]:e.target.value}))} placeholder="기본메모 선택 입력" />
+              {warning && <div className="warning">{warning}</div>}
+            </div>
+          )}
+
+          <div className="total"><span>총 금액</span><b>{total.toLocaleString()}원</b></div>
+          <button className="pay" onClick={()=>completePayment(false)}>결제완료</button>
+          <button className="pay print" onClick={()=>completePayment(true)}>결제완료 + 영수증 출력</button>
+        </section>
       </div>
 
-      {showCreditDrawer && <div className="drawer">
-        <h2 className="section-title">📒 외상장부</h2>
-        <button className="btn green" onClick={paySelectedCredits}>선택 완납처리</button>
-        {Object.keys(groupedCredits).length === 0 && <div className="muted">외상내역이 없습니다</div>}
-        {Object.entries(groupedCredits).map(([groupName, list]) => {
-          const groupTotal = list.filter(x => !x.paid).reduce((sum, x) => sum + Number(x.remainingAmount || 0), 0);
-          return <div key={groupName} className="credit-group">
-            <div className="row" style={{justifyContent:'space-between', alignItems:'center'}}>
-              <div><h3>{groupName}</h3><b>외상잔액: {formatWon(groupTotal)}</b></div>
-              <button className="btn gray" onClick={() => setExpandedCreditGroups(p => ({...p, [groupName]: !p[groupName]}))}>{expandedCreditGroups[groupName] ? '펼치기' : '숨기기'}</button>
-            </div>
-            {!expandedCreditGroups[groupName] && list.map(item => <div key={item.id} className={`credit-item ${item.paid ? 'paid' : ''}`}>
-              <div className="row" style={{alignItems:'flex-start'}}>
-                <input className="check" type="checkbox" disabled={item.paid} checked={checkedCredit[item.id] === true} onChange={e => setCheckedCredit(p => ({...p, [item.id]: e.target.checked}))} />
-                <div style={{flex:1}}>
-                  <b>{item.date} {item.time} / {item.table}번 테이블</b>
-                  <div>{item.items.map(x => `${x.name} ${x.qty}개`).join(', ')}</div>
-                  <div><b>남은금액: {formatWon(item.remainingAmount)}</b> {item.paid && '✅ 결제완료'}</div>
-                  {(item.partialPayments || []).map((p, idx) => <div key={idx} className="muted">부분결제 {formatWon(p.amount)} / {p.date}</div>)}
-                  {!item.paid && <div className="row" style={{marginTop:8}}>
-                    <input className="input" style={{maxWidth:180}} type="number" value={partialAmount[item.id] || ''} onChange={e => setPartialAmount(p => ({...p, [item.id]: e.target.value}))} placeholder="부분결제금액" />
-                    <button className="btn orange" onClick={() => payCreditItem(item, partialAmount[item.id])}>일부결제</button>
-                  </div>}
-                </div>
-              </div>
-            </div>)}
+      <div className="bottom-panels">
+        <button onClick={()=>setShowCreditPanel(!showCreditPanel)}>외상장부 {showCreditPanel ? '▲' : '▼'}</button>
+        <button onClick={()=>setShowStatsPanel(!showStatsPanel)}>판매통계 {showStatsPanel ? '▲' : '▼'}</button>
+      </div>
+
+      {showCreditPanel && (
+        <section className="panel credit-ledger">
+          <h2>외상장부</h2>
+          <div className="credit-actions">
+            <button className={selectedAllPaid ? 'orange' : 'green'} onClick={()=>paySelectedCredit('', selectedAllPaid)}>
+              {selectedAllPaid ? '선택완납처리해제' : '선택완납처리'}
+            </button>
+            <span className="hint">완납 내역도 체크해서 해제할 수 있습니다.</span>
           </div>
-        })}
-      </div>}
+          {Object.entries(groupedCredits).length === 0 && <div className="empty">외상내역이 없습니다</div>}
+          {Object.entries(groupedCredits).map(([group, list]) => {
+            const profile = creditProfiles[group] || {};
+            const groupTotal = list.reduce((sum,x)=>sum+Number(x.remainingAmount||0),0);
+            return (
+              <div key={group} className="credit-group">
+                <div className="credit-head">
+                  <div>
+                    <h3>{group} <small>{profile.contact}</small></h3>
+                    <div className="memo">{profile.memo}</div>
+                    <b>잔액 {groupTotal.toLocaleString()}원</b>
+                  </div>
+                  <button onClick={()=>setCollapsedGroups(prev=>({...prev,[group]:!prev[group]}))}>{collapsedGroups[group] ? '펼치기' : '숨기기'}</button>
+                </div>
+                {!collapsedGroups[group] && list.map(item => (
+                  <div key={item.id} className={`credit-item ${item.paid ? 'paid' : ''} ${checkedCredit[item.id] ? 'checked' : ''}`}>
+                    <input type="checkbox" checked={!!checkedCredit[item.id]} onChange={e=>setCheckedCredit(prev=>({...prev,[item.id]:e.target.checked}))} />
+                    <div className="credit-main">
+                      <b>{item.date} {item.time} / {item.table}번 테이블</b>
+                      <div>{(item.items||[]).map(x=>`${x.name} ${x.qty}개`).join(', ')}</div>
+                      <div>남은금액: {(item.remainingAmount || 0).toLocaleString()}원 {item.paid && <b className="done">결제완료</b>}</div>
+                      {(item.partialPayments||[]).map((p,idx)=><div key={idx} className="partial">부분결제 {p.amount.toLocaleString()}원 / {p.date}</div>)}
+                    </div>
+                    {!item.paid && (
+                      <div className="partial-pay">
+                        <input type="number" value={partialAmount[item.id] || ''} onChange={e=>setPartialAmount(prev=>({...prev,[item.id]:e.target.value}))} placeholder="일부결제" />
+                        <button onClick={()=>partialPay(item)}>일부결제</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </section>
+      )}
 
-      {showStatsDrawer && <div className="drawer">
-        <h2 className="section-title">📊 판매통계</h2>
-        <div className="row">
-          <input className="input" style={{maxWidth:180}} type="date" value={statsStart} onChange={e => setStatsStart(e.target.value)} />
-          <input className="input" style={{maxWidth:180}} type="date" value={statsEnd} onChange={e => setStatsEnd(e.target.value)} />
-          <button className="btn green" onClick={exportCSV}>엑셀/CSV 저장</button>
-        </div>
-        <div className="stat-grid" style={{marginTop:12}}>
-          <div className="stat-card"><div className="muted">기간 총매출</div><div className="big">{formatWon(totalSales)}</div></div>
-          <div className="stat-card"><div className="muted">오늘 매출</div><div className="big">{formatWon(todaySales)}</div></div>
-          {Object.entries(stats.payment).map(([k,v]) => <div key={k} className="stat-card"><div className="muted">{k} 매출</div><div className="big">{formatWon(v)}</div></div>)}
-          {Object.entries(stats.eat).map(([k,v]) => <div key={k} className="stat-card"><div className="muted">{k} 매출</div><div className="big">{formatWon(v)}</div></div>)}
-        </div>
-        <div className="panel" style={{marginTop:12}}><h3>시간대별 매출</h3>{Object.entries(stats.hour).sort((a,b)=>Number(a[0])-Number(b[0])).map(([h,v]) => <div className="order-item" key={h}><b>{h}시</b><b>{formatWon(v)}</b></div>)}</div>
-        <div className="panel"><h3>메뉴별 판매수량/금액</h3>{Object.entries(stats.menu).sort((a,b)=>b[1].qty-a[1].qty).map(([name,v]) => <div className="order-item" key={name}><b>{name}</b><div>{v.qty}개 / {formatWon(v.amount)}</div></div>)}</div>
-      </div>}
+      {showStatsPanel && (
+        <section className="panel stats">
+          <h2>판매통계</h2>
+          <div className="date-row">
+            <input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)} />
+            <input type="date" value={endDate} onChange={e=>setEndDate(e.target.value)} />
+            <button onClick={exportCSV}>기간통계 CSV</button>
+          </div>
+          <div className="stat-cards">
+            <div><span>오늘 매출</span><b>{todaySales.toLocaleString()}원</b></div>
+            <div><span>누적 매출</span><b>{totalSales.toLocaleString()}원</b></div>
+          </div>
+          <div className="stat-grid">
+            <div><h3>결제방식별</h3>{Object.entries(stats.payment).map(([k,v])=><p key={k}>{k}: <b>{Number(v).toLocaleString()}원</b></p>)}</div>
+            <div><h3>식사/포장별</h3>{Object.entries(stats.eat).map(([k,v])=><p key={k}>{k}: <b>{Number(v).toLocaleString()}원</b></p>)}</div>
+            <div><h3>메뉴별 판매량</h3>{Object.entries(stats.menu).map(([k,v])=><p key={k}>{k}: <b>{v.qty}개 / {v.total.toLocaleString()}원</b></p>)}</div>
+            <div><h3>시간대별 매출</h3>{Object.entries(stats.hour).map(([k,v])=><p key={k}>{k}시: <b>{Number(v).toLocaleString()}원</b></p>)}</div>
+          </div>
+        </section>
+      )}
 
-      <div className="bottom-toggle"><div className="bottom-inner">
-        <button className="btn orange" onClick={() => {setShowCreditDrawer(v=>!v); setShowStatsDrawer(false)}}>외상장부 {showCreditDrawer?'▲':'▼'}</button>
-        <button className="btn blue" onClick={() => {setShowStatsDrawer(v=>!v); setShowCreditDrawer(false)}}>판매통계 {showStatsDrawer?'▲':'▼'}</button>
-      </div></div>
+      {adminUnlocked && (
+        <section className="admin">
+          <h2>관리자모드</h2>
+          <div className="admin-card top-add">
+            <h3>메뉴추가</h3>
+            <div className="form-grid">
+              <input value={newMenu.name} onChange={e=>setNewMenu(prev=>({...prev,name:e.target.value}))} placeholder="메뉴명" />
+              <input type="number" value={newMenu.price} onChange={e=>setNewMenu(prev=>({...prev,price:e.target.value}))} placeholder="가격" />
+              <select value={newMenu.category} onChange={e=>setNewMenu(prev=>({...prev,category:e.target.value}))}>
+                {sortedCategories.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
+              </select>
+              <select value={newMenu.emoji} onChange={e=>setNewMenu(prev=>({...prev,emoji:e.target.value}))}>
+                {emojiList.map(e=><option key={e} value={e}>{e}</option>)}
+              </select>
+              <input type="file" accept="image/*" onChange={handleImage} />
+              <button onClick={addNewMenu}>메뉴추가</button>
+            </div>
+            <div className="emoji-row">{emojiList.map(e=><button key={e} onClick={()=>setNewMenu(prev=>({...prev,emoji:e}))}>{e}</button>)}</div>
+            <div className="hint">이미지는 자동으로 축소되어 저장됩니다.</div>
+          </div>
+
+          <div className="admin-card">
+            <h3>현재 메뉴 / 품절 / 수정</h3>
+            <div className="admin-menu-list">
+              {menus.map(m=>(
+                <div key={m.id} className="admin-menu-row">
+                  <input type="checkbox" checked={!!m.soldOut} onChange={e=>updateMenu(m.id,{soldOut:e.target.checked})}/>
+                  <span>{m.image ? <img src={m.image}/> : m.emoji}</span>
+                  <input value={m.name} onChange={e=>updateMenu(m.id,{name:e.target.value})}/>
+                  <input type="number" value={m.price} onChange={e=>updateMenu(m.id,{price:Number(e.target.value)})}/>
+                  <select value={m.category} onChange={e=>updateMenu(m.id,{category:e.target.value})}>{sortedCategories.map(c=><option key={c.id}>{c.name}</option>)}</select>
+                  <button className="red" onClick={()=>setMenus(prev=>prev.filter(x=>x.id!==m.id))}>삭제</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="admin-card">
+            <h3>메뉴구분 순서관리</h3>
+            <div className="form-grid">
+              <input value={newCategory.name} onChange={e=>setNewCategory(prev=>({...prev,name:e.target.value}))} placeholder="메뉴구분명" />
+              <input type="number" value={newCategory.order} onChange={e=>setNewCategory(prev=>({...prev,order:e.target.value}))} placeholder="순서번호" />
+              <button onClick={addCategory}>구분추가</button>
+            </div>
+            {sortedCategories.map(c=>(
+              <div key={c.id} className="cat-row">
+                <input value={c.name} onChange={e=>setCategories(prev=>prev.map(x=>x.id===c.id?{...x,name:e.target.value}:x))}/>
+                <input type="number" value={c.order} onChange={e=>setCategories(prev=>prev.map(x=>x.id===c.id?{...x,order:Number(e.target.value)}:x))}/>
+                <button onClick={()=>setCategories(prev=>prev.filter(x=>x.id!==c.id))}>삭제</button>
+              </div>
+            ))}
+          </div>
+
+          <div className="admin-card">
+            <h3>시스템 설정</h3>
+            <div className="form-grid">
+              <label>테이블수<input type="number" value={tableCount} onChange={e=>setTableCount(Number(e.target.value||1))}/></label>
+              <label>인기메뉴 표시개수<input type="number" value={popularLimit} onChange={e=>setPopularLimit(Number(e.target.value||1))}/></label>
+              <label>식당이용 내용<input value={serviceOptions['식당식사']?.label || ''} onChange={e=>setServiceOptions(prev=>({...prev,'식당식사':{...prev['식당식사'],label:e.target.value}}))}/></label>
+              <label>식당이용 금액<input type="number" value={serviceOptions['식당식사']?.price || 0} onChange={e=>setServiceOptions(prev=>({...prev,'식당식사':{...prev['식당식사'],price:Number(e.target.value||0)}}))}/></label>
+              <label>포장 내용<input value={serviceOptions['포장']?.label || ''} onChange={e=>setServiceOptions(prev=>({...prev,'포장':{...prev['포장'],label:e.target.value}}))}/></label>
+              <label>포장 금액<input type="number" value={serviceOptions['포장']?.price || 0} onChange={e=>setServiceOptions(prev=>({...prev,'포장':{...prev['포장'],price:Number(e.target.value||0)}}))}/></label>
+            </div>
+          </div>
+
+          <div className="admin-card">
+            <h3>비밀번호 변경</h3>
+            <input type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="새 비밀번호" />
+            <button onClick={()=>{ if(!newPassword) return; setAdminPassword(newPassword); setNewPassword(''); alert('비밀번호 변경 완료');}}>변경</button>
+          </div>
+
+          <div className="admin-card data-manage">
+            <h3>데이터 관리</h3>
+            <div className="data-buttons">
+              <button onClick={()=>backupData(false)}>전체백업 다운로드<span>메뉴/판매통계/외상장부를 파일로 저장합니다.</span></button>
+              <button onClick={()=>backupData(true)}>전체백업 공유하기<span>카톡/문자/메일 공유창이 열립니다. 안되면 다운로드됩니다.</span></button>
+              <label className="file-label">백업파일 불러오기<span>저장한 백업파일로 복구합니다.</span><input type="file" accept="application/json" onChange={restoreData}/></label>
+              <button onClick={()=>setOrders({})}>테스트 주문 초기화<span>현재 테이블 주문내역만 삭제합니다.</span></button>
+            </div>
+            <div className="danger-zone">
+              <b>판매/외상 데이터 초기화</b>
+              <p>판매통계와 외상장부가 삭제됩니다. 계속하려면 아래에 “초기화”를 입력하세요.</p>
+              <input value={resetText} onChange={e=>setResetText(e.target.value)} placeholder="초기화" />
+              <button onClick={resetSalesAndCredits}>판매/외상 데이터초기화</button>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
