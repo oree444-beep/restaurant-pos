@@ -1,52 +1,47 @@
-import React, { useEffect, useMemo, useState } from 'react';
 
-const DEFAULT_MENUS = [
+import React, { useEffect, useMemo, useState } from 'react';
+import './style.css';
+
+const defaultMenus = [
   { id: 1, name: '생태탕', price: 12000, category: '식사류', emoji: '🍲', image: '', soldOut: false },
   { id: 2, name: '애호박찌개', price: 10000, category: '식사류', emoji: '🥘', image: '', soldOut: false },
   { id: 3, name: '소주', price: 5000, category: '주류', emoji: '🍶', image: '', soldOut: false },
-  { id: 4, name: '콜라', price: 2000, category: '음료', emoji: '🥤', image: '', soldOut: false },
+  { id: 4, name: '맥주', price: 5000, category: '주류', emoji: '🍺', image: '', soldOut: false },
+  { id: 5, name: '콜라', price: 2000, category: '음료', emoji: '🥤', image: '', soldOut: false },
 ];
-const PAYMENT_LIST = ['현금', '카드', '카드+현금', '상품권', '기타', '외상'];
-const EMOJIS = ['🍲', '🥘', '🍽️', '🍜', '🍚', '🐟', '🍖', '🍗', '🍱', '🍶', '🍺', '🥤', '🧃', '☕'];
-const key = (name) => name;
-function load(name, fallback) {
+
+const defaultCategories = [
+  { name: '식사류', order: 1 },
+  { name: '주류', order: 2 },
+  { name: '음료', order: 3 },
+];
+
+const paymentList = ['현금', '카드', '카드+현금', '상품권', '기타', '외상'];
+const emojis = ['🍲','🥘','🍚','🍜','🍱','🍖','🍗','🍺','🍶','🥤','☕','🍽️','🐟','🦀','🍤','🍛'];
+
+function load(key, fallback) {
   try {
-    const data = localStorage.getItem(key(name));
+    const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : fallback;
   } catch {
     return fallback;
   }
 }
-function save(name, value) {
-  localStorage.setItem(key(name), JSON.stringify(value));
-}
-function money(v) {
-  return Number(v || 0).toLocaleString();
-}
-function todayInput() {
-  return new Date().toISOString().slice(0, 10);
-}
-function getDateInput(daysAgo = 0) {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().slice(0, 10);
-}
-function resizeImage(file, maxSize = 300, quality = 0.75) {
+function save(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+function money(n) { return Number(n || 0).toLocaleString() + '원'; }
+function todayText() { return new Date().toLocaleDateString(); }
+
+function resizeImage(file, maxSize = 360, quality = 0.78) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = reject;
     reader.onload = () => {
       const img = new Image();
-      img.onerror = reject;
       img.onload = () => {
-        let { width, height } = img;
-        if (width > height && width > maxSize) {
-          height = Math.round((height * maxSize) / width);
-          width = maxSize;
-        } else if (height >= width && height > maxSize) {
-          width = Math.round((width * maxSize) / height);
-          height = maxSize;
-        }
+        let width = img.width;
+        let height = img.height;
+        const ratio = Math.min(maxSize / width, maxSize / height, 1);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -54,38 +49,27 @@ function resizeImage(file, maxSize = 300, quality = 0.75) {
         ctx.drawImage(img, 0, 0, width, height);
         resolve(canvas.toDataURL('image/jpeg', quality));
       };
+      img.onerror = reject;
       img.src = reader.result;
     };
+    reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
-function downloadFile(filename, text, type = 'application/json;charset=utf-8;') {
-  const blob = new Blob([text], { type });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-function csvEscape(v) {
-  const s = String(v ?? '');
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
 
 export default function App() {
-  const [menus, setMenus] = useState(() => load('menus', DEFAULT_MENUS));
+  const [menus, setMenus] = useState(() => load('menus', defaultMenus));
   const [orders, setOrders] = useState(() => load('orders', {}));
   const [salesHistory, setSalesHistory] = useState(() => load('salesHistory', []));
   const [tableCount, setTableCount] = useState(() => load('tableCount', 12));
   const [takeoutFee, setTakeoutFee] = useState(() => load('takeoutFee', 0));
   const [selectedTable, setSelectedTable] = useState(1);
-  const [paymentType, setPaymentType] = useState({});
-  const [eatType, setEatType] = useState({});
-  const [creditGroup, setCreditGroup] = useState({});
-  const [creditContacts, setCreditContacts] = useState(() => load('creditContacts', {}));
-  const [creditMemos, setCreditMemos] = useState(() => load('creditMemos', {}));
+  const [paymentType, setPaymentType] = useState(() => load('paymentType', {}));
+  const [eatType, setEatType] = useState(() => load('eatType', {}));
+  const [creditGroup, setCreditGroup] = useState(() => load('creditGroup', {}));
+  const [creditProfiles, setCreditProfiles] = useState(() => load('creditProfiles', {}));
   const [warning, setWarning] = useState('');
+  const [adminMode, setAdminMode] = useState(false);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPassword, setAdminPassword] = useState(() => load('adminPassword', '1234'));
   const [passwordInput, setPasswordInput] = useState('');
@@ -93,390 +77,191 @@ export default function App() {
   const [popularPeriod, setPopularPeriod] = useState('7');
   const [popularLimit, setPopularLimit] = useState(() => load('popularLimit', 5));
   const [checkedCredit, setCheckedCredit] = useState({});
-  const [partialAmount, setPartialAmount] = useState('');
-  const [showCredit, setShowCredit] = useState(false);
-  const [showStats, setShowStats] = useState(false);
-  const [collapsedCredit, setCollapsedCredit] = useState({});
-  const [statsStart, setStatsStart] = useState(getDateInput(30));
-  const [statsEnd, setStatsEnd] = useState(todayInput());
-  const [categoryOrder, setCategoryOrder] = useState(() => load('categoryOrder', ['식사류', '주류', '음료']));
-  const [serviceOptions, setServiceOptions] = useState(() =>
-    load('serviceOptions', {
-      dineIn: { name: '', price: 0 },
-      takeout: { name: '포장용기', price: 0 },
-    })
-  );
-  const [newMenu, setNewMenu] = useState({ name: '', price: '', category: '식사류', emoji: '🍽️', image: '' });
-  const [newCategory, setNewCategory] = useState('');
-  const [resetWord, setResetWord] = useState('');
+  const [partialAmount, setPartialAmount] = useState({});
+  const [expandedCredit, setExpandedCredit] = useState({});
+  const [showCreditPanel, setShowCreditPanel] = useState(false);
+  const [showStatsPanel, setShowStatsPanel] = useState(false);
+  const [categories, setCategories] = useState(() => load('categories', defaultCategories));
+  const [serviceConfig, setServiceConfig] = useState(() => load('serviceConfig', { dineIn: { label: '', amount: 0 }, takeout: { label: '', amount: 0 } }));
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [toast, setToast] = useState('');
+  const [newMenu, setNewMenu] = useState({ name: '', price: '', category: '식사류', emoji: '🍽️', image: '', soldOut: false });
 
   useEffect(() => save('menus', menus), [menus]);
   useEffect(() => save('orders', orders), [orders]);
   useEffect(() => save('salesHistory', salesHistory), [salesHistory]);
   useEffect(() => save('tableCount', tableCount), [tableCount]);
   useEffect(() => save('takeoutFee', takeoutFee), [takeoutFee]);
-  useEffect(() => save('popularLimit', popularLimit), [popularLimit]);
+  useEffect(() => save('paymentType', paymentType), [paymentType]);
+  useEffect(() => save('eatType', eatType), [eatType]);
+  useEffect(() => save('creditGroup', creditGroup), [creditGroup]);
+  useEffect(() => save('creditProfiles', creditProfiles), [creditProfiles]);
   useEffect(() => save('adminPassword', adminPassword), [adminPassword]);
-  useEffect(() => save('categoryOrder', categoryOrder), [categoryOrder]);
-  useEffect(() => save('creditContacts', creditContacts), [creditContacts]);
-  useEffect(() => save('creditMemos', creditMemos), [creditMemos]);
-  useEffect(() => save('serviceOptions', serviceOptions), [serviceOptions]);
+  useEffect(() => save('popularLimit', popularLimit), [popularLimit]);
+  useEffect(() => save('categories', categories), [categories]);
+  useEffect(() => save('serviceConfig', serviceConfig), [serviceConfig]);
 
   const currentOrders = orders[selectedTable] || [];
-  const selectedEat = eatType[selectedTable] || '식당이용';
-  const selectedPayment = paymentType[selectedTable] || '현금';
-  const serviceExtra = selectedEat === '포장' ? serviceOptions.takeout : serviceOptions.dineIn;
-  const serviceExtraPrice = Number(serviceExtra?.price || 0);
-  const total = useMemo(() => {
-    const base = currentOrders.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 1), 0);
-    return base + serviceExtraPrice;
-  }, [currentOrders, serviceExtraPrice]);
+  const currentEat = eatType[selectedTable] || '식당식사';
+  const currentPayment = paymentType[selectedTable] || '현금';
 
-  const allCategories = useMemo(() => {
-    const set = new Set([...categoryOrder, ...menus.map((m) => m.category || '기타')]);
-    return [...set].filter(Boolean);
-  }, [categoryOrder, menus]);
+  const serviceItem = useMemo(() => {
+    const cfg = currentEat === '포장' ? serviceConfig.takeout : serviceConfig.dineIn;
+    if (!cfg?.label && !Number(cfg?.amount || 0)) return null;
+    return { id: `service-${currentEat}`, name: cfg.label || currentEat, price: Number(cfg.amount || 0), qty: 1, category: '자동추가', isService: true };
+  }, [currentEat, serviceConfig]);
+
+  const displayOrders = serviceItem ? [...currentOrders, serviceItem] : currentOrders;
+  const total = useMemo(() => displayOrders.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 1), 0), [displayOrders]);
+
+  const orderedCategories = useMemo(() => {
+    const names = new Set([...categories.map(c => c.name), ...menus.map(m => m.category)]);
+    return Array.from(names).map(name => categories.find(c => c.name === name) || { name, order: 999 }).sort((a,b) => Number(a.order||999) - Number(b.order||999));
+  }, [categories, menus]);
+
   const groupedMenus = useMemo(() => {
-    const grouped = {};
-    allCategories.forEach((cat) => (grouped[cat] = []));
-    menus.forEach((menu) => {
-      const cat = menu.category || '기타';
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(menu);
+    const map = {};
+    menus.forEach(menu => { if (!map[menu.category]) map[menu.category] = []; map[menu.category].push(menu); });
+    return map;
+  }, [menus]);
+
+  const filteredSales = useMemo(() => salesHistory.filter(s => {
+    if (!dateRange.start && !dateRange.end) return true;
+    const t = new Date(s.timestamp || Date.now());
+    if (dateRange.start && t < new Date(dateRange.start)) return false;
+    if (dateRange.end) { const en = new Date(dateRange.end); en.setHours(23,59,59,999); if (t > en) return false; }
+    return true;
+  }), [salesHistory, dateRange]);
+
+  const stats = useMemo(() => {
+    const byPayment = {}, byEat = {}, byMenu = {}, byHour = {};
+    let totalSales = 0, todaySales = 0; const today = todayText();
+    filteredSales.forEach(s => {
+      totalSales += Number(s.total || 0);
+      if (s.date === today) todaySales += Number(s.total || 0);
+      byPayment[s.payment] = (byPayment[s.payment] || 0) + Number(s.total || 0);
+      byEat[s.eatType] = (byEat[s.eatType] || 0) + Number(s.total || 0);
+      const h = new Date(s.timestamp || Date.now()).getHours();
+      byHour[h] = (byHour[h] || 0) + Number(s.total || 0);
+      (s.items || []).filter(i => !i.isService).forEach(i => {
+        if (!byMenu[i.name]) byMenu[i.name] = { qty: 0, amount: 0 };
+        byMenu[i.name].qty += Number(i.qty || 0);
+        byMenu[i.name].amount += Number(i.qty || 0) * Number(i.price || 0);
+      });
     });
-    return grouped;
-  }, [menus, allCategories]);
+    return { totalSales, todaySales, byPayment, byEat, byMenu, byHour };
+  }, [filteredSales]);
 
   const popularMenus = useMemo(() => {
-    const days = Number(popularPeriod);
-    const now = Date.now();
-    const count = {};
-    salesHistory
-      .filter((x) => now - Number(x.timestamp || 0) < days * 24 * 60 * 60 * 1000)
-      .forEach((sale) => {
-        (sale.items || []).forEach((item) => {
-          count[item.name] = (count[item.name] || 0) + Number(item.qty || 0);
-        });
+    const days = Number(popularPeriod), now = Date.now(), count = {};
+    salesHistory.filter(x => now - Number(x.timestamp || 0) < days * 86400000).forEach(sale => {
+      (sale.items || []).filter(i => !i.isService).forEach(item => {
+        if (!count[item.name]) count[item.name] = { qty: 0, menu: menus.find(m => m.name === item.name) };
+        count[item.name].qty += Number(item.qty || 0);
       });
-    return Object.entries(count)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, Number(popularLimit || 5));
-  }, [salesHistory, popularPeriod, popularLimit]);
+    });
+    return Object.entries(count).sort((a,b)=>b[1].qty-a[1].qty).slice(0, Number(popularLimit || 5));
+  }, [salesHistory, popularPeriod, menus, popularLimit]);
 
-  const unpaidCredits = salesHistory.filter((x) => x.payment === '외상');
+  const unpaidCredits = salesHistory.filter(x => x.payment === '외상');
   const groupedCredits = useMemo(() => {
-    const acc = {};
-    unpaidCredits.forEach((item) => {
-      const group = item.credit || '미지정';
-      if (!acc[group]) acc[group] = [];
-      acc[group].push(item);
-    });
-    Object.keys(acc).forEach((group) => {
-      acc[group].sort((a, b) => Number(a.paid) - Number(b.paid) || b.timestamp - a.timestamp);
-    });
-    return acc;
+    const sorted = [...unpaidCredits].sort((a,b) => (!!a.paid !== !!b.paid) ? (a.paid ? 1 : -1) : Number(b.timestamp || 0) - Number(a.timestamp || 0));
+    return sorted.reduce((acc, item) => { const key = item.credit || '미지정'; if (!acc[key]) acc[key] = []; acc[key].push(item); return acc; }, {});
   }, [unpaidCredits]);
-  const creditNameList = [...new Set(unpaidCredits.map((x) => x.credit).filter(Boolean))];
-
-  const filteredStats = useMemo(() => {
-    const start = new Date(statsStart);
-    const end = new Date(statsEnd);
-    end.setHours(23, 59, 59, 999);
-    return salesHistory.filter((x) => {
-      const t = new Date(Number(x.timestamp || Date.now()));
-      return t >= start && t <= end;
-    });
-  }, [salesHistory, statsStart, statsEnd]);
-  const paymentStats = useMemo(() => {
-    const acc = {};
-    PAYMENT_LIST.forEach((p) => (acc[p] = 0));
-    filteredStats.forEach((x) => (acc[x.payment || '현금'] = (acc[x.payment || '현금'] || 0) + Number(x.total || 0)));
-    return acc;
-  }, [filteredStats]);
-  const eatStats = useMemo(() => {
-    const acc = { 식당이용: 0, 포장: 0 };
-    filteredStats.forEach((x) => (acc[x.eatType || '식당이용'] = (acc[x.eatType || '식당이용'] || 0) + Number(x.total || 0)));
-    return acc;
-  }, [filteredStats]);
-  const menuStats = useMemo(() => {
-    const acc = {};
-    filteredStats.forEach((sale) => {
-      (sale.items || []).forEach((item) => {
-        if (!acc[item.name]) acc[item.name] = { qty: 0, amount: 0 };
-        acc[item.name].qty += Number(item.qty || 0);
-        acc[item.name].amount += Number(item.qty || 0) * Number(item.price || 0);
-      });
-    });
-    return Object.entries(acc).sort((a, b) => b[1].qty - a[1].qty);
-  }, [filteredStats]);
-  const hourStats = useMemo(() => {
-    const acc = {};
-    filteredStats.forEach((sale) => {
-      const h = new Date(Number(sale.timestamp || Date.now())).getHours();
-      acc[h] = (acc[h] || 0) + Number(sale.total || 0);
-    });
-    return acc;
-  }, [filteredStats]);
+  const creditNames = useMemo(() => Array.from(new Set([...Object.keys(creditProfiles), ...salesHistory.map(x => x.credit).filter(Boolean)])), [creditProfiles, salesHistory]);
 
   function addMenu(menu) {
-    if (menu.soldOut) return alert('품절 메뉴입니다');
-    setOrders((prev) => {
+    if (menu.soldOut) { setToast(`${menu.name} 메뉴는 품절입니다`); setTimeout(() => setToast(''), 1800); return; }
+    setOrders(prev => {
       const tableOrders = [...(prev[selectedTable] || [])];
-      const find = tableOrders.find((x) => x.id === menu.id);
-      if (find) find.qty += 1;
-      else tableOrders.push({ ...menu, qty: 1 });
+      const find = tableOrders.find(x => x.id === menu.id);
+      if (find) find.qty += 1; else tableOrders.push({ ...menu, qty: 1 });
       return { ...prev, [selectedTable]: tableOrders };
     });
-    setWarning('');
   }
   function changeQty(id, diff) {
-    setOrders((prev) => ({
-      ...prev,
-      [selectedTable]: (prev[selectedTable] || [])
-        .map((item) => (item.id === id ? { ...item, qty: item.qty + diff } : item))
-        .filter((item) => item.qty > 0),
-    }));
+    setOrders(prev => ({ ...prev, [selectedTable]: (prev[selectedTable] || []).map(item => item.id === id ? { ...item, qty: item.qty + diff } : item).filter(item => item.qty > 0) }));
   }
-  function updateCreditInfo(name, contact, memo) {
-    if (!name) return;
-    setCreditContacts((prev) => ({ ...prev, [name]: contact ?? prev[name] ?? '' }));
-    setCreditMemos((prev) => ({ ...prev, [name]: memo ?? prev[name] ?? '' }));
-  }
-  function createSale(print = false) {
-    if (currentOrders.length === 0) return alert('주문내역이 없습니다');
-    if (selectedPayment === '외상' && !(creditGroup[selectedTable] || '').trim()) {
-      setWarning('⚠️ 단체명을 입력 또는 선택해주세요 ⚠️');
-      return;
-    }
-    const credit = creditGroup[selectedTable] || '';
-    const saleItems = [...currentOrders];
-    if (serviceExtra?.name && serviceExtraPrice > 0) {
-      saleItems.push({ id: `service-${selectedEat}`, name: serviceExtra.name, price: serviceExtraPrice, qty: 1, category: '자동추가', emoji: '➕' });
-    }
-    const sale = {
-      id: Date.now(),
-      table: selectedTable,
-      eatType: selectedEat,
-      payment: selectedPayment,
-      credit,
-      contact: creditContacts[credit] || '',
-      memo: creditMemos[credit] || '',
-      total,
-      remainingAmount: selectedPayment === '외상' ? total : 0,
-      items: saleItems,
-      paid: selectedPayment !== '외상',
-      partialPayments: [],
-      timestamp: Date.now(),
-      date: new Date().toLocaleDateString(),
-      time: new Date().toLocaleTimeString(),
-    };
-    setSalesHistory((prev) => [sale, ...prev]);
-    setOrders((prev) => ({ ...prev, [selectedTable]: [] }));
-    setWarning('');
-    if (print) printReceipt(sale);
-    alert(print ? '결제완료 후 영수증 출력 화면을 열었습니다' : '결제완료');
+  function completePayment({ print = false } = {}) {
+    if (currentOrders.length === 0) { setWarning('메뉴를 선택해주세요'); return; }
+    if (currentPayment === '외상' && !(creditGroup[selectedTable] || '').trim()) { setWarning('⚠️ 외상 단체명을 입력 또는 선택해주세요 ⚠️'); return; }
+    const credit = creditGroup[selectedTable] || ''; const profile = creditProfiles[credit] || {};
+    const sale = { id: Date.now(), table: selectedTable, eatType: currentEat, payment: currentPayment, credit, creditPhone: profile.phone || '', creditMemo: profile.memo || '', total, remainingAmount: currentPayment === '외상' ? total : 0, items: displayOrders, paid: currentPayment !== '외상', partialPayments: [], timestamp: Date.now(), date: todayText(), time: new Date().toLocaleTimeString() };
+    setSalesHistory(prev => [sale, ...prev]);
+    setOrders(prev => ({ ...prev, [selectedTable]: [] }));
+    setWarning(''); setToast(`${selectedTable}번 테이블 결제되었습니다`); setTimeout(() => setToast(''), 2200);
+    if (print) setTimeout(() => printReceipt(sale), 100);
   }
   function printReceipt(sale) {
-    const w = window.open('', '_blank', 'width=420,height=700');
-    if (!w) return;
-    const rows = (sale.items || [])
-      .map((item) => `<tr><td>${item.name}</td><td>${item.qty}</td><td>${money(item.price * item.qty)}원</td></tr>`)
-      .join('');
-    w.document.write(`<!doctype html><html><head><title>영수증</title><style>body{font-family:monospace;padding:12px;width:300px}h2{text-align:center}table{width:100%;border-collapse:collapse}td{padding:4px 0;border-bottom:1px dashed #ccc}.total{font-size:20px;font-weight:bold;text-align:right;margin-top:12px}@media print{button{display:none}}</style></head><body><h2>영수증</h2><div>${sale.date} ${sale.time}</div><div>${sale.table}번 / ${sale.eatType}</div><div>결제: ${sale.payment}</div><table>${rows}</table><div class="total">합계 ${money(sale.total)}원</div><button onclick="window.print()">인쇄</button><script>setTimeout(()=>window.print(),300)</script></body></html>`);
-    w.document.close();
+    const rows = (sale.items || []).map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${money(Number(i.price||0)*Number(i.qty||1))}</td></tr>`).join('');
+    const html = `<html><head><title>영수증</title><style>body{font-family:Arial,sans-serif;width:280px;padding:12px}h2{text-align:center;margin:0 0 12px}table{width:100%;border-collapse:collapse}td{padding:4px 0;border-bottom:1px dashed #ccc;font-size:13px}.total{font-size:20px;font-weight:800;text-align:right;margin-top:12px}.center{text-align:center}</style></head><body><h2>식당 POS</h2><div>일시: ${sale.date} ${sale.time}</div><div>테이블: ${sale.table}번 / ${sale.eatType}</div><div>결제: ${sale.payment}</div><hr/><table>${rows}</table><div class="total">합계 ${money(sale.total)}</div><p class="center">감사합니다</p><script>window.print(); setTimeout(()=>window.close(), 500);</script></body></html>`;
+    const w = window.open('', 'receipt', 'width=360,height=600'); if (w) { w.document.write(html); w.document.close(); }
   }
-  async function handleImage(file) {
-    if (!file) return;
-    const data = await resizeImage(file, 300, 0.75);
-    setNewMenu((prev) => ({ ...prev, image: data }));
-  }
+  async function handleImage(file) { if (!file) return; const resized = await resizeImage(file); setNewMenu(prev => ({ ...prev, image: resized })); }
   function addNewMenu() {
-    if (!newMenu.name || !newMenu.price) return alert('메뉴명과 가격을 입력해주세요');
-    setMenus((prev) => [
-      ...prev,
-      { id: Date.now(), name: newMenu.name, price: Number(newMenu.price), category: newMenu.category, emoji: newMenu.emoji, image: newMenu.image, soldOut: false },
-    ]);
-    if (!categoryOrder.includes(newMenu.category)) setCategoryOrder((prev) => [...prev, newMenu.category]);
-    setNewMenu({ name: '', price: '', category: newMenu.category, emoji: '🍽️', image: '' });
+    if (!newMenu.name || !newMenu.price) { alert('메뉴명과 가격을 입력해주세요'); return; }
+    const category = newMenu.category || '식사류';
+    if (!categories.find(c => c.name === category)) setCategories(prev => [...prev, { name: category, order: prev.length + 1 }]);
+    setMenus(prev => [...prev, { ...newMenu, id: Date.now(), price: Number(newMenu.price), category }]);
+    setNewMenu({ name: '', price: '', category: '식사류', emoji: '🍽️', image: '', soldOut: false });
   }
-  function toggleSoldOut(id) {
-    setMenus((prev) => prev.map((m) => (m.id === id ? { ...m, soldOut: !m.soldOut } : m)));
+  function updateMenu(id, patch) { setMenus(prev => prev.map(m => m.id === id ? { ...m, ...patch } : m)); }
+  function exportCSV() {
+    const rows = filteredSales.map(x => [x.date, x.time, x.table, x.eatType, x.payment, x.credit || '', x.total].join(','));
+    downloadText('매출통계.csv', ['날짜,시간,테이블,이용방식,결제,외상단체,금액', ...rows].join('\n'));
   }
-  function completeSelectedCredits() {
-    const ids = Object.keys(checkedCredit).filter((id) => checkedCredit[id]);
-    if (ids.length === 0) return;
-    setSalesHistory((prev) =>
-      prev.map((x) => (ids.includes(String(x.id)) ? { ...x, remainingAmount: 0, paid: true } : x))
-    );
-    setCheckedCredit({});
+  function downloadText(filename, text) {
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url);
   }
-  function undoCompleteSelectedCredits() {
-    const ids = Object.keys(checkedCredit).filter((id) => checkedCredit[id]);
-    if (ids.length === 0) return;
-    setSalesHistory((prev) =>
-      prev.map((x) => (ids.includes(String(x.id)) ? { ...x, remainingAmount: x.total, paid: false } : x))
-    );
-    setCheckedCredit({});
-  }
-  function partialPay(item) {
-    const pay = Number(partialAmount || 0);
-    if (pay <= 0) return;
-    setSalesHistory((prev) =>
-      prev.map((x) => {
-        if (x.id !== item.id) return x;
-        const remain = Number(x.remainingAmount || x.total || 0) - pay;
-        return {
-          ...x,
-          remainingAmount: remain > 0 ? remain : 0,
-          paid: remain <= 0,
-          partialPayments: [...(x.partialPayments || []), { amount: pay, date: new Date().toLocaleString() }],
-        };
-      })
-    );
-    setPartialAmount('');
-  }
-  function exportStatsCSV() {
-    const rows = [['구분', '항목', '금액/수량'], ...Object.entries(paymentStats).map(([k, v]) => ['결제방식', k, v]), ...Object.entries(eatStats).map(([k, v]) => ['식사방식', k, v]), ...menuStats.map(([name, v]) => ['메뉴', `${name} ${v.qty}개`, v.amount])];
-    downloadFile('매출통계.csv', rows.map((r) => r.map(csvEscape).join(',')).join('\n'), 'text/csv;charset=utf-8;');
-  }
-  function backupAll(share = false) {
-    const data = { menus, orders, salesHistory, tableCount, takeoutFee, popularLimit, adminPassword, categoryOrder, serviceOptions, creditContacts, creditMemos, version: 1, exportedAt: new Date().toISOString() };
-    const text = JSON.stringify(data, null, 2);
-    if (share && navigator.share) {
-      const file = new File([text], 'pos-backup.json', { type: 'application/json' });
-      navigator.share({ files: [file], title: 'POS 백업파일' }).catch(() => downloadFile('pos-backup.json', text));
-    } else {
-      downloadFile('pos-backup.json', text);
-    }
+  function backupAll({ share = false } = {}) {
+    const data = { menus, orders, salesHistory, tableCount, takeoutFee, paymentType, eatType, creditGroup, creditProfiles, adminPassword, popularLimit, categories, serviceConfig, createdAt: new Date().toISOString() };
+    const text = JSON.stringify(data, null, 2); const file = new File([text], 'pos-backup.json', { type: 'application/json' });
+    if (share && navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ title: 'POS 백업파일', text: 'POS 전체 백업파일입니다.', files: [file] });
+    else downloadText('pos-backup.json', text);
   }
   function restoreBackup(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result);
-        if (data.menus) setMenus(data.menus);
-        if (data.orders) setOrders(data.orders);
-        if (data.salesHistory) setSalesHistory(data.salesHistory);
-        if (data.tableCount) setTableCount(data.tableCount);
-        if (data.takeoutFee !== undefined) setTakeoutFee(data.takeoutFee);
-        if (data.popularLimit) setPopularLimit(data.popularLimit);
-        if (data.categoryOrder) setCategoryOrder(data.categoryOrder);
-        if (data.serviceOptions) setServiceOptions(data.serviceOptions);
-        if (data.creditContacts) setCreditContacts(data.creditContacts);
-        if (data.creditMemos) setCreditMemos(data.creditMemos);
-        alert('복구 완료');
-      } catch {
-        alert('백업파일을 확인해주세요');
-      }
-    };
-    reader.readAsText(file);
+    if (!file) return; const reader = new FileReader(); reader.onload = () => {
+      try { const data = JSON.parse(reader.result); if (!confirm('백업파일로 복구할까요? 현재 데이터가 바뀝니다.')) return;
+        setMenus(data.menus || defaultMenus); setOrders(data.orders || {}); setSalesHistory(data.salesHistory || []); setTableCount(data.tableCount || 12); setTakeoutFee(data.takeoutFee || 0); setPaymentType(data.paymentType || {}); setEatType(data.eatType || {}); setCreditGroup(data.creditGroup || {}); setCreditProfiles(data.creditProfiles || {}); setAdminPassword(data.adminPassword || '1234'); setPopularLimit(data.popularLimit || 5); setCategories(data.categories || defaultCategories); setServiceConfig(data.serviceConfig || { dineIn:{label:'',amount:0}, takeout:{label:'',amount:0} }); alert('복구 완료');
+      } catch { alert('백업파일을 읽을 수 없습니다'); }
+    }; reader.readAsText(file);
   }
-  function moveCategory(cat, dir) {
-    setCategoryOrder((prev) => {
-      const arr = [...prev];
-      const i = arr.indexOf(cat);
-      const ni = i + dir;
-      if (i < 0 || ni < 0 || ni >= arr.length) return arr;
-      [arr[i], arr[ni]] = [arr[ni], arr[i]];
-      return arr;
-    });
+  function resetData(kind) {
+    const text = prompt(`${kind} 초기화를 진행하려면 "초기화"를 입력하세요`); if (text !== '초기화') return;
+    if (kind === '주문') setOrders({});
+    if (kind === '판매/외상') setSalesHistory([]);
+    if (kind === '전체') { setOrders({}); setSalesHistory([]); setMenus(defaultMenus); setCategories(defaultCategories); setCreditProfiles({}); }
   }
-  const tableTopCount = Math.ceil(tableCount / 2);
-  const tableRows = [Array.from({ length: tableTopCount }, (_, i) => i + 1), Array.from({ length: tableCount - tableTopCount }, (_, i) => i + 1 + tableTopCount)];
-  const selectedIds = Object.keys(checkedCredit).filter((id) => checkedCredit[id]);
-  const selectedPaidOnly = selectedIds.length > 0 && selectedIds.every((id) => salesHistory.find((x) => String(x.id) === id)?.paid);
+  function paySelectedCredits(groupName) {
+    const selectedIds = Object.entries(checkedCredit).filter(([,v]) => v).map(([k]) => Number(k));
+    if (!selectedIds.length) return alert('선택된 외상내역이 없습니다');
+    const selectedItems = salesHistory.filter(s => selectedIds.includes(s.id)); const hasPaid = selectedItems.some(s => s.paid);
+    if (hasPaid) { setSalesHistory(prev => prev.map(s => selectedIds.includes(s.id) && s.paid ? { ...s, paid: false, remainingAmount: s.total } : s)); setCheckedCredit({}); return; }
+    const amount = Number(partialAmount[groupName] || 0);
+    if (!amount) { setSalesHistory(prev => prev.map(s => selectedIds.includes(s.id) ? { ...s, paid: true, remainingAmount: 0 } : s)); setCheckedCredit({}); return; }
+    let rest = amount;
+    setSalesHistory(prev => prev.map(s => {
+      if (!selectedIds.includes(s.id) || rest <= 0 || s.paid) return s;
+      const before = Number(s.remainingAmount ?? s.total), pay = Math.min(before, rest); rest -= pay; const remain = before - pay;
+      return { ...s, remainingAmount: remain, paid: remain <= 0, partialPayments: [...(s.partialPayments || []), { amount: pay, date: new Date().toLocaleString() }] };
+    }));
+    setPartialAmount(prev => ({ ...prev, [groupName]: '' })); setCheckedCredit({});
+  }
+  const tableRows = useMemo(() => { const count = Number(tableCount || 1), top = Math.ceil(count / 2), arr = Array.from({ length: count }, (_, i) => i + 1); return [arr.slice(0, top), arr.slice(top)]; }, [tableCount]);
 
   return (
-    <div className="page">
-      <header className="header">
-        <div>
-          <h1>식당 POS</h1>
-          <p>주문 · 외상장부 · 판매통계</p>
-        </div>
-        <div className="header-actions">
-          <button className="black" onClick={() => (adminUnlocked ? setAdminUnlocked(false) : null)}>{adminUnlocked ? '관리자모드 해제' : '관리자모드'}</button>
-          {!adminUnlocked && (
-            <span className="login-box"><input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="비밀번호" /><button onClick={() => { if (passwordInput === adminPassword) { setAdminUnlocked(true); setPasswordInput(''); } else alert('비밀번호가 틀렸습니다'); }}>확인</button></span>
-          )}
-        </div>
-      </header>
-
-      {adminUnlocked && (
-        <section className="admin card">
-          <h2>관리자모드</h2>
-          <div className="admin-grid top-form">
-            <input value={newMenu.name} onChange={(e) => setNewMenu((p) => ({ ...p, name: e.target.value }))} placeholder="메뉴명" />
-            <input type="number" value={newMenu.price} onChange={(e) => setNewMenu((p) => ({ ...p, price: e.target.value }))} placeholder="가격" />
-            <input value={newMenu.category} onChange={(e) => setNewMenu((p) => ({ ...p, category: e.target.value }))} placeholder="메뉴구분" />
-            <select value={newMenu.emoji} onChange={(e) => setNewMenu((p) => ({ ...p, emoji: e.target.value }))}>{EMOJIS.map((e) => <option key={e} value={e}>{e}</option>)}</select>
-            <input type="file" accept="image/*" onChange={(e) => handleImage(e.target.files?.[0])} />
-            <button className="primary" onClick={addNewMenu}>메뉴추가</button>
-          </div>
-          <div className="help">사진은 자동으로 300px 정도로 축소 저장됩니다.</div>
-          <div className="admin-grid">
-            <label>테이블수<input type="number" value={tableCount} onChange={(e) => setTableCount(Number(e.target.value || 1))} /></label>
-            <label>인기메뉴 표시 개수<input type="number" value={popularLimit} onChange={(e) => setPopularLimit(Number(e.target.value || 1))} /></label>
-            <label>식당이용 내용<input value={serviceOptions.dineIn.name} onChange={(e) => setServiceOptions((p) => ({ ...p, dineIn: { ...p.dineIn, name: e.target.value } }))} /></label>
-            <label>식당이용 금액<input type="number" value={serviceOptions.dineIn.price} onChange={(e) => setServiceOptions((p) => ({ ...p, dineIn: { ...p.dineIn, price: Number(e.target.value || 0) } }))} /></label>
-            <label>포장 내용<input value={serviceOptions.takeout.name} onChange={(e) => setServiceOptions((p) => ({ ...p, takeout: { ...p.takeout, name: e.target.value } }))} /></label>
-            <label>포장 금액<input type="number" value={serviceOptions.takeout.price} onChange={(e) => { const value = Number(e.target.value || 0); setServiceOptions((p) => ({ ...p, takeout: { ...p.takeout, price: value } })); setTakeoutFee(value); }} /></label>
-          </div>
-          <div className="sub-card">
-            <h3>메뉴구분 순서관리</h3>
-            <div className="inline"><input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="새 메뉴구분" /><button onClick={() => { if (newCategory && !categoryOrder.includes(newCategory)) setCategoryOrder((p) => [...p, newCategory]); setNewCategory(''); }}>추가</button></div>
-            {categoryOrder.map((cat) => <div className="row" key={cat}><b>{cat}</b><span><button onClick={() => moveCategory(cat, -1)}>↑</button><button onClick={() => moveCategory(cat, 1)}>↓</button></span></div>)}
-          </div>
-          <div className="sub-card">
-            <h3>현재 메뉴 / 품절관리</h3>
-            {menus.map((m) => <div className="row" key={m.id}><span><input type="checkbox" checked={!!m.soldOut} onChange={() => toggleSoldOut(m.id)} /> {m.image ? '🖼️' : m.emoji} {m.name} {money(m.price)}원 {m.soldOut && <b className="danger">품절</b>}</span><button className="danger-btn" onClick={() => setMenus((p) => p.filter((x) => x.id !== m.id))}>삭제</button></div>)}
-          </div>
-          <div className="sub-card">
-            <h3>비밀번호 변경</h3>
-            <div className="inline"><input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="새 비밀번호" /><button onClick={() => { if (newPassword.length < 4) return alert('4자리 이상 입력해주세요'); setAdminPassword(newPassword); setNewPassword(''); alert('변경 완료'); }}>변경</button></div>
-          </div>
-          <div className="sub-card data-manage">
-            <h3>데이터 관리</h3>
-            <button onClick={() => backupAll(false)}>전체백업 다운로드</button><p>메뉴/외상/판매통계/설정을 파일로 저장합니다.</p>
-            <button onClick={() => backupAll(true)}>전체백업 공유하기</button><p>가능한 기기에서는 카톡/문자/메일 공유창을 열고, 안 되면 다운로드합니다.</p>
-            <label className="file-label">백업파일 불러오기<input type="file" accept="application/json" onChange={(e) => restoreBackup(e.target.files?.[0])} /></label><p>저장한 백업파일로 복구합니다.</p>
-            <button onClick={() => setOrders({})}>테스트 주문 초기화</button><p>현재 주문내역만 삭제합니다. 메뉴/통계/외상은 유지됩니다.</p>
-            <div className="danger-zone"><input value={resetWord} onChange={(e) => setResetWord(e.target.value)} placeholder="초기화 입력" /><button onClick={() => { if (resetWord !== '초기화') return alert('초기화라고 입력해야 실행됩니다'); setSalesHistory([]); setResetWord(''); }}>판매/외상 데이터초기화</button><p>판매통계와 외상장부를 삭제합니다. 실행 전 반드시 백업하세요.</p></div>
-          </div>
-        </section>
-      )}
-
-      <main className="layout">
-        <section className="left card">
-          <h2>테이블</h2>
-          <div className="table-zone">
-            {tableRows.map((row, idx) => <div className="table-row" key={idx}>{row.map((n) => { const hasOrder = (orders[n] || []).length > 0; return <button key={n} onClick={() => setSelectedTable(n)} className={`table-btn ${selectedTable === n ? 'active' : ''} ${hasOrder ? 'has-order' : ''}`}>{n}번</button>; })}</div>)}
-          </div>
-          <div className="popular">
-            <div className="section-title">🔥 인기메뉴</div>
-            <div className="inline small">{['1', '7', '30'].map((v) => <button key={v} onClick={() => setPopularPeriod(v)} className={popularPeriod === v ? 'selected' : ''}>{v === '1' ? '오늘' : v === '7' ? '최근7일' : '최근30일'}</button>)}</div>
-            <div className="popular-grid">{popularMenus.map(([name, qty]) => { const item = menus.find((x) => x.name === name); if (!item) return null; return <button key={name} onClick={() => addMenu(item)}><span>{item.image ? '🖼️' : item.emoji}</span><b>{name}</b><small>{qty}개</small></button>; })}</div>
-          </div>
-          <div className="eat-select"><button className={selectedEat === '식당이용' ? 'selected' : ''} onClick={() => setEatType((p) => ({ ...p, [selectedTable]: '식당이용' }))}>식당이용</button><button className={selectedEat === '포장' ? 'selected orange' : ''} onClick={() => setEatType((p) => ({ ...p, [selectedTable]: '포장' }))}>포장</button>{serviceExtra?.name && serviceExtraPrice > 0 && <span className="extra">{serviceExtra.name} +{money(serviceExtraPrice)}원</span>}</div>
-          {allCategories.map((category) => <div key={category} className="menu-section"><h2>{category}</h2><div className="menu-grid">{(groupedMenus[category] || []).map((item) => <button key={item.id} disabled={item.soldOut} onClick={() => addMenu(item)} className={`menu-card ${item.soldOut ? 'soldout' : ''}`}>{item.image ? <img src={item.image} alt="menu" /> : <div className="emoji">{item.emoji}</div>}<b>{item.name}</b><span>{money(item.price)}원</span>{item.soldOut && <strong>품절</strong>}</button>)}</div></div>)}
-        </section>
-
-        <aside className="right card">
-          <h2>주문내역 <span>{selectedTable}번</span></h2>
-          <div className="order-list">{currentOrders.length === 0 && <div className="empty">메뉴를 선택해주세요</div>}{currentOrders.map((item) => <div className="order-item" key={item.id}><div><b>{item.name}</b><small>{money(item.price)}원</small></div><div className="qty"><button onClick={() => changeQty(item.id, -1)}>-</button><span>{item.qty}</span><button onClick={() => changeQty(item.id, 1)}>+</button></div></div>)}</div>
-          <div className="payments">{PAYMENT_LIST.map((p) => <button key={p} onClick={() => setPaymentType((prev) => ({ ...prev, [selectedTable]: p }))} className={selectedPayment === p ? 'selected' : ''}>{p}</button>)}</div>
-          {selectedPayment === '외상' && <div className={`credit-box ${warning ? 'warn' : ''}`}><b>외상 단체명 입력 또는 선택</b><input list="credit-list" value={creditGroup[selectedTable] || ''} onChange={(e) => { const name = e.target.value; setCreditGroup((p) => ({ ...p, [selectedTable]: name })); setWarning(''); }} placeholder="단체명" /><datalist id="credit-list">{creditNameList.map((name) => <option key={name} value={name} />)}</datalist><input value={creditContacts[creditGroup[selectedTable] || ''] || ''} onChange={(e) => updateCreditInfo(creditGroup[selectedTable], e.target.value, undefined)} placeholder="연락처 선택입력" /><input value={creditMemos[creditGroup[selectedTable] || ''] || ''} onChange={(e) => updateCreditInfo(creditGroup[selectedTable], undefined, e.target.value)} placeholder="기본메모 선택입력" />{warning && <div className="warning">{warning}</div>}</div>}
-          <div className="total">총 금액 <b>{money(total)}원</b></div>
-          <button className="pay" onClick={() => createSale(false)}>결제완료</button>
-          <button className="print" onClick={() => createSale(true)}>결제완료 + 영수증 출력</button>
-        </aside>
-      </main>
-
-      <div className="bottom-actions"><button onClick={() => setShowCredit((p) => !p)}>외상장부 {showCredit ? '▲' : '▼'}</button><button onClick={() => setShowStats((p) => !p)}>판매통계 {showStats ? '▲' : '▼'}</button></div>
-
-      {showCredit && <section className="panel card"><h2>외상장부</h2>{Object.keys(groupedCredits).length === 0 && <div className="empty">외상내역이 없습니다</div>}{Object.entries(groupedCredits).map(([group, list]) => { const totalRemain = list.reduce((s, x) => s + Number(x.remainingAmount || 0), 0); return <div className="credit-group" key={group}><div className="credit-head"><div><b>{group}</b><span>{creditContacts[group] && ` ☎ ${creditContacts[group]}`} {creditMemos[group] && ` · ${creditMemos[group]}`}</span><small>잔액 {money(totalRemain)}원</small></div><button onClick={() => setCollapsedCredit((p) => ({ ...p, [group]: !p[group] }))}>{collapsedCredit[group] ? '펼치기' : '숨기기'}</button></div>{!collapsedCredit[group] && <div className="credit-list">{list.map((item) => { const checked = !!checkedCredit[item.id]; return <div key={item.id} className={`credit-item ${item.paid ? 'paid' : ''} ${checked ? 'checked' : ''}`}><input type="checkbox" checked={checked} onChange={(e) => setCheckedCredit((p) => ({ ...p, [item.id]: e.target.checked }))} /><div className="grow"><b>{item.date} {item.time} / {item.table}번</b><p>{(item.items || []).map((x) => `${x.name} ${x.qty}개`).join(', ')}</p>{(item.partialPayments || []).map((p, idx) => <small key={idx}>부분결제 {money(p.amount)}원 / {p.date}</small>)}</div><div className="amount">{item.paid ? '결제완료' : `${money(item.remainingAmount)}원`}</div>{!item.paid && <div className="inline"><input value={partialAmount} onChange={(e) => setPartialAmount(e.target.value)} type="number" placeholder="일부결제" /><button onClick={() => partialPay(item)}>처리</button></div>}</div>; })}</div>}</div>; })}<div className="inline"><button className={selectedPaidOnly ? 'orange-btn' : 'primary'} onClick={selectedPaidOnly ? undoCompleteSelectedCredits : completeSelectedCredits}>{selectedPaidOnly ? '선택완납처리해제' : '선택완납처리'}</button></div></section>}
-
-      {showStats && <section className="panel card"><h2>판매통계</h2><div className="inline"><input type="date" value={statsStart} onChange={(e) => setStatsStart(e.target.value)} /><span>~</span><input type="date" value={statsEnd} onChange={(e) => setStatsEnd(e.target.value)} /><button onClick={exportStatsCSV}>통계 CSV 다운로드</button></div><div className="stats-grid"><div><h3>결제방식별</h3>{Object.entries(paymentStats).map(([k, v]) => <p key={k}>{k}: <b>{money(v)}원</b></p>)}</div><div><h3>식사/포장별</h3>{Object.entries(eatStats).map(([k, v]) => <p key={k}>{k}: <b>{money(v)}원</b></p>)}</div><div><h3>시간대별</h3>{Object.entries(hourStats).map(([k, v]) => <p key={k}>{k}시: <b>{money(v)}원</b></p>)}</div></div><div className="sub-card"><h3>메뉴별 판매량/금액</h3>{menuStats.map(([name, v]) => <div className="row" key={name}><span>{name} {v.qty}개</span><b>{money(v.amount)}원</b></div>)}</div></section>}
+    <div className="app">
+      {toast && <div className="toast">{toast}</div>}
+      <header className="top"><div><h1>식당 POS</h1><p>주문 · 외상장부 · 판매통계 · 관리자</p></div><div className="top-actions"><button className="dark" onClick={() => { setAdminMode(true); setAdminUnlocked(false); }}>관리자모드</button><button className="green" onClick={exportCSV}>CSV 다운로드</button></div></header>
+      <section className="tables">{tableRows.map((row, idx) => <div className="table-row" key={idx}>{row.map(n => { const hasOrder = (orders[n] || []).length > 0; return <button key={n} onClick={() => setSelectedTable(n)} className={`table-btn ${selectedTable === n ? 'selected' : hasOrder ? 'has-order' : ''}`}>{n}번</button>; })}</div>)}</section>
+      <section className="popular"><div className="section-title">🔥 인기메뉴</div><div className="periods">{[['1','오늘'], ['7','최근7일'], ['30','최근30일']].map(([v,label]) => <button key={v} onClick={() => setPopularPeriod(v)} className={popularPeriod === v ? 'active' : ''}>{label}</button>)}</div><div className="popular-list">{popularMenus.length === 0 && <span className="muted">결제 후 인기메뉴가 표시됩니다</span>}{popularMenus.map(([name, info]) => { const item = info.menu || menus.find(m => m.name === name); if (!item) return null; return <button className="popular-card" key={name} onClick={() => addMenu(item)}>{item.image ? <img src={item.image} /> : <span className="emoji">{item.emoji}</span>}<b>{name}</b><small>{info.qty}개 판매</small></button>; })}</div></section>
+      <div className="main-grid"><main className="menu-area"><div className="eat-buttons"><button className={currentEat === '식당식사' ? 'active' : ''} onClick={() => setEatType(p=>({...p,[selectedTable]:'식당식사'}))}>식당식사</button><button className={currentEat === '포장' ? 'active gray' : 'gray'} onClick={() => setEatType(p=>({...p,[selectedTable]:'포장'}))}>포장</button></div>{orderedCategories.map(cat => <section className="menu-section" key={cat.name}><h2>{cat.name}</h2><div className="menu-grid">{(groupedMenus[cat.name] || []).map(item => <button className={`menu-card ${item.soldOut ? 'soldout' : ''}`} key={item.id} onClick={() => addMenu(item)}><div className="image-wrap">{item.image ? <img src={item.image} alt="" /> : <span className="emoji big">{item.emoji}</span>}</div>{item.soldOut && <div className="soldout-badge">품절</div>}<b>{item.name}</b><span>{money(item.price)}</span></button>)}</div></section>)}</main>
+        <aside className="order-panel"><h2>주문내역 ({selectedTable}번)</h2><div className="order-list">{displayOrders.length === 0 && <div className="empty">메뉴를 선택해주세요</div>}{displayOrders.map(item => <div className={`order-item ${item.isService ? 'service' : ''}`} key={item.id}><div><b>{item.name}</b><span>{money(item.price)} x {item.qty}</span></div>{!item.isService && <div className="qty"><button onClick={() => changeQty(item.id, -1)}>-</button><button onClick={() => changeQty(item.id, 1)}>+</button></div>}</div>)}</div>{warning && <div className="warning">{warning}</div>}{currentPayment === '외상' && <div className="credit-input"><input list="creditNames" value={creditGroup[selectedTable] || ''} onChange={e => setCreditGroup(p=>({...p,[selectedTable]:e.target.value}))} placeholder="외상 단체명 입력 또는 선택" /><datalist id="creditNames">{creditNames.map(n => <option value={n} key={n} />)}</datalist><input value={creditProfiles[creditGroup[selectedTable] || '']?.phone || ''} onChange={e => { const name=creditGroup[selectedTable]||''; if(!name)return; setCreditProfiles(p=>({...p,[name]:{...(p[name]||{}),phone:e.target.value}})); }} placeholder="연락처 선택입력" /><input value={creditProfiles[creditGroup[selectedTable] || '']?.memo || ''} onChange={e => { const name=creditGroup[selectedTable]||''; if(!name)return; setCreditProfiles(p=>({...p,[name]:{...(p[name]||{}),memo:e.target.value}})); }} placeholder="기본메모 선택입력" /></div>}<div className="payments">{paymentList.map(type => <button key={type} className={currentPayment === type ? 'pay-active' : ''} onClick={() => setPaymentType(p=>({...p,[selectedTable]:type}))}>{type}</button>)}</div><div className="total"><b>총 금액</b><strong>{money(total)}</strong></div><button className="pay" onClick={() => completePayment()}>결제완료</button><button className="pay print" onClick={() => completePayment({ print: true })}>결제완료 + 영수증 출력</button></aside>
+      </div>
+      <div className="bottom-panels"><button className="panel-tab orange" onClick={() => setShowCreditPanel(v => !v)}>외상장부 {showCreditPanel ? '▲' : '▼'}</button><button className="panel-tab blue" onClick={() => setShowStatsPanel(v => !v)}>판매통계 {showStatsPanel ? '▲' : '▼'}</button></div>
+      {showCreditPanel && <section className="panel credit-panel"><h2>외상장부</h2>{Object.keys(groupedCredits).length === 0 && <p className="muted">외상내역이 없습니다</p>}{Object.entries(groupedCredits).map(([group, list]) => { const totalRemain = list.reduce((s,x)=>s+Number(x.remainingAmount || 0),0); const selectedIds = Object.entries(checkedCredit).filter(([,v])=>v).map(([k])=>Number(k)); const selectedPaid = list.some(x => selectedIds.includes(x.id) && x.paid); return <div className="credit-group" key={group}><div className="credit-head" onClick={() => setExpandedCredit(p=>({...p,[group]:!p[group]}))}><div><b>{group}</b><span>{creditProfiles[group]?.phone} {creditProfiles[group]?.memo && ` / ${creditProfiles[group]?.memo}`}</span></div><strong>잔액 {money(totalRemain)}</strong></div>{expandedCredit[group] !== false && <><>{list.map(item => <div className={`credit-row ${item.paid ? 'paid' : ''} ${checkedCredit[item.id] ? 'checked' : ''}`} key={item.id}><input type="checkbox" checked={!!checkedCredit[item.id]} onChange={e => setCheckedCredit(p=>({...p,[item.id]:e.target.checked}))} /><div className="credit-info"><b>{item.date} / {item.table}번 테이블 {item.paid && ' · 결제완료'}</b><span>{(item.items || []).map(x => `${x.name} ${x.qty}개`).join(', ')}</span>{(item.partialPayments || []).map((p,i)=><small key={i}>부분결제 {money(p.amount)} / {p.date}</small>)}</div><strong>{money(item.remainingAmount ?? item.total)}</strong></div>)}</><div className="credit-actions"><input type="number" value={partialAmount[group] || ''} onChange={e => setPartialAmount(p=>({...p,[group]:e.target.value}))} placeholder="부분결제 금액, 비우면 완납" /><button className={selectedPaid ? 'red' : 'green'} onClick={() => paySelectedCredits(group)}>{selectedPaid ? '선택완납처리해제' : '선택완납처리'}</button></div></>}</div>; })}</section>}
+      {showStatsPanel && <section className="panel stats-panel"><h2>판매통계</h2><div className="date-row"><input type="date" value={dateRange.start} onChange={e => setDateRange(p=>({...p,start:e.target.value}))} /><input type="date" value={dateRange.end} onChange={e => setDateRange(p=>({...p,end:e.target.value}))} /><button className="green" onClick={exportCSV}>기간통계 CSV</button></div><div className="stat-grid"><div className="stat"><span>오늘 매출</span><b>{money(stats.todaySales)}</b></div><div className="stat"><span>기간 매출</span><b>{money(stats.totalSales)}</b></div>{Object.entries(stats.byPayment).map(([k,v]) => <div className="stat" key={k}><span>{k}</span><b>{money(v)}</b></div>)}{Object.entries(stats.byEat).map(([k,v]) => <div className="stat" key={k}><span>{k}</span><b>{money(v)}</b></div>)}</div><div className="stat-columns"><div><h3>메뉴별 판매량</h3>{Object.entries(stats.byMenu).map(([name, v]) => <p key={name}><b>{name}</b> {v.qty}개 / {money(v.amount)}</p>)}</div><div><h3>시간대별 매출</h3>{Object.entries(stats.byHour).sort((a,b)=>a[0]-b[0]).map(([h,v]) => <p key={h}><b>{h}시</b> {money(v)}</p>)}</div></div></section>}
+      {adminMode && <div className="modal"><div className="admin"><button className="close" onClick={() => setAdminMode(false)}>×</button>{!adminUnlocked ? <div className="login"><h2>관리자 비밀번호</h2><input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} placeholder="비밀번호" /><button className="dark" onClick={() => { if (passwordInput === adminPassword) setAdminUnlocked(true); else alert('비밀번호가 틀렸습니다'); }}>확인</button><p className="muted">기본 비밀번호는 1234입니다.</p></div> : <><h2>관리자모드</h2><div className="admin-card add-menu"><h3>메뉴 추가</h3><div className="admin-grid"><input value={newMenu.name} onChange={e => setNewMenu(p=>({...p,name:e.target.value}))} placeholder="메뉴명" /><input type="number" value={newMenu.price} onChange={e => setNewMenu(p=>({...p,price:e.target.value}))} placeholder="가격" /><select value={newMenu.category} onChange={e => setNewMenu(p=>({...p,category:e.target.value}))}>{orderedCategories.map(c => <option key={c.name}>{c.name}</option>)}</select><input value={newMenu.category} onChange={e => setNewMenu(p=>({...p,category:e.target.value}))} placeholder="새 메뉴구분 입력 가능" /></div><div className="emoji-list">{emojis.map(e => <button className={newMenu.emoji === e ? 'picked' : ''} key={e} onClick={() => setNewMenu(p=>({...p,emoji:e}))}>{e}</button>)}</div><input type="file" accept="image/*" onChange={e => handleImage(e.target.files?.[0])} />{newMenu.image && <img className="preview" src={newMenu.image} />}<button className="green" onClick={addNewMenu}>메뉴추가</button></div><div className="admin-card"><h3>현재 메뉴 / 품절 / 수정</h3>{menus.map(m => <div className="admin-menu-row" key={m.id}><label><input type="checkbox" checked={!!m.soldOut} onChange={() => updateMenu(m.id,{soldOut:!m.soldOut})} /> 품절</label><input value={m.name} onChange={e => updateMenu(m.id,{name:e.target.value})} /><input type="number" value={m.price} onChange={e => updateMenu(m.id,{price:Number(e.target.value)})} /><input value={m.category} onChange={e => updateMenu(m.id,{category:e.target.value})} /><button className="red" onClick={() => setMenus(prev => prev.filter(x => x.id !== m.id))}>삭제</button></div>)}</div><div className="admin-card"><h3>메뉴구분 순서</h3>{categories.map((c, i) => <div className="category-row" key={i}><input value={c.name} onChange={e => setCategories(prev => prev.map((x,idx)=>idx===i?{...x,name:e.target.value}:x))} /><input type="number" value={c.order} onChange={e => setCategories(prev => prev.map((x,idx)=>idx===i?{...x,order:Number(e.target.value)}:x))} /></div>)}<button onClick={() => setCategories(prev => [...prev, { name: '새구분', order: prev.length + 1 }])}>구분추가</button></div><div className="admin-card"><h3>식당이용 / 포장 자동추가</h3><div className="admin-grid"><input value={serviceConfig.dineIn.label} onChange={e => setServiceConfig(p=>({...p,dineIn:{...p.dineIn,label:e.target.value}}))} placeholder="식당이용 내용" /><input type="number" value={serviceConfig.dineIn.amount} onChange={e => setServiceConfig(p=>({...p,dineIn:{...p.dineIn,amount:Number(e.target.value)}}))} placeholder="식당이용 금액" /><input value={serviceConfig.takeout.label} onChange={e => setServiceConfig(p=>({...p,takeout:{...p.takeout,label:e.target.value}}))} placeholder="포장 내용" /><input type="number" value={serviceConfig.takeout.amount} onChange={e => setServiceConfig(p=>({...p,takeout:{...p.takeout,amount:Number(e.target.value)}}))} placeholder="포장 금액" /></div></div><div className="admin-card"><h3>시스템 설정</h3><div className="admin-grid"><input type="number" value={tableCount} onChange={e => setTableCount(Number(e.target.value || 1))} placeholder="테이블수" /><input type="number" value={popularLimit} onChange={e => setPopularLimit(Number(e.target.value || 1))} placeholder="인기메뉴 표시 개수" /><input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="새 비밀번호" /><button onClick={() => { if(newPassword){ setAdminPassword(newPassword); setNewPassword(''); alert('비밀번호 변경 완료'); }}}>비밀번호 변경</button></div></div><div className="admin-card"><h3>데이터 관리</h3><div className="data-actions"><button onClick={() => backupAll()}>전체백업 다운로드<br/><small>메뉴/판매통계/외상장부를 저장합니다</small></button><button onClick={() => backupAll({share:true})}>전체백업 공유하기<br/><small>카톡/문자/메일로 백업파일을 공유합니다</small></button><label className="file-label">백업파일 불러오기<br/><small>저장한 백업파일로 복구합니다</small><input type="file" accept=".json" onChange={e => restoreBackup(e.target.files?.[0])} /></label><button onClick={() => resetData('주문')}>테스트 주문 초기화<br/><small>현재 주문내역만 삭제합니다</small></button><button className="danger" onClick={() => resetData('판매/외상')}>판매/외상 데이터 초기화<br/><small>판매통계와 외상장부를 삭제합니다</small></button><button className="danger" onClick={() => resetData('전체')}>전체 초기화<br/><small>메뉴/판매/외상/설정을 모두 삭제합니다</small></button></div></div></>}</div></div>}
     </div>
   );
 }
