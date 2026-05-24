@@ -64,3 +64,8 @@
   .adminMenu.adminMenuHead b:first-child{width:72px;min-width:72px}
   .soldOutCell{width:72px;min-width:72px;grid-column:1}
 }
+
+.sectionHead button.green,.dateRange button.green{background:#16a34a!important;color:white!important;border-radius:14px;padding:12px 18px;font-weight:900;box-shadow:0 4px 12px #16a34a33}
+.sectionHead button.orange,.dateRange button.orange{background:#f97316!important;color:white!important;border-radius:14px;padding:12px 18px;font-weight:900}
+.creditActions button.green,.groupActions button.green,.right button.green{background:#16a34a!important;color:white!important}
+.creditActions button.orange,.groupActions button.orange,.right button.orange{background:#f97316!important;color:white!important}

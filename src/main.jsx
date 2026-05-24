@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V17";
+const VERSION = "V18";
 
 const D_M = [
   { id: "m1", name: "생태탕", price: 12000, category: "식사류", emoji: "🍲", image: "", soldOut: false },
@@ -182,12 +182,23 @@ const downloadXlsx = (fileName, sheets) => {
   link.download = fileName;
   link.click();
 };
-const buildSalesWorkbook = ({ restaurantName, sales, menus, startDate, endDate }) => {
+const buildSalesWorkbook = ({ restaurantName, sales, menus, credits = [], startDate, endDate }) => {
   const filteredSales = filterSalesByRange(sales, startDate, endDate);
+  const creditBySaleId = {};
+  credits.forEach(item => {
+    if (item?.id != null) creditBySaleId[item.id] = item.group || item.credit || item.creditGroup || "미지정";
+  });
+  const paymentText = sale => {
+    const pay = sale.payment || "";
+    if (pay !== "외상") return pay || "미지정";
+    const group = sale.creditGroup || sale.credit || sale.group || creditBySaleId[sale.id] || "미지정";
+    return `외상-${group}`;
+  };
   const byPay = {}, byService = {}, byHour = {}, byMenu = {};
   filteredSales.forEach(sale => {
     const total = saleTotal(sale);
-    byPay[sale.payment || "미지정"] = (byPay[sale.payment || "미지정"] || 0) + total;
+    const payLabel = paymentText(sale);
+    byPay[payLabel] = (byPay[payLabel] || 0) + total;
     byService[saleService(sale)] = (byService[saleService(sale)] || 0) + total;
     const d = safeDateObj(saleTimeValue(sale));
     const hour = d ? `${d.getHours()}시` : "시간없음";
@@ -235,7 +246,7 @@ const buildSalesWorkbook = ({ restaurantName, sales, menus, startDate, endDate }
         dateText(saleTimeValue(sale)),
         timeText(saleTimeValue(sale)),
         sale.table || "",
-        sale.payment || "",
+        paymentText(sale),
         saleService(sale),
         item.name || "",
         Number(item.qty || 0),
@@ -469,6 +480,7 @@ function App() {
       id: Date.now(),
       table: selectedTable,
       payment,
+      creditGroup: payment === "외상" ? creditName.trim() : "",
       serviceType,
       total,
       createdAt: new Date().toISOString(),
@@ -772,8 +784,8 @@ function App() {
       </div>
 
       <div className="bottomBars">
-        <button className="orange" onClick={() => setOpenCredit(!openCredit)}>외상장부 ▼</button>
-        <button className="blue" onClick={() => setOpenStats(!openStats)}>판매통계 ▼</button>
+        <button className="orange" onClick={() => setOpenCredit(!openCredit)}>외상장부 {openCredit ? "▲" : "▼"}</button>
+        <button className="blue" onClick={() => setOpenStats(!openStats)}>판매통계 {openStats ? "▲" : "▼"}</button>
       </div>
 
       {openCredit && (
@@ -826,7 +838,7 @@ function App() {
         </section>
       )}
 
-      {openStats && <section className="card panel"><Stats sales={sales} menus={menus} restaurantName={restaurantName} /></section>}
+      {openStats && <section className="card panel"><Stats sales={sales} menus={menus} credits={credits} restaurantName={restaurantName} /></section>}
 
       {showPw && (
         <div className="modal">
@@ -941,19 +953,32 @@ function CreditRow({ c, selected, setSelectedCreditIds, partialPay }) {
   );
 }
 
-function Stats({ sales, menus, restaurantName }) {
+function Stats({ sales, menus, credits = [], restaurantName }) {
   const [startDate, setStartDate] = useState(todayValue());
   const [endDate, setEndDate] = useState(todayValue());
   const filteredSales = useMemo(() => filterSalesByRange(sales, startDate, endDate), [sales, startDate, endDate]);
+  const creditBySaleId = useMemo(() => {
+    const map = {};
+    credits.forEach(item => {
+      if (item?.id != null) map[item.id] = item.group || item.credit || item.creditGroup || "미지정";
+    });
+    return map;
+  }, [credits]);
+  const paymentLabel = sale => {
+    if ((sale.payment || "") !== "외상") return sale.payment || "미지정";
+    const group = sale.creditGroup || sale.credit || sale.group || creditBySaleId[sale.id] || "미지정";
+    return `외상-${group}`;
+  };
   const exportSalesExcel = () => {
-    const sheets = buildSalesWorkbook({ restaurantName, sales, menus, startDate, endDate });
+    const sheets = buildSalesWorkbook({ restaurantName, sales, menus, credits, startDate, endDate });
     downloadXlsx(`${restaurantName || "식당"}_판매통계_${startDate}_${endDate}_${timeName()}.xlsx`, sheets);
   };
 
   const byPay = {}, byService = {}, byHour = {}, byMenu = {};
   filteredSales.forEach(sale => {
     const total = saleTotal(sale);
-    byPay[sale.payment || "미지정"] = (byPay[sale.payment || "미지정"] || 0) + total;
+    const payLabel = paymentLabel(sale);
+    byPay[payLabel] = (byPay[payLabel] || 0) + total;
     byService[saleService(sale)] = (byService[saleService(sale)] || 0) + total;
     const date = safeDateObj(saleTimeValue(sale));
     const hour = date ? `${date.getHours()}시` : "시간없음";
