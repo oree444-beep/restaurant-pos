@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V14";
+const VERSION = "V15";
 
 const D_M = [
   { id: "m1", name: "생태탕", price: 12000, category: "식사류", emoji: "🍲", image: "", soldOut: false },
@@ -54,18 +54,20 @@ const timeName = () => {
   return `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
 };
 
-function resizeImage(file, max = 450, quality = 0.75) {
+function resizeImage(file, size = 300, quality = 0.82) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = event => {
       const img = new Image();
       img.onload = () => {
-        const scale = Math.min(1, max / Math.max(img.width, img.height));
         const canvas = document.createElement("canvas");
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
+        canvas.width = size;
+        canvas.height = size;
         const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const cropSize = Math.min(img.width, img.height);
+        const sx = Math.round((img.width - cropSize) / 2);
+        const sy = Math.round((img.height - cropSize) / 2);
+        ctx.drawImage(img, sx, sy, cropSize, cropSize, 0, 0, size, size);
         resolve(canvas.toDataURL("image/jpeg", quality));
       };
       img.onerror = reject;
@@ -107,6 +109,7 @@ function App() {
   const [diningSetting, setDiningSetting] = useState(() => getLS(LS.diningSetting, { label: "", price: 0 }));
   const [takeoutSetting, setTakeoutSetting] = useState(() => getLS(LS.takeoutSetting, { label: "", price: 0 }));
   const [selectedCreditIds, setSelectedCreditIds] = useState([]);
+  const [hiddenCreditGroups, setHiddenCreditGroups] = useState({});
   const [msgModal, setMsgModal] = useState(null);
   const [receiptModal, setReceiptModal] = useState(false);
   const [pinTables, setPinTables] = useState(() => getLS(LS.pinTables, true));
@@ -143,11 +146,13 @@ function App() {
   );
 
   const sortedMenus = useMemo(
-    () => [...menus].sort((a, b) => {
-      const ao = categories.find(c => c.name === a.category)?.order || 99;
-      const bo = categories.find(c => c.name === b.category)?.order || 99;
-      return ao - bo || a.name.localeCompare(b.name, "ko");
-    }),
+    () => menus
+      .map((menu, index) => ({ ...menu, _orderIndex: index }))
+      .sort((a, b) => {
+        const ao = categories.find(c => c.name === a.category)?.order || 99;
+        const bo = categories.find(c => c.name === b.category)?.order || 99;
+        return ao - bo || a._orderIndex - b._orderIndex;
+      }),
     [menus, categories]
   );
 
@@ -381,6 +386,31 @@ function App() {
     }));
   };
 
+  const selectedCredits = credits.filter(item => selectedCreditIds.includes(item.id));
+  const selectedCreditTotal = selectedCredits.reduce((sum, item) => sum + (!item.paid ? Number(item.remain || 0) : 0), 0);
+  const isUnlockMode = selectedCredits.length > 0 && selectedCredits.every(item => item.paid);
+  const payToggleClass = isUnlockMode ? "orangeAction" : "green";
+  const selectAllUnpaid = () => setSelectedCreditIds(credits.filter(item => !item.paid).map(item => item.id));
+  const clearCreditSelection = () => setSelectedCreditIds([]);
+  const openMessageModal = () => {
+    if (!selectedCredits.length) return showToast("문자전송할 외상 내역을 선택해주세요");
+    setMsgModal({ selected: selectedCredits, total: selectedCreditTotal });
+  };
+
+  const groupedCredits = useMemo(() => {
+    const map = new Map();
+    [...credits]
+      .sort((a, b) => Number(a.paid) - Number(b.paid) || new Date(b.createdAt) - new Date(a.createdAt))
+      .forEach(item => {
+        const key = item.group || "미지정";
+        if (!map.has(key)) map.set(key, { group: key, items: [], unpaidTotal: 0 });
+        const group = map.get(key);
+        group.items.push(item);
+        if (!item.paid) group.unpaidTotal += Number(item.remain || 0);
+      });
+    return Array.from(map.values()).sort((a, b) => b.unpaidTotal - a.unpaidTotal || a.group.localeCompare(b.group, "ko"));
+  }, [credits]);
+
   return (
     <div className="app" onClick={clearToast}>
       <header className="top card">
@@ -509,26 +539,36 @@ function App() {
 
       {openCredit && (
         <section className="card panel">
-          <div className="sectionHead">
-            <h2>외상장부</h2>
+          <div className="sectionHead creditHead">
             <div>
-              <button className="green" onClick={togglePaid}>{creditLabel()}</button>
-              <button onClick={() => setMsgModal({})}>문자전송</button>
+              <h2>외상장부</h2>
+              <p className="muted">선택 {selectedCreditIds.length}건 / 선택 미납합계 <b>{money(selectedCreditTotal)}</b></p>
+            </div>
+            <div className="creditActions">
+              <button onClick={selectAllUnpaid}>미결제 전체선택</button>
+              <button onClick={clearCreditSelection}>선택해제</button>
+              <button className={payToggleClass} onClick={togglePaid}>{creditLabel()}</button>
+              <button onClick={openMessageModal}>문자전송</button>
             </div>
           </div>
-          {[...credits]
-            .sort((a, b) => Number(a.paid) - Number(b.paid) || new Date(b.createdAt) - new Date(a.createdAt))
-            .map(credit => (
-              <CreditRow
-                key={credit.id}
-                c={credit}
-                selected={selectedCreditIds.includes(credit.id)}
-                setSelectedCreditIds={setSelectedCreditIds}
-                partialPay={partialPay}
-                setMsgModal={setMsgModal}
-              />
-            ))}
-          <div className="right"><button className="green" onClick={togglePaid}>{creditLabel()}</button></div>
+          {groupedCredits.length ? groupedCredits.map(group => (
+            <div className="creditGroup" key={group.group}>
+              <div className="creditGroupHead">
+                <div><b>{group.group}</b> <span>미납총액 {money(group.unpaidTotal)}</span></div>
+                <button onClick={() => setHiddenCreditGroups(prev => ({ ...prev, [group.group]: !prev[group.group] }))}>{hiddenCreditGroups[group.group] ? "펼치기" : "숨기기"}</button>
+              </div>
+              {!hiddenCreditGroups[group.group] && group.items.map(credit => (
+                <CreditRow
+                  key={credit.id}
+                  c={credit}
+                  selected={selectedCreditIds.includes(credit.id)}
+                  setSelectedCreditIds={setSelectedCreditIds}
+                  partialPay={partialPay}
+                />
+              ))}
+            </div>
+          )) : <p className="muted">외상 내역이 없습니다</p>}
+          <div className="right"><button className={payToggleClass} onClick={togglePaid}>{creditLabel()}</button></div>
         </section>
       )}
 
@@ -584,11 +624,13 @@ function App() {
 
       {msgModal && (
         <div className="modal">
-          <div className="modalBox">
+          <div className="modalBox wide">
             <button className="xBtn" onClick={() => setMsgModal(null)}>×</button>
             <h2>문자전송</h2>
+            <div className="summaryBox">선택한 외상 {msgModal.selected?.length || 0}건 / 미납총액 <b>{money(msgModal.total || 0)}</b></div>
             <p>문자전송 기능 준비중입니다 😊</p>
-            <p className="muted">추후 외상 독려문자, 자동 금액 입력, 문자포인트, 발송내역 기능을 연결할 예정입니다.</p>
+            <p className="muted">현재는 체크한 내역 기준으로 미납총액만 계산합니다. 추후 외상 독려문자, 자동 금액 입력, 문자포인트, 발송내역 기능을 연결할 예정입니다.</p>
+            {(msgModal.selected || []).map(item => <p key={item.id}>{item.group} / {new Date(item.createdAt).toLocaleDateString()} / 잔액 {money(item.remain)}</p>)}
           </div>
         </div>
       )}
@@ -624,7 +666,7 @@ function MenuCard({ m, addMenu, popular }) {
   );
 }
 
-function CreditRow({ c, selected, setSelectedCreditIds, partialPay, setMsgModal }) {
+function CreditRow({ c, selected, setSelectedCreditIds, partialPay }) {
   const [amount, setAmount] = useState("");
   return (
     <div className={`creditRow ${c.paid ? "done" : ""} ${selected ? "checked" : ""}`}>
@@ -640,7 +682,6 @@ function CreditRow({ c, selected, setSelectedCreditIds, partialPay, setMsgModal 
       <div className="creditSide">
         <input type="number" placeholder="부분결제" value={amount} onChange={e => setAmount(e.target.value)} />
         <button onClick={() => { partialPay(c.id, amount); setAmount(""); }}>일부결제</button>
-        <button onClick={() => setMsgModal(c)}>문자전송</button>
       </div>
     </div>
   );
@@ -718,6 +759,22 @@ function Box({ title, data }) {
   );
 }
 
+const emojiOptions = [
+  { value: "🍲", label: "🍲 탕류" },
+  { value: "🥘", label: "🥘 찌개류" },
+  { value: "🍚", label: "🍚 식사류" },
+  { value: "🍜", label: "🍜 면류" },
+  { value: "🥩", label: "🥩 고기류" },
+  { value: "🐟", label: "🐟 생선류" },
+  { value: "🦑", label: "🦑 해산물" },
+  { value: "🥗", label: "🥗 반찬/사이드" },
+  { value: "🍶", label: "🍶 소주" },
+  { value: "🍺", label: "🍺 맥주" },
+  { value: "🥤", label: "🥤 음료" },
+  { value: "☕", label: "☕ 커피" },
+  { value: "🍽️", label: "🍽️ 기타" }
+];
+
 function AdminModal(props) {
   const [pass, setPass] = useState("");
   const addMenu = () => {
@@ -750,6 +807,17 @@ function AdminModal(props) {
     props.setCategories(prev => prev.filter(item => item.name !== category.name));
   };
 
+  const moveMenu = (id, direction) => {
+    props.setMenus(prev => {
+      const index = prev.findIndex(item => item.id === id);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= prev.length) return prev;
+      const copy = [...prev];
+      [copy[index], copy[nextIndex]] = [copy[nextIndex], copy[index]];
+      return copy;
+    });
+  };
+
   const changeTableCount = value => {
     const next = Number(value) || 1;
     props.setTableCount(next);
@@ -766,14 +834,16 @@ function AdminModal(props) {
           <h3>상호 / 메뉴추가</h3>
           <label>상호명</label>
           <input value={props.restaurantName} onChange={e => props.setRestaurantName(e.target.value)} placeholder="상호명" />
-          <p className="muted">권장 이미지: 정사각형 300x300px / 1MB 이하 권장 / 큰 사진은 자동축소됩니다.</p>
+          <p className="muted">사진은 자동으로 가운데 기준 정사각형 300x300px로 잘려 저장됩니다.</p>
           <div className="grid2">
             <input placeholder="메뉴명" value={props.newMenu.name} onChange={e => props.setNewMenu(prev => ({ ...prev, name: e.target.value }))} />
             <input type="number" placeholder="가격" value={props.newMenu.price} onChange={e => props.setNewMenu(prev => ({ ...prev, price: e.target.value }))} />
             <select value={props.newMenu.category} onChange={e => props.setNewMenu(prev => ({ ...prev, category: e.target.value }))}>
               {props.categories.map(category => <option key={category.name}>{category.name}</option>)}
             </select>
-            <input placeholder="이모지" value={props.newMenu.emoji} onChange={e => props.setNewMenu(prev => ({ ...prev, emoji: e.target.value }))} />
+            <select value={props.newMenu.emoji} onChange={e => props.setNewMenu(prev => ({ ...prev, emoji: e.target.value }))}>
+              {emojiOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
             <input type="file" accept="image/*" onChange={onImage} />
             <button onClick={addMenu}>메뉴추가</button>
           </div>
@@ -781,7 +851,7 @@ function AdminModal(props) {
 
         <div className="adminCard">
           <h3>현재 메뉴</h3>
-          <div className="adminMenu adminMenuHead"><b>품절</b><b>메뉴</b><b>가격</b><b>구분</b><b>삭제</b></div>
+          <div className="adminMenu adminMenuHead"><b>품절</b><b>메뉴</b><b>가격</b><b>구분</b><b>순서</b><b>삭제</b></div>
           {props.menus.map(menu => (
             <div className="adminMenu" key={menu.id}>
               <input type="checkbox" checked={menu.soldOut || false} onChange={e => props.setMenus(prev => prev.map(item => item.id === menu.id ? { ...item, soldOut: e.target.checked } : item))} />
@@ -793,6 +863,7 @@ function AdminModal(props) {
               <select value={menu.category} onChange={e => props.setMenus(prev => prev.map(item => item.id === menu.id ? { ...item, category: e.target.value } : item))}>
                 {props.categories.map(category => <option key={category.name}>{category.name}</option>)}
               </select>
+              <div className="moveBtns"><button onClick={() => moveMenu(menu.id, -1)}>▲</button><button onClick={() => moveMenu(menu.id, 1)}>▼</button></div>
               <button onClick={() => props.setMenus(prev => prev.filter(item => item.id !== menu.id))}>삭제</button>
             </div>
           ))}
