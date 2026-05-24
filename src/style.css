@@ -21,3 +21,46 @@
 .groupActions button{margin-left:0;background:#e5e7eb;border-radius:12px;padding:10px 14px;font-weight:900}
 .groupActions button:nth-child(4){background:#2563eb;color:white}
 @media(max-width:1000px){.groupActions{justify-content:flex-start}.creditGroupTitle{width:100%}}
+.soldOutCell{display:flex;align-items:center;justify-content:center;min-height:54px}.soldOutCell input[type="checkbox"]{width:28px!important;height:28px!important}.adminMenuHead b:first-child{text-align:center}.excelNote{color:#64748b;font-size:13px;margin-top:6px}
+
+
+/* V17 관리자 품절 체크박스 정렬 보강 */
+.adminMenu,
+.adminMenu.adminMenuHead{
+  grid-template-columns:72px minmax(280px,1.4fr) 130px 150px 86px 80px;
+}
+.adminMenu.adminMenuHead b:first-child,
+.soldOutCell{
+  width:72px;
+  min-width:72px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+.adminMenu.adminMenuHead b{
+  display:flex;
+  align-items:center;
+  min-height:34px;
+}
+.adminMenu.adminMenuHead b:first-child{
+  justify-content:center;
+}
+.soldOutCell{
+  min-height:54px;
+  align-self:center;
+  justify-self:center;
+}
+.soldOutCell input[type="checkbox"]{
+  width:30px!important;
+  height:30px!important;
+  margin:0;
+}
+@media(max-width:1000px){
+  .adminMenu{grid-template-columns:72px 1fr}
+  .adminMenuHead{display:grid}
+  .adminMenu.adminMenuHead{grid-template-columns:72px 1fr}
+  .adminMenu.adminMenuHead b:nth-child(n+3){display:none}
+  .adminMenu.adminMenuHead b:first-child{width:72px;min-width:72px}
+  .soldOutCell{width:72px;min-width:72px;grid-column:1}
+}

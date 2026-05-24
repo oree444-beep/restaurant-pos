@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V16";
+const VERSION = "V17";
 
 const D_M = [
   { id: "m1", name: "생태탕", price: 12000, category: "식사류", emoji: "🍲", image: "", soldOut: false },
@@ -77,6 +77,221 @@ function resizeImage(file, size = 300, quality = 0.82) {
     reader.readAsDataURL(file);
   });
 }
+
+
+const pad2 = value => String(value).padStart(2, "0");
+const safeDateObj = value => {
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date : null;
+};
+const dateText = value => {
+  const date = safeDateObj(value);
+  if (!date) return "";
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+};
+const timeText = value => {
+  const date = safeDateObj(value);
+  if (!date) return "";
+  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
+};
+const saleTimeValue = sale => sale.createdAt || sale.timestamp || sale.date || "";
+const saleService = sale => sale.serviceType || sale.eatType || "식당식사";
+const saleTotal = sale => Number(sale.total) || (sale.items || []).reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 0), 0);
+const filterSalesByRange = (sales, startDate, endDate) => {
+  const start = new Date(`${startDate}T00:00:00`).getTime();
+  const end = new Date(`${endDate}T23:59:59`).getTime();
+  return sales.filter(sale => {
+    const date = safeDateObj(saleTimeValue(sale));
+    if (!date) return false;
+    const time = date.getTime();
+    return time >= start && time <= end;
+  });
+};
+const xmlEscape = value => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+const colName = index => {
+  let name = "";
+  let n = index + 1;
+  while (n > 0) {
+    const mod = (n - 1) % 26;
+    name = String.fromCharCode(65 + mod) + name;
+    n = Math.floor((n - mod) / 26);
+  }
+  return name;
+};
+const worksheetXml = rows => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetData>${rows.map((row, r) => `<row r="${r + 1}">${row.map((cell, c) => {
+  const value = cell ?? "";
+  const ref = `${colName(c)}${r + 1}`;
+  if (typeof value === "number" && Number.isFinite(value)) return `<c r="${ref}"><v>${value}</v></c>`;
+  return `<c r="${ref}" t="inlineStr"><is><t>${xmlEscape(value)}</t></is></c>`;
+}).join("")}</row>`).join("")}</sheetData></worksheet>`;
+const crcTable = (() => {
+  const table = [];
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[i] = c >>> 0;
+  }
+  return table;
+})();
+const crc32 = bytes => {
+  let crc = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+};
+const textBytes = text => new TextEncoder().encode(text);
+const u16 = value => [value & 255, (value >>> 8) & 255];
+const u32 = value => [value & 255, (value >>> 8) & 255, (value >>> 16) & 255, (value >>> 24) & 255];
+const makeZipBlob = files => {
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+  const now = new Date();
+  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+  const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  files.forEach(file => {
+    const name = textBytes(file.name);
+    const data = textBytes(file.content);
+    const crc = crc32(data);
+    const localHeader = new Uint8Array([
+      ...u32(0x04034b50), ...u16(20), ...u16(0), ...u16(0), ...u16(dosTime), ...u16(dosDate),
+      ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(name.length), ...u16(0)
+    ]);
+    localParts.push(localHeader, name, data);
+    const centralHeader = new Uint8Array([
+      ...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0), ...u16(0), ...u16(dosTime), ...u16(dosDate),
+      ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(name.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(offset)
+    ]);
+    centralParts.push(centralHeader, name);
+    offset += localHeader.length + name.length + data.length;
+  });
+  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+  const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(centralSize), ...u32(offset), ...u16(0)]);
+  return new Blob([...localParts, ...centralParts, end], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+};
+const downloadXlsx = (fileName, sheets) => {
+  const safeSheets = sheets.map((sheet, index) => ({ name: String(sheet.name || `Sheet${index + 1}`).slice(0, 31), rows: sheet.rows || [] }));
+  const files = [
+    { name: "[Content_Types].xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${safeSheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>` },
+    { name: "_rels/.rels", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+    { name: "xl/workbook.xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${safeSheets.map((sheet, i) => `<sheet name="${xmlEscape(sheet.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets></workbook>` },
+    { name: "xl/_rels/workbook.xml.rels", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${safeSheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("")}</Relationships>` },
+    ...safeSheets.map((sheet, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, content: worksheetXml(sheet.rows) }))
+  ];
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(makeZipBlob(files));
+  link.download = fileName;
+  link.click();
+};
+const buildSalesWorkbook = ({ restaurantName, sales, menus, startDate, endDate }) => {
+  const filteredSales = filterSalesByRange(sales, startDate, endDate);
+  const byPay = {}, byService = {}, byHour = {}, byMenu = {};
+  filteredSales.forEach(sale => {
+    const total = saleTotal(sale);
+    byPay[sale.payment || "미지정"] = (byPay[sale.payment || "미지정"] || 0) + total;
+    byService[saleService(sale)] = (byService[saleService(sale)] || 0) + total;
+    const d = safeDateObj(saleTimeValue(sale));
+    const hour = d ? `${d.getHours()}시` : "시간없음";
+    byHour[hour] = (byHour[hour] || 0) + total;
+    (sale.items || []).forEach(item => {
+      if (item.service) return;
+      const key = item.id || item.name;
+      if (!byMenu[key]) byMenu[key] = { category: item.category || "미지정", name: item.name || "", qty: 0, total: 0 };
+      byMenu[key].qty += Number(item.qty || 0);
+      byMenu[key].total += Number(item.price || 0) * Number(item.qty || 0);
+    });
+  });
+  menus.forEach(menu => {
+    const key = menu.id || menu.name;
+    if (!byMenu[key]) byMenu[key] = { category: menu.category || "미지정", name: menu.name || "", qty: 0, total: 0 };
+  });
+  const totalSales = filteredSales.reduce((sum, sale) => sum + saleTotal(sale), 0);
+  const menuRows = Object.values(byMenu).sort((a, b) => String(a.category).localeCompare(String(b.category), "ko") || String(a.name).localeCompare(String(b.name), "ko"));
+  const summary = [
+    [`${restaurantName || "식당"} 판매통계 요약`],
+    ["조회기간", startDate, "~", endDate],
+    ["총매출", totalSales],
+    ["총 주문건수", filteredSales.length],
+    [],
+    ["결제방식별 매출"],
+    ["결제방식", "매출"],
+    ...Object.entries(byPay),
+    [],
+    ["식당/포장별 매출"],
+    ["식사구분", "매출"],
+    ...Object.entries(byService),
+    [],
+    ["시간대별 매출"],
+    ["시간", "매출"],
+    ...Object.entries(byHour).sort((a, b) => parseInt(a[0]) - parseInt(b[0])),
+    [], [], [],
+    ["메뉴별 판매 요약"],
+    ["구분", "메뉴명", "판매수량", "총판매액"],
+    ...menuRows.map(row => [row.category, row.name, row.qty, row.total])
+  ];
+  const details = [["날짜", "시간", "테이블", "결제", "식사구분", "메뉴", "수량", "금액", "주문총액"]];
+  filteredSales.forEach(sale => {
+    (sale.items || []).forEach(item => {
+      details.push([
+        dateText(saleTimeValue(sale)),
+        timeText(saleTimeValue(sale)),
+        sale.table || "",
+        sale.payment || "",
+        saleService(sale),
+        item.name || "",
+        Number(item.qty || 0),
+        Number(item.price || 0) * Number(item.qty || 0),
+        saleTotal(sale)
+      ]);
+    });
+  });
+  return [
+    { name: "판매통계 요약", rows: summary },
+    { name: "판매 상세내역", rows: details }
+  ];
+};
+const buildCreditWorkbook = ({ restaurantName, credits }) => {
+  const groupMap = new Map();
+  credits.forEach(item => {
+    const group = item.group || "미지정";
+    if (!groupMap.has(group)) groupMap.set(group, { total: 0, paid: 0, remain: 0, unpaidCount: 0, paidCount: 0 });
+    const row = groupMap.get(group);
+    const total = Number(item.total || 0);
+    const remain = item.paid ? 0 : Number(item.remain || 0);
+    row.total += total;
+    row.remain += remain;
+    row.paid += Math.max(0, total - remain);
+    if (item.paid) row.paidCount += 1; else row.unpaidCount += 1;
+  });
+  const summary = [
+    [`${restaurantName || "식당"} 외상장부 요약`],
+    ["다운로드일", dateText(new Date()), timeText(new Date())],
+    [],
+    ["단체명", "주문총액", "결제완료금액", "현 미납액", "미결제건수", "완납건수"],
+    ...Array.from(groupMap.entries()).sort((a, b) => a[0].localeCompare(b[0], "ko")).map(([group, value]) => [group, value.total, value.paid, value.remain, value.unpaidCount, value.paidCount])
+  ];
+  const details = [["단체명", "날짜", "시간", "테이블", "메뉴내역", "주문총액", "결제완료금액", "현 미납액", "상태", "연락처", "메모"]];
+  credits.forEach(item => {
+    const total = Number(item.total || 0);
+    const remain = item.paid ? 0 : Number(item.remain || 0);
+    details.push([
+      item.group || "미지정",
+      dateText(item.createdAt),
+      timeText(item.createdAt),
+      item.table || "",
+      (item.items || []).map(menu => `${menu.name} ${menu.qty}개`).join(", "),
+      total,
+      Math.max(0, total - remain),
+      remain,
+      item.paid ? "완납" : "미결제",
+      item.phone || "",
+      item.memo || ""
+    ]);
+  });
+  return [
+    { name: "단체별 외상 요약", rows: summary },
+    { name: "외상 상세내역", rows: details }
+  ];
+};
 
 function App() {
   const [restaurantName, setRestaurantName] = useState(() => getLS(LS.restaurantName, "식당"));
@@ -291,28 +506,6 @@ function App() {
     if (scrollTopAfterPay) window.setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 120);
   };
 
-  const exportStats = () => {
-    const head = ["날짜", "테이블", "결제", "식사구분", "메뉴", "수량", "금액", "총액"];
-    const rows = sales.flatMap(sale =>
-      sale.items.map(item => [
-        new Date(sale.createdAt).toLocaleString(),
-        sale.table,
-        sale.payment,
-        sale.serviceType,
-        item.name,
-        item.qty,
-        item.price * item.qty,
-        sale.total
-      ])
-    );
-    const csv = [head, ...rows].map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n");
-    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${restaurantName || "식당"}_매출통계_${timeName()}.csv`;
-    link.click();
-  };
-
   const openAdmin = () => {
     setPwInput("");
     setShowPw(true);
@@ -439,6 +632,11 @@ function App() {
     setMsgModal({ title: `${groupName} 문자전송`, selected, total });
   };
 
+  const exportCreditExcel = () => {
+    const sheets = buildCreditWorkbook({ restaurantName, credits });
+    downloadXlsx(`${restaurantName || "식당"}_외상장부_${timeName()}.xlsx`, sheets);
+  };
+
   const groupedCredits = useMemo(() => {
     const map = new Map();
     [...credits]
@@ -462,8 +660,7 @@ function App() {
         </div>
         <div className="topBtns">
           <button onClick={e => { e.stopPropagation(); openAdmin(); }} className="dark">관리자모드</button>
-          <button onClick={e => { e.stopPropagation(); exportStats(); }} className="green">CSV 다운로드</button>
-        </div>
+                  </div>
       </header>
 
       <div className="layout">
@@ -591,6 +788,7 @@ function App() {
               <button onClick={clearCreditSelection}>선택해제</button>
               <button className={payToggleClass} onClick={togglePaid}>{creditLabel()}</button>
               <button onClick={openMessageModal}>문자전송</button>
+              <button onClick={exportCreditExcel}>외상 엑셀다운</button>
             </div>
           </div>
           {groupedCredits.length ? groupedCredits.map(group => {
@@ -628,7 +826,7 @@ function App() {
         </section>
       )}
 
-      {openStats && <section className="card panel"><Stats sales={sales} menus={menus} /></section>}
+      {openStats && <section className="card panel"><Stats sales={sales} menus={menus} restaurantName={restaurantName} /></section>}
 
       {showPw && (
         <div className="modal">
@@ -743,24 +941,23 @@ function CreditRow({ c, selected, setSelectedCreditIds, partialPay }) {
   );
 }
 
-function Stats({ sales, menus }) {
+function Stats({ sales, menus, restaurantName }) {
   const [startDate, setStartDate] = useState(todayValue());
   const [endDate, setEndDate] = useState(todayValue());
-  const filteredSales = useMemo(() => {
-    const start = new Date(`${startDate}T00:00:00`).getTime();
-    const end = new Date(`${endDate}T23:59:59`).getTime();
-    return sales.filter(sale => {
-      const time = new Date(sale.createdAt).getTime();
-      return time >= start && time <= end;
-    });
-  }, [sales, startDate, endDate]);
+  const filteredSales = useMemo(() => filterSalesByRange(sales, startDate, endDate), [sales, startDate, endDate]);
+  const exportSalesExcel = () => {
+    const sheets = buildSalesWorkbook({ restaurantName, sales, menus, startDate, endDate });
+    downloadXlsx(`${restaurantName || "식당"}_판매통계_${startDate}_${endDate}_${timeName()}.xlsx`, sheets);
+  };
 
   const byPay = {}, byService = {}, byHour = {}, byMenu = {};
   filteredSales.forEach(sale => {
-    byPay[sale.payment] = (byPay[sale.payment] || 0) + sale.total;
-    byService[sale.serviceType] = (byService[sale.serviceType] || 0) + sale.total;
-    const hour = `${new Date(sale.createdAt).getHours()}시`;
-    byHour[hour] = (byHour[hour] || 0) + sale.total;
+    const total = saleTotal(sale);
+    byPay[sale.payment || "미지정"] = (byPay[sale.payment || "미지정"] || 0) + total;
+    byService[saleService(sale)] = (byService[saleService(sale)] || 0) + total;
+    const date = safeDateObj(saleTimeValue(sale));
+    const hour = date ? `${date.getHours()}시` : "시간없음";
+    byHour[hour] = (byHour[hour] || 0) + total;
     sale.items.forEach(item => {
       if (item.service) return;
       byMenu[item.name] = byMenu[item.name] || { qty: 0, total: 0 };
@@ -771,7 +968,7 @@ function Stats({ sales, menus }) {
   const menuEntries = Object.entries(byMenu).sort((a, b) => b[1].total - a[1].total);
   const lowEntries = [...menuEntries].sort((a, b) => a[1].qty - b[1].qty).slice(0, 5);
   const zeroMenus = menus.filter(menu => !byMenu[menu.name]);
-  const totalSales = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
+  const totalSales = filteredSales.reduce((sum, sale) => sum + saleTotal(sale), 0);
 
   return (
     <>
@@ -780,6 +977,7 @@ function Stats({ sales, menus }) {
         <div className="dateRange">
           <label>시작 <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></label>
           <label>종료 <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></label>
+          <button className="green" onClick={exportSalesExcel}>엑셀 다운로드</button>
         </div>
       </div>
       <div className="summaryBox">선택기간 매출: <b>{money(totalSales)}</b></div>
@@ -910,7 +1108,7 @@ function AdminModal(props) {
           <div className="adminMenu adminMenuHead"><b>품절</b><b>메뉴</b><b>가격</b><b>구분</b><b>순서</b><b>삭제</b></div>
           {props.menus.map(menu => (
             <div className="adminMenu" key={menu.id}>
-              <input type="checkbox" checked={menu.soldOut || false} onChange={e => props.setMenus(prev => prev.map(item => item.id === menu.id ? { ...item, soldOut: e.target.checked } : item))} />
+              <div className="soldOutCell"><input type="checkbox" checked={menu.soldOut || false} onChange={e => props.setMenus(prev => prev.map(item => item.id === menu.id ? { ...item, soldOut: e.target.checked } : item))} /></div>
               <div className="adminMenuName">
                 {menu.image ? <img src={menu.image} alt="" /> : <span>{menu.emoji}</span>}
                 <input value={menu.name} onChange={e => props.setMenus(prev => prev.map(item => item.id === menu.id ? { ...item, name: e.target.value } : item))} />
