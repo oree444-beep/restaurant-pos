@@ -100,3 +100,7 @@
   .serviceBtns{display:flex;gap:8px;overflow-x:auto}
   .serviceBtns button{margin-left:0;flex:0 0 auto}
 }
+
+/* V20 Firebase / 영수증 안내 */
+.syncStatus{font-size:13px;color:#2563eb;margin-top:4px;font-weight:800}
+.receiptConfirm{text-align:left;max-width:520px}.receiptActions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}.receiptActions button{width:100%}

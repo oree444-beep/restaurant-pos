@@ -2,7 +2,21 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V19";
+const VERSION = "V20";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAC3W2CNOW7-GzgSHeecILfMHv3KsIis7Y",
+  authDomain: "hr-restaurant-pos.firebaseapp.com",
+  projectId: "hr-restaurant-pos",
+  storageBucket: "hr-restaurant-pos.firebasestorage.app",
+  messagingSenderId: "783348005326",
+  appId: "1:783348005326:web:7181e6dd9ec4514f7a139f",
+  measurementId: "G-HW3ESNTVR4"
+};
+
+const RESTAURANT_ID = "mom-restaurant";
+const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents`;
+const firestoreUrl = path => `${FIRESTORE_BASE}/${path}?key=${firebaseConfig.apiKey}`;
 
 const D_M = [
   { id: "m1", name: "생태탕", price: 12000, category: "식사류", emoji: "🍲", image: "", soldOut: false },
@@ -47,6 +61,60 @@ const getLS = (key, fallback) => {
 };
 
 const setLS = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+const cleanData = value => JSON.parse(JSON.stringify(value ?? null));
+const firebaseId = value => String(value ?? Date.now()).replace(/[^a-zA-Z0-9_-]/g, "_");
+const toFirestoreValue = value => {
+  if (value === null || value === undefined) return { nullValue: null };
+  if (Array.isArray(value)) return { arrayValue: { values: value.map(toFirestoreValue) } };
+  if (typeof value === "boolean") return { booleanValue: value };
+  if (typeof value === "number") return Number.isInteger(value) ? { integerValue: String(value) } : { doubleValue: value };
+  if (typeof value === "object") {
+    return { mapValue: { fields: Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined).map(([k, v]) => [k, toFirestoreValue(v)])) } };
+  }
+  return { stringValue: String(value) };
+};
+const fromFirestoreValue = value => {
+  if (!value) return null;
+  if ("stringValue" in value) return value.stringValue;
+  if ("integerValue" in value) return Number(value.integerValue);
+  if ("doubleValue" in value) return Number(value.doubleValue);
+  if ("booleanValue" in value) return value.booleanValue;
+  if ("nullValue" in value) return null;
+  if ("arrayValue" in value) return (value.arrayValue.values || []).map(fromFirestoreValue);
+  if ("mapValue" in value) return fromFirestoreFields(value.mapValue.fields || {});
+  if ("timestampValue" in value) return value.timestampValue;
+  return null;
+};
+const fromFirestoreFields = fields => Object.fromEntries(Object.entries(fields || {}).map(([k, v]) => [k, fromFirestoreValue(v)]));
+const firestoreSetDoc = async (path, data) => {
+  const body = { fields: Object.fromEntries(Object.entries(cleanData(data) || {}).filter(([, v]) => v !== undefined).map(([k, v]) => [k, toFirestoreValue(v)])) };
+  const response = await fetch(firestoreUrl(path), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json();
+};
+const firestoreGetDoc = async path => {
+  const response = await fetch(firestoreUrl(path));
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(await response.text());
+  const data = await response.json();
+  return fromFirestoreFields(data.fields || {});
+};
+const firestoreGetCollection = async path => {
+  const response = await fetch(firestoreUrl(path));
+  if (response.status === 404) return [];
+  if (!response.ok) throw new Error(await response.text());
+  const data = await response.json();
+  return (data.documents || []).map(item => fromFirestoreFields(item.fields || {}));
+};
+const saveSettingsToFirebase = async data => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/config/settings`, { ...cleanData(data), initialized: true, updatedAt: new Date().toISOString() });
+const saveSaleToFirebase = async sale => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/sales/${firebaseId(sale.id)}`, { ...cleanData(sale), updatedAt: new Date().toISOString() });
+const saveCreditToFirebase = async credit => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/credits/${firebaseId(credit.id)}`, { ...cleanData(credit), updatedAt: new Date().toISOString() });
+const batchUploadCollection = async (collectionName, items) => {
+  for (const item of (items || []).filter(Boolean)) {
+    const path = `restaurants/${RESTAURANT_ID}/${collectionName}/${firebaseId(item.id)}`;
+    await firestoreSetDoc(path, { ...cleanData(item), updatedAt: new Date().toISOString() });
+  }
+};
 const money = value => `${(Number(value) || 0).toLocaleString()}원`;
 const todayValue = () => new Date().toISOString().slice(0, 10);
 const timeName = () => {
@@ -182,7 +250,7 @@ const downloadXlsx = (fileName, sheets) => {
   link.download = fileName;
   link.click();
 };
-const buildSalesWorkbook = ({ restaurantName, sales, menus, startDate, endDate }) => {
+const buildSalesWorkbook = ({ restaurantName, sales, menus, credits = [], startDate, endDate }) => {
   const filteredSales = filterSalesByRange(sales, startDate, endDate);
   const byPay = {}, byService = {}, byHour = {}, byMenu = {};
   filteredSales.forEach(sale => {
@@ -228,7 +296,7 @@ const buildSalesWorkbook = ({ restaurantName, sales, menus, startDate, endDate }
     ["구분", "메뉴명", "판매수량", "총판매액"],
     ...menuRows.map(row => [row.category, row.name, row.qty, row.total])
   ];
-  const details = [["날짜", "시간", "테이블", "결제", "식사구분", "메뉴", "수량", "금액", "주문총액"]];
+  const details = [["날짜", "시간", "테이블", "결제", "식사구분", "메뉴", "수량", "금액", "주문총액", "외상단체명"]];
   filteredSales.forEach(sale => {
     (sale.items || []).forEach(item => {
       details.push([
@@ -240,7 +308,8 @@ const buildSalesWorkbook = ({ restaurantName, sales, menus, startDate, endDate }
         item.name || "",
         Number(item.qty || 0),
         Number(item.price || 0) * Number(item.qty || 0),
-        saleTotal(sale)
+        saleTotal(sale),
+        sale.payment === "외상" ? (sale.creditGroup || sale.credit || credits.find(credit => String(credit.id) === String(sale.id))?.group || "") : ""
       ]);
     });
   });
@@ -331,6 +400,10 @@ function App() {
   const [pinOrder, setPinOrder] = useState(() => getLS(LS.pinOrder, true));
   const [scrollTopAfterPay, setScrollTopAfterPay] = useState(() => getLS(LS.scrollTopAfterPay, true));
   const [screenWidth, setScreenWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1400));
+  const [firebaseReady, setFirebaseReady] = useState(false);
+  const [firebaseLoading, setFirebaseLoading] = useState(true);
+  const [syncStatus, setSyncStatus] = useState("Firebase 연결 준비중");
+  const [receiptPrintSale, setReceiptPrintSale] = useState(null);
 
   useEffect(() => {
     const onResize = () => setScreenWidth(window.innerWidth);
@@ -340,6 +413,68 @@ function App() {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("orientationchange", onResize);
     };
+  }, []);
+
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadFirebaseData = async () => {
+      try {
+        setSyncStatus("Firebase 데이터 불러오는 중");
+        const data = await firestoreGetDoc(`restaurants/${RESTAURANT_ID}/config/settings`);
+        if (data?.initialized) {
+          if (cancelled) return;
+          setRestaurantName(data.restaurantName ?? restaurantName);
+          setMenus(data.menus ?? menus);
+          setCategories(data.categories ?? categories);
+          setTableCount(data.tableCount ?? tableCount);
+          setTableRows(data.tableRows ?? tableRows);
+          setOrders(data.orders ?? orders);
+          setPopularCount(data.popularCount ?? popularCount);
+          setShowPopular(data.showPopular ?? showPopular);
+          setAdminPw(data.adminPw ?? adminPw);
+          setDiningSetting(data.diningSetting ?? diningSetting);
+          setTakeoutSetting(data.takeoutSetting ?? takeoutSetting);
+          setPinTables(data.pinTables ?? pinTables);
+          setPinOrder(data.pinOrder ?? pinOrder);
+          setScrollTopAfterPay(data.scrollTopAfterPay ?? scrollTopAfterPay);
+        } else {
+          await saveSettingsToFirebase({
+            restaurantName, menus, categories, tableCount, tableRows, orders,
+            popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
+            pinTables, pinOrder, scrollTopAfterPay
+          });
+        }
+
+        const remoteSales = (await firestoreGetCollection(`restaurants/${RESTAURANT_ID}/sales`)).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        if (remoteSales.length) {
+          if (!cancelled) setSales(remoteSales);
+        } else if ((sales || []).length) {
+          await batchUploadCollection("sales", sales);
+        }
+
+        const remoteCredits = (await firestoreGetCollection(`restaurants/${RESTAURANT_ID}/credits`)).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        if (remoteCredits.length) {
+          if (!cancelled) setCredits(remoteCredits);
+        } else if ((credits || []).length) {
+          await batchUploadCollection("credits", credits);
+        }
+
+        if (!cancelled) {
+          setFirebaseReady(true);
+          setSyncStatus("Firebase 연결됨");
+        }
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          setSyncStatus("Firebase 연결 확인 필요 · 임시로 기기저장 사용중");
+        }
+      } finally {
+        if (!cancelled) setFirebaseLoading(false);
+      }
+    };
+    loadFirebaseData();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => setLS(LS.restaurantName, restaurantName), [restaurantName]);
@@ -358,6 +493,22 @@ function App() {
   useEffect(() => setLS(LS.pinTables, pinTables), [pinTables]);
   useEffect(() => setLS(LS.pinOrder, pinOrder), [pinOrder]);
   useEffect(() => setLS(LS.scrollTopAfterPay, scrollTopAfterPay), [scrollTopAfterPay]);
+  useEffect(() => {
+    if (!firebaseReady) return;
+    const timer = window.setTimeout(() => {
+      saveSettingsToFirebase({
+        restaurantName, menus, categories, tableCount, tableRows, orders,
+        popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
+        pinTables, pinOrder, scrollTopAfterPay
+      })
+        .then(() => setSyncStatus("Firebase 자동저장 완료"))
+        .catch(error => {
+          console.error(error);
+          setSyncStatus("Firebase 설정 저장 실패 · 기기저장 유지중");
+        });
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay]);
 
   const currentOrder = orders[selectedTable] || [];
   const total = currentOrder.reduce((sum, item) => sum + item.price * item.qty, 0);
@@ -513,6 +664,7 @@ function App() {
       id: Date.now(),
       table: selectedTable,
       payment,
+      creditGroup: payment === "외상" ? creditName.trim() : "",
       serviceType,
       total,
       createdAt: new Date().toISOString(),
@@ -520,23 +672,28 @@ function App() {
     };
 
     setSales(prev => [sale, ...prev]);
+    saveSaleToFirebase(sale)
+      .then(() => setSyncStatus("판매내역 Firebase 저장 완료"))
+      .catch(error => { console.error(error); setSyncStatus("판매내역 Firebase 저장 실패 · 기기저장 유지중"); });
+
     if (payment === "외상") {
-      setCredits(prev => [
-        {
-          id: sale.id,
-          group: creditName.trim(),
-          phone: creditPhone,
-          memo: creditMemo,
-          table: selectedTable,
-          total,
-          remain: total,
-          paid: false,
-          createdAt: sale.createdAt,
-          items: currentOrder,
-          partialPayments: []
-        },
-        ...prev
-      ]);
+      const credit = {
+        id: sale.id,
+        group: creditName.trim(),
+        phone: creditPhone,
+        memo: creditMemo,
+        table: selectedTable,
+        total,
+        remain: total,
+        paid: false,
+        createdAt: sale.createdAt,
+        items: currentOrder,
+        partialPayments: []
+      };
+      setCredits(prev => [credit, ...prev]);
+      saveCreditToFirebase(credit)
+        .then(() => setSyncStatus("외상장부 Firebase 저장 완료"))
+        .catch(error => { console.error(error); setSyncStatus("외상장부 Firebase 저장 실패 · 기기저장 유지중"); });
       setCreditName("");
       setCreditPhone("");
       setCreditMemo("");
@@ -546,7 +703,10 @@ function App() {
     setOrders(prev => ({ ...prev, [selectedTable]: [] }));
     setCreditWarn("");
     showToast(`${selectedTable}번테이블 ${payment}결제 완료했습니다`);
-    if (withPrint) printReceipt(sale);
+    if (withPrint) {
+      setReceiptPrintSale(sale);
+      window.setTimeout(() => printReceipt(sale), 250);
+    }
     if (scrollTopAfterPay) window.setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 120);
   };
 
@@ -601,9 +761,11 @@ function App() {
     const unlock = selected.every(item => item.paid);
     setCredits(prev => prev.map(item => {
       if (!selectedCreditIds.includes(item.id)) return item;
-      return unlock
+      const updated = unlock
         ? { ...item, paid: false, remain: item.total, partialPayments: [] }
         : { ...item, paid: true, remain: 0 };
+      saveCreditToFirebase(updated).catch(error => { console.error(error); setSyncStatus("외상장부 Firebase 저장 실패 · 기기저장 유지중"); });
+      return updated;
     }));
     setSelectedCreditIds([]);
   };
@@ -614,12 +776,14 @@ function App() {
     setCredits(prev => prev.map(item => {
       if (item.id !== id) return item;
       const remain = Math.max(0, Number(item.remain || 0) - payAmount);
-      return {
+      const updated = {
         ...item,
         remain,
         paid: remain === 0,
         partialPayments: [...(item.partialPayments || []), { amount: payAmount, at: new Date().toISOString() }]
       };
+      saveCreditToFirebase(updated).catch(error => { console.error(error); setSyncStatus("외상장부 Firebase 저장 실패 · 기기저장 유지중"); });
+      return updated;
     }));
   };
 
@@ -663,9 +827,11 @@ function App() {
     const unlock = selected.every(item => item.paid);
     setCredits(prev => prev.map(item => {
       if (!ids.has(item.id)) return item;
-      return unlock
+      const updated = unlock
         ? { ...item, paid: false, remain: item.total, partialPayments: [] }
         : { ...item, paid: true, remain: 0 };
+      saveCreditToFirebase(updated).catch(error => { console.error(error); setSyncStatus("외상장부 Firebase 저장 실패 · 기기저장 유지중"); });
+      return updated;
     }));
     setSelectedCreditIds(prev => prev.filter(id => !ids.has(id)));
   };
@@ -701,6 +867,7 @@ function App() {
         <div>
           <h1>{restaurantName} POS <span>{VERSION}</span></h1>
           <p>주문 · 외상장부 · 판매통계 · 관리자</p>
+          <p className="syncStatus">{syncStatus}</p>
         </div>
         <div className="topBtns">
           <button onClick={e => { e.stopPropagation(); openAdmin(); }} className="dark">관리자모드</button>
@@ -870,7 +1037,7 @@ function App() {
         </section>
       )}
 
-      {openStats && <section className="card panel"><Stats sales={sales} menus={menus} restaurantName={restaurantName} /></section>}
+      {openStats && <section className="card panel"><Stats sales={sales} credits={credits} menus={menus} restaurantName={restaurantName} /></section>}
 
       {showPw && (
         <div className="modal">
@@ -933,6 +1100,23 @@ function App() {
         </div>
       )}
 
+      {receiptPrintSale && (
+        <div className="modal">
+          <div className="modalBox receiptConfirm">
+            <button className="xBtn" onClick={() => setReceiptPrintSale(null)}>×</button>
+            <h2>영수증 출력</h2>
+            <p>결제는 완료되었습니다. 인쇄창이 안 뜨면 아래 버튼을 눌러 다시 출력해주세요.</p>
+            <div className="summaryBox">
+              {receiptPrintSale.table}번 / {receiptPrintSale.payment}{receiptPrintSale.creditGroup ? `-${receiptPrintSale.creditGroup}` : ""} / {money(receiptPrintSale.total)}
+            </div>
+            <div className="receiptActions">
+              <button className="green" onClick={() => printReceipt(receiptPrintSale)}>영수증 다시 출력</button>
+              <button className="dark" onClick={() => setReceiptPrintSale(null)}>POS 화면으로 돌아가기</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {receiptModal && (
         <div className="modal">
           <div className="modalBox wide">
@@ -985,12 +1169,12 @@ function CreditRow({ c, selected, setSelectedCreditIds, partialPay }) {
   );
 }
 
-function Stats({ sales, menus, restaurantName }) {
+function Stats({ sales, credits, menus, restaurantName }) {
   const [startDate, setStartDate] = useState(todayValue());
   const [endDate, setEndDate] = useState(todayValue());
   const filteredSales = useMemo(() => filterSalesByRange(sales, startDate, endDate), [sales, startDate, endDate]);
   const exportSalesExcel = () => {
-    const sheets = buildSalesWorkbook({ restaurantName, sales, menus, startDate, endDate });
+    const sheets = buildSalesWorkbook({ restaurantName, sales, credits, menus, startDate, endDate });
     downloadXlsx(`${restaurantName || "식당"}_판매통계_${startDate}_${endDate}_${timeName()}.xlsx`, sheets);
   };
 
