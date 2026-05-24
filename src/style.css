@@ -6,3 +6,18 @@
 .popularScroller .menuCard .pic{width:78px;height:78px}
 .menuCard img{width:100%;height:100%;object-fit:cover;border-radius:14px}
 .creditHead{align-items:flex-start;flex-wrap:wrap}.creditActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.creditActions button{margin-left:0}.orangeAction{background:#f97316;color:white;border-radius:14px;padding:12px 18px;font-weight:900}.creditGroup{border:2px solid #e5e7eb;border-radius:18px;padding:12px;margin:14px 0;background:#fff}.creditGroupHead{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#f8fafc;border-radius:14px;padding:12px;margin-bottom:10px}.creditGroupHead b{font-size:22px}.creditGroupHead span{color:#dc2626;font-weight:900;margin-left:10px}.creditGroupHead button{background:#e5e7eb;border-radius:12px;padding:10px 14px;font-weight:900}.creditRow{grid-template-columns:52px 1fr 230px}.creditRow>input[type="checkbox"]{width:32px!important;height:32px!important;justify-self:center;align-self:center}.creditSide button{font-weight:800}.adminMenu{grid-template-columns:64px 1.4fr 130px 150px 86px 80px}.adminMenuHead{align-items:center}.adminMenu>input[type="checkbox"]{width:26px;height:26px;justify-self:center;align-self:center}.moveBtns{display:flex;gap:4px;justify-content:center}.moveBtns button{background:#e5e7eb;border-radius:10px;padding:8px 9px;font-weight:900}.adminMenuName img,.adminMenuName span{flex:0 0 42px}.grid2 select{border:2px solid #e2e8f0;border-radius:12px;padding:12px;width:100%}@media(max-width:1000px){.creditActions{justify-content:flex-start}.creditRow{grid-template-columns:48px 1fr}.adminMenu{grid-template-columns:52px 1fr}.adminMenuHead{display:none}.adminMenu>input[type="checkbox"]{grid-column:1}.moveBtns{grid-column:2;justify-content:flex-start}}
+
+/* V16 외상장부 단체별 제어 버튼 */
+.creditActions .green,
+.groupActions .green,
+.right .green{background:#16a34a!important;color:#fff!important;border-radius:14px;padding:12px 18px;font-weight:900}
+.creditActions .orangeAction,
+.groupActions .orangeAction,
+.right .orangeAction{background:#f97316!important;color:#fff!important;border-radius:14px;padding:12px 18px;font-weight:900}
+.creditGroupHead{align-items:flex-start;flex-wrap:wrap}
+.creditGroupTitle{min-width:260px;flex:1}
+.creditGroupTitle p{margin:6px 0 0}
+.groupActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.groupActions button{margin-left:0;background:#e5e7eb;border-radius:12px;padding:10px 14px;font-weight:900}
+.groupActions button:nth-child(4){background:#2563eb;color:white}
+@media(max-width:1000px){.groupActions{justify-content:flex-start}.creditGroupTitle{width:100%}}

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V15";
+const VERSION = "V16";
 
 const D_M = [
   { id: "m1", name: "생태탕", price: 12000, category: "식사류", emoji: "🍲", image: "", soldOut: false },
@@ -390,11 +390,53 @@ function App() {
   const selectedCreditTotal = selectedCredits.reduce((sum, item) => sum + (!item.paid ? Number(item.remain || 0) : 0), 0);
   const isUnlockMode = selectedCredits.length > 0 && selectedCredits.every(item => item.paid);
   const payToggleClass = isUnlockMode ? "orangeAction" : "green";
+
   const selectAllUnpaid = () => setSelectedCreditIds(credits.filter(item => !item.paid).map(item => item.id));
   const clearCreditSelection = () => setSelectedCreditIds([]);
   const openMessageModal = () => {
     if (!selectedCredits.length) return showToast("문자전송할 외상 내역을 선택해주세요");
-    setMsgModal({ selected: selectedCredits, total: selectedCreditTotal });
+    setMsgModal({ title: "선택 내역 문자전송", selected: selectedCredits, total: selectedCreditTotal });
+  };
+
+  const getGroupItems = groupName => credits.filter(item => (item.group || "미지정") === groupName);
+  const getGroupSelected = groupName => getGroupItems(groupName).filter(item => selectedCreditIds.includes(item.id));
+  const getGroupSelectedTotal = groupName => getGroupSelected(groupName).reduce((sum, item) => sum + (!item.paid ? Number(item.remain || 0) : 0), 0);
+  const getGroupPayInfo = groupName => {
+    const selected = getGroupSelected(groupName);
+    const unlock = selected.length > 0 && selected.every(item => item.paid);
+    return {
+      selected,
+      unlock,
+      label: unlock ? "단체 완납해제" : "단체 완납처리",
+      className: unlock ? "orangeAction" : "green"
+    };
+  };
+  const selectGroupUnpaid = groupName => {
+    const ids = getGroupItems(groupName).filter(item => !item.paid).map(item => item.id);
+    setSelectedCreditIds(prev => Array.from(new Set([...prev, ...ids])));
+  };
+  const clearGroupSelection = groupName => {
+    const ids = new Set(getGroupItems(groupName).map(item => item.id));
+    setSelectedCreditIds(prev => prev.filter(id => !ids.has(id)));
+  };
+  const toggleGroupPaid = groupName => {
+    const selected = getGroupSelected(groupName);
+    if (!selected.length) return showToast("완납처리할 단체 내역을 선택해주세요");
+    const ids = new Set(selected.map(item => item.id));
+    const unlock = selected.every(item => item.paid);
+    setCredits(prev => prev.map(item => {
+      if (!ids.has(item.id)) return item;
+      return unlock
+        ? { ...item, paid: false, remain: item.total, partialPayments: [] }
+        : { ...item, paid: true, remain: 0 };
+    }));
+    setSelectedCreditIds(prev => prev.filter(id => !ids.has(id)));
+  };
+  const openGroupMessageModal = groupName => {
+    const selected = getGroupSelected(groupName);
+    if (!selected.length) return showToast("해당 단체에서 문자전송할 외상 내역을 선택해주세요");
+    const total = selected.reduce((sum, item) => sum + (!item.paid ? Number(item.remain || 0) : 0), 0);
+    setMsgModal({ title: `${groupName} 문자전송`, selected, total });
   };
 
   const groupedCredits = useMemo(() => {
@@ -551,11 +593,24 @@ function App() {
               <button onClick={openMessageModal}>문자전송</button>
             </div>
           </div>
-          {groupedCredits.length ? groupedCredits.map(group => (
+          {groupedCredits.length ? groupedCredits.map(group => {
+            const groupSelected = getGroupSelected(group.group);
+            const groupPayInfo = getGroupPayInfo(group.group);
+            const groupSelectedTotal = getGroupSelectedTotal(group.group);
+            return (
             <div className="creditGroup" key={group.group}>
               <div className="creditGroupHead">
-                <div><b>{group.group}</b> <span>미납총액 {money(group.unpaidTotal)}</span></div>
-                <button onClick={() => setHiddenCreditGroups(prev => ({ ...prev, [group.group]: !prev[group.group] }))}>{hiddenCreditGroups[group.group] ? "펼치기" : "숨기기"}</button>
+                <div className="creditGroupTitle">
+                  <b>{group.group}</b> <span>미납총액 {money(group.unpaidTotal)}</span>
+                  <p className="muted">단체 선택 {groupSelected.length}건 / 선택 미납합계 <b>{money(groupSelectedTotal)}</b></p>
+                </div>
+                <div className="groupActions">
+                  <button onClick={() => selectGroupUnpaid(group.group)}>단체 미결제 전체선택</button>
+                  <button onClick={() => clearGroupSelection(group.group)}>단체 선택해제</button>
+                  <button className={groupPayInfo.className} onClick={() => toggleGroupPaid(group.group)}>{groupPayInfo.label}</button>
+                  <button onClick={() => openGroupMessageModal(group.group)}>현단체 문자전송</button>
+                  <button onClick={() => setHiddenCreditGroups(prev => ({ ...prev, [group.group]: !prev[group.group] }))}>{hiddenCreditGroups[group.group] ? "펼치기" : "숨기기"}</button>
+                </div>
               </div>
               {!hiddenCreditGroups[group.group] && group.items.map(credit => (
                 <CreditRow
@@ -567,7 +622,8 @@ function App() {
                 />
               ))}
             </div>
-          )) : <p className="muted">외상 내역이 없습니다</p>}
+            );
+          }) : <p className="muted">외상 내역이 없습니다</p>}
           <div className="right"><button className={payToggleClass} onClick={togglePaid}>{creditLabel()}</button></div>
         </section>
       )}
@@ -626,7 +682,7 @@ function App() {
         <div className="modal">
           <div className="modalBox wide">
             <button className="xBtn" onClick={() => setMsgModal(null)}>×</button>
-            <h2>문자전송</h2>
+            <h2>{msgModal.title || "문자전송"}</h2>
             <div className="summaryBox">선택한 외상 {msgModal.selected?.length || 0}건 / 미납총액 <b>{money(msgModal.total || 0)}</b></div>
             <p>문자전송 기능 준비중입니다 😊</p>
             <p className="muted">현재는 체크한 내역 기준으로 미납총액만 계산합니다. 추후 외상 독려문자, 자동 금액 입력, 문자포인트, 발송내역 기능을 연결할 예정입니다.</p>
