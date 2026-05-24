@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V18";
+const VERSION = "V19";
 
 const D_M = [
   { id: "m1", name: "생태탕", price: 12000, category: "식사류", emoji: "🍲", image: "", soldOut: false },
@@ -182,23 +182,12 @@ const downloadXlsx = (fileName, sheets) => {
   link.download = fileName;
   link.click();
 };
-const buildSalesWorkbook = ({ restaurantName, sales, menus, credits = [], startDate, endDate }) => {
+const buildSalesWorkbook = ({ restaurantName, sales, menus, startDate, endDate }) => {
   const filteredSales = filterSalesByRange(sales, startDate, endDate);
-  const creditBySaleId = {};
-  credits.forEach(item => {
-    if (item?.id != null) creditBySaleId[item.id] = item.group || item.credit || item.creditGroup || "미지정";
-  });
-  const paymentText = sale => {
-    const pay = sale.payment || "";
-    if (pay !== "외상") return pay || "미지정";
-    const group = sale.creditGroup || sale.credit || sale.group || creditBySaleId[sale.id] || "미지정";
-    return `외상-${group}`;
-  };
   const byPay = {}, byService = {}, byHour = {}, byMenu = {};
   filteredSales.forEach(sale => {
     const total = saleTotal(sale);
-    const payLabel = paymentText(sale);
-    byPay[payLabel] = (byPay[payLabel] || 0) + total;
+    byPay[sale.payment || "미지정"] = (byPay[sale.payment || "미지정"] || 0) + total;
     byService[saleService(sale)] = (byService[saleService(sale)] || 0) + total;
     const d = safeDateObj(saleTimeValue(sale));
     const hour = d ? `${d.getHours()}시` : "시간없음";
@@ -246,7 +235,7 @@ const buildSalesWorkbook = ({ restaurantName, sales, menus, credits = [], startD
         dateText(saleTimeValue(sale)),
         timeText(saleTimeValue(sale)),
         sale.table || "",
-        paymentText(sale),
+        sale.payment || "",
         saleService(sale),
         item.name || "",
         Number(item.qty || 0),
@@ -341,6 +330,17 @@ function App() {
   const [pinTables, setPinTables] = useState(() => getLS(LS.pinTables, true));
   const [pinOrder, setPinOrder] = useState(() => getLS(LS.pinOrder, true));
   const [scrollTopAfterPay, setScrollTopAfterPay] = useState(() => getLS(LS.scrollTopAfterPay, true));
+  const [screenWidth, setScreenWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1400));
+
+  useEffect(() => {
+    const onResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, []);
 
   useEffect(() => setLS(LS.restaurantName, restaurantName), [restaurantName]);
   useEffect(() => setLS(LS.menus, menus), [menus]);
@@ -364,6 +364,7 @@ function App() {
   const tables = Array.from({ length: Number(tableCount) || 1 }, (_, index) => index + 1);
   const rows = Math.max(1, Math.min(Number(tableRows) || 2, tables.length));
   const cols = Math.ceil(tables.length / rows);
+  const tableColumns = screenWidth <= 1200 ? Math.min(3, tables.length) : cols;
   const fixedEnabled = !openCredit && !openStats;
 
   const sortedCats = useMemo(
@@ -453,10 +454,42 @@ function App() {
   };
 
   const printReceipt = sale => {
-    const win = window.open("", "receipt", "width=360,height=600");
-    if (!win) return;
-    win.document.write(`<!doctype html><html><head><title>영수증</title><style>body{font-family:sans-serif;width:280px;margin:12px}h2{text-align:center;margin:0 0 8px}td{padding:4px;border-bottom:1px dashed #ccc}.total{text-align:right;font-weight:bold;font-size:20px;margin-top:12px}</style></head><body><h2>${restaurantName}</h2><div>${new Date(sale.createdAt).toLocaleString()}</div><div>${sale.table}번 / ${sale.payment} / ${sale.serviceType}</div><hr/><table style="width:100%">${sale.items.map(item => `<tr><td>${item.name}</td><td>${item.qty}</td><td>${money(item.price * item.qty)}</td></tr>`).join("")}</table><div class="total">합계 ${money(sale.total)}</div><p style="text-align:center">감사합니다</p><script>window.onload=function(){window.print();setTimeout(function(){window.close()},300)}</script></body></html>`);
-    win.document.close();
+    const receiptHtml = `<!doctype html><html><head><title>영수증</title><meta name="viewport" content="width=device-width,initial-scale=1"/><style>body{font-family:sans-serif;width:280px;margin:12px;color:#111}h2{text-align:center;margin:0 0 8px}td{padding:4px;border-bottom:1px dashed #ccc}.total{text-align:right;font-weight:bold;font-size:20px;margin-top:12px}.actions{margin-top:22px;display:flex;gap:8px}.actions button{flex:1;border:0;border-radius:12px;padding:12px;font-weight:bold}.back{background:#111827;color:white}.print{background:#16a34a;color:white}@media print{.actions{display:none}} </style></head><body><h2>${restaurantName}</h2><div>${new Date(sale.createdAt).toLocaleString()}</div><div>${sale.table}번 / ${sale.payment} / ${sale.serviceType}</div><hr/><table style="width:100%">${sale.items.map(item => `<tr><td>${item.name}</td><td>${item.qty}</td><td>${money(item.price * item.qty)}</td></tr>`).join("")}</table><div class="total">합계 ${money(sale.total)}</div><p style="text-align:center">감사합니다</p><div class="actions"><button class="back" onclick="window.close();history.back();">POS 화면으로 돌아가기</button><button class="print" onclick="window.print();">영수증 다시 출력</button></div></body></html>`;
+
+    try {
+      const frame = document.createElement("iframe");
+      frame.setAttribute("aria-hidden", "true");
+      frame.style.position = "fixed";
+      frame.style.right = "0";
+      frame.style.bottom = "0";
+      frame.style.width = "0";
+      frame.style.height = "0";
+      frame.style.border = "0";
+      frame.style.opacity = "0";
+      document.body.appendChild(frame);
+
+      const doc = frame.contentWindow?.document;
+      if (!doc) throw new Error("iframe print unavailable");
+      doc.open();
+      doc.write(receiptHtml);
+      doc.close();
+
+      frame.onload = () => {
+        window.setTimeout(() => {
+          try {
+            frame.contentWindow?.focus();
+            frame.contentWindow?.print();
+          } finally {
+            window.setTimeout(() => frame.remove(), 1200);
+          }
+        }, 120);
+      };
+    } catch {
+      const win = window.open("", "receipt", "width=360,height=600");
+      if (!win) return;
+      win.document.write(receiptHtml.replace("</body>", "<script>window.onload=function(){window.print();setTimeout(function(){try{window.close()}catch(e){}},500)}<\/script></body>"));
+      win.document.close();
+    }
   };
 
   const complete = withPrint => {
@@ -480,7 +513,6 @@ function App() {
       id: Date.now(),
       table: selectedTable,
       payment,
-      creditGroup: payment === "외상" ? creditName.trim() : "",
       serviceType,
       total,
       createdAt: new Date().toISOString(),
@@ -679,7 +711,7 @@ function App() {
         <div className="leftCol">
           <section
             className={`tables ${pinTables && fixedEnabled ? "pinTables" : ""}`}
-            style={{ gridTemplateColumns: `repeat(${cols}, minmax(110px, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${tableColumns}, minmax(0, 1fr))` }}
           >
             {tables.map(table => (
               <button
@@ -838,7 +870,7 @@ function App() {
         </section>
       )}
 
-      {openStats && <section className="card panel"><Stats sales={sales} menus={menus} credits={credits} restaurantName={restaurantName} /></section>}
+      {openStats && <section className="card panel"><Stats sales={sales} menus={menus} restaurantName={restaurantName} /></section>}
 
       {showPw && (
         <div className="modal">
@@ -953,32 +985,19 @@ function CreditRow({ c, selected, setSelectedCreditIds, partialPay }) {
   );
 }
 
-function Stats({ sales, menus, credits = [], restaurantName }) {
+function Stats({ sales, menus, restaurantName }) {
   const [startDate, setStartDate] = useState(todayValue());
   const [endDate, setEndDate] = useState(todayValue());
   const filteredSales = useMemo(() => filterSalesByRange(sales, startDate, endDate), [sales, startDate, endDate]);
-  const creditBySaleId = useMemo(() => {
-    const map = {};
-    credits.forEach(item => {
-      if (item?.id != null) map[item.id] = item.group || item.credit || item.creditGroup || "미지정";
-    });
-    return map;
-  }, [credits]);
-  const paymentLabel = sale => {
-    if ((sale.payment || "") !== "외상") return sale.payment || "미지정";
-    const group = sale.creditGroup || sale.credit || sale.group || creditBySaleId[sale.id] || "미지정";
-    return `외상-${group}`;
-  };
   const exportSalesExcel = () => {
-    const sheets = buildSalesWorkbook({ restaurantName, sales, menus, credits, startDate, endDate });
+    const sheets = buildSalesWorkbook({ restaurantName, sales, menus, startDate, endDate });
     downloadXlsx(`${restaurantName || "식당"}_판매통계_${startDate}_${endDate}_${timeName()}.xlsx`, sheets);
   };
 
   const byPay = {}, byService = {}, byHour = {}, byMenu = {};
   filteredSales.forEach(sale => {
     const total = saleTotal(sale);
-    const payLabel = paymentLabel(sale);
-    byPay[payLabel] = (byPay[payLabel] || 0) + total;
+    byPay[sale.payment || "미지정"] = (byPay[sale.payment || "미지정"] || 0) + total;
     byService[saleService(sale)] = (byService[saleService(sale)] || 0) + total;
     const date = safeDateObj(saleTimeValue(sale));
     const hour = date ? `${date.getHours()}시` : "시간없음";

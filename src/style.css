@@ -69,3 +69,34 @@
 .sectionHead button.orange,.dateRange button.orange{background:#f97316!important;color:white!important;border-radius:14px;padding:12px 18px;font-weight:900}
 .creditActions button.green,.groupActions button.green,.right button.green{background:#16a34a!important;color:white!important}
 .creditActions button.orange,.groupActions button.orange,.right button.orange{background:#f97316!important;color:white!important}
+
+/* V19 반응형/영수증 보정 */
+.tables{max-width:100%;overflow:hidden}
+.sectionHead h2{white-space:nowrap;word-break:keep-all}
+.popular{max-width:100%}
+.popular .muted{word-break:keep-all;line-height:1.5}
+@media(max-width:1200px) and (min-width:1001px){
+  .app{max-width:none;width:100%;padding-left:14px;padding-right:14px}
+  .layout{grid-template-columns:minmax(0,1fr) 390px;gap:14px}
+  .tableBtn{height:58px;font-size:18px}
+  .order{min-width:0;overflow:hidden}
+  .order h2{font-size:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .popularScroller .menuCard{flex-basis:142px}
+  .menuGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+  html,body,#root{width:100%;max-width:100%;overflow-x:hidden}
+  .app{width:100%;max-width:100%;margin:0;padding:10px 10px 86px}
+  .top{width:100%;margin-bottom:12px}
+  .tables{gap:8px;margin-bottom:12px}
+  .tableBtn{height:48px;font-size:17px;border-width:2px;border-radius:12px}
+  .popular.card{padding:14px;overflow:hidden}
+  .popular .sectionHead{flex-direction:column;align-items:flex-start;gap:8px}
+  .popular .sectionHead h2{font-size:24px;margin-bottom:0;writing-mode:horizontal-tb;letter-spacing:0}
+  .periodBtns{display:flex;gap:6px;width:100%;overflow-x:auto;white-space:nowrap;padding-bottom:2px}
+  .periodBtns button{margin-left:0;padding:9px 12px;flex:0 0 auto}
+  .popularScroller{gap:10px}
+  .popularScroller .menuCard{flex-basis:130px}
+  .serviceBtns{display:flex;gap:8px;overflow-x:auto}
+  .serviceBtns button{margin-left:0;flex:0 0 auto}
+}
