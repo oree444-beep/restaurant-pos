@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V21";
+const VERSION = "V22";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAC3W2CNOW7-GzgSHeecILfMHv3KsIis7Y",
@@ -140,6 +140,11 @@ const defaultSubscription = () => ({
   expireDate: addDaysValue(todayValue(), 30),
   graceDays: 7,
   monthlyFee: 30000,
+  bankName: "농협",
+  accountNumber: "123-456-7890",
+  referralActiveCount: 0,
+  referralDiscountRate: 10,
+  referralGraceDays: 90,
   status: "active"
 });
 const formatKoreanDate = value => {
@@ -577,7 +582,7 @@ function App() {
       return {
         className: daysLeft <= 3 ? "warn" : "ok",
         text: `이용기간: ${formatKoreanDate(subscription.expireDate)}까지`,
-        notice: daysLeft <= 7 ? `이용기간이 ${daysLeft}일 남았습니다. 안정적인 이용을 위해 연장 입금을 부탁드립니다.` : ""
+        notice: daysLeft <= 7 ? `연장 안내 · ${Math.max(0, daysLeft)}일 남음` : ""
       };
     }
     const graceEnd = new Date(end);
@@ -587,11 +592,24 @@ function App() {
       return {
         className: "warn",
         text: `유예기간 이용중 · ${Math.max(0, graceLeft)}일 남음`,
-        notice: `이용기간이 종료되었습니다. 현재 유예기간으로 이용 중입니다. 연장 입금 확인을 부탁드립니다.`
+        notice: `입금 확인 후 이용기간이 연장됩니다`
       };
     }
-    return { className: "danger", text: "이용기간 확인 필요", notice: "이용기간 및 유예기간이 종료되었습니다. 관리자에게 문의해주세요." };
+    return { className: "danger", text: "이용기간 확인 필요", notice: "관리자에게 문의해주세요" };
   }, [subscription]);
+
+  const compactSyncStatus = firebaseReady ? "자동저장 완료" : firebaseLoading ? "자동저장 확인중" : "기기저장 유지중";
+  const copyAccountNumber = async event => {
+    event?.stopPropagation?.();
+    const digits = String(subscription?.accountNumber || "").replace(/\D/g, "");
+    if (!digits) return showToast("복사할 계좌번호가 없습니다");
+    try {
+      await navigator.clipboard.writeText(digits);
+      showToast("계좌번호 숫자만 복사되었습니다");
+    } catch {
+      window.prompt("아래 계좌번호를 복사해주세요", digits);
+    }
+  };
 
   const sortedCats = useMemo(
     () => [...categories].sort((a, b) => Number(a.order) - Number(b.order)),
@@ -786,46 +804,60 @@ function App() {
   };
 
 
-  const confirmReset = label => window.prompt(`${label}\n정말 초기화하려면 아래 칸에 초기화 라고 입력해주세요.`) === "초기화";
+  const [resetDialog, setResetDialog] = useState(null);
 
-  const resetSalesData = async () => {
-    if (!confirmReset("판매내역/판매통계/인기메뉴 기록을 초기화합니다. 메뉴와 설정은 유지됩니다.")) return;
-    const ids = sales.map(item => item.id);
-    setSales([]);
-    setLS(LS.salesHistory, []);
-    try {
+  const resetDialogMap = {
+    sales: {
+      mode: "password",
+      title: "판매내역/판매통계 초기화",
+      message: "판매내역, 판매통계, 인기메뉴 기록을 초기화합니다. 메뉴와 설정은 유지됩니다."
+    },
+    orders: {
+      mode: "password",
+      title: "현재 주문내역 초기화",
+      message: "현재 테이블별 주문내역만 초기화합니다. 판매내역과 외상장부는 유지됩니다."
+    },
+    credits: {
+      mode: "danger",
+      title: "외상장부 초기화",
+      message: "외상장부는 금액 손실과 직접 관련된 중요한 자료입니다. 이 작업은 되돌리기 어렵습니다."
+    },
+    operating: {
+      mode: "danger",
+      title: "운영 데이터 전체 초기화",
+      message: "판매내역, 판매통계, 외상장부, 현재 주문내역을 모두 초기화합니다. 메뉴와 설정은 유지됩니다. 이 작업은 되돌리기 어렵습니다."
+    }
+  };
+
+  const openResetDialog = action => {
+    const config = resetDialogMap[action];
+    if (!config) return;
+    setResetDialog({ ...config, action, password: "", confirmText: "", error: "" });
+  };
+
+  const executeReset = async action => {
+    if (action === "sales") {
+      const ids = sales.map(item => item.id);
+      setSales([]);
+      setLS(LS.salesHistory, []);
       await firestoreDeleteMany("sales", ids);
       setSyncStatus("판매내역 Firebase 초기화 완료");
       showToast("판매내역/판매통계가 초기화되었습니다");
-    } catch (error) {
-      console.error(error);
-      setSyncStatus("판매내역 Firebase 초기화 실패");
-      alert("Firebase 판매내역 초기화 중 오류가 발생했습니다. 콘솔을 확인해주세요.");
+      return;
     }
-  };
-
-  const resetCreditData = async () => {
-    if (!confirmReset("외상장부를 초기화합니다. 이 작업은 매우 중요하니 실제 운영 중에는 백업 후 진행해주세요.")) return;
-    const ids = credits.map(item => item.id);
-    setCredits([]);
-    setSelectedCreditIds([]);
-    setLS(LS.creditLedger, []);
-    try {
+    if (action === "credits") {
+      const ids = credits.map(item => item.id);
+      setCredits([]);
+      setSelectedCreditIds([]);
+      setLS(LS.creditLedger, []);
       await firestoreDeleteMany("credits", ids);
       setSyncStatus("외상장부 Firebase 초기화 완료");
       showToast("외상장부가 초기화되었습니다");
-    } catch (error) {
-      console.error(error);
-      setSyncStatus("외상장부 Firebase 초기화 실패");
-      alert("Firebase 외상장부 초기화 중 오류가 발생했습니다. 콘솔을 확인해주세요.");
+      return;
     }
-  };
-
-  const resetOrderData = async () => {
-    if (!confirmReset("현재 테이블 주문내역을 초기화합니다.")) return;
-    setOrders({});
-    setLS(LS.orders, {});
-    try {
+    if (action === "orders") {
+      setOrders({});
+      setLS(LS.orders, {});
       await saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders: {},
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
@@ -833,24 +865,18 @@ function App() {
       });
       setSyncStatus("현재 주문내역 초기화 완료");
       showToast("현재 주문내역이 초기화되었습니다");
-    } catch (error) {
-      console.error(error);
-      setSyncStatus("현재 주문내역 Firebase 초기화 실패");
+      return;
     }
-  };
-
-  const resetOperatingData = async () => {
-    if (!confirmReset("운영 데이터 전체를 초기화합니다. 판매내역, 외상장부, 현재 주문내역이 삭제되고 메뉴/설정은 유지됩니다.")) return;
-    const saleIds = sales.map(item => item.id);
-    const creditIds = credits.map(item => item.id);
-    setSales([]);
-    setCredits([]);
-    setOrders({});
-    setSelectedCreditIds([]);
-    setLS(LS.salesHistory, []);
-    setLS(LS.creditLedger, []);
-    setLS(LS.orders, {});
-    try {
+    if (action === "operating") {
+      const saleIds = sales.map(item => item.id);
+      const creditIds = credits.map(item => item.id);
+      setSales([]);
+      setCredits([]);
+      setOrders({});
+      setSelectedCreditIds([]);
+      setLS(LS.salesHistory, []);
+      setLS(LS.creditLedger, []);
+      setLS(LS.orders, {});
       await firestoreDeleteMany("sales", saleIds);
       await firestoreDeleteMany("credits", creditIds);
       await saveSettingsToFirebase({
@@ -860,12 +886,34 @@ function App() {
       });
       setSyncStatus("운영 데이터 전체 초기화 완료");
       showToast("운영 데이터가 초기화되었습니다");
-    } catch (error) {
-      console.error(error);
-      setSyncStatus("운영 데이터 Firebase 초기화 실패");
-      alert("Firebase 운영 데이터 초기화 중 오류가 발생했습니다. 콘솔을 확인해주세요.");
     }
   };
+
+  const confirmResetDialog = async () => {
+    if (!resetDialog) return;
+    if (resetDialog.mode === "password" && resetDialog.password !== adminPw) {
+      setResetDialog(prev => ({ ...prev, error: "관리자 비밀번호가 맞지 않습니다." }));
+      return;
+    }
+    if (resetDialog.mode === "danger" && resetDialog.confirmText !== "초기화") {
+      setResetDialog(prev => ({ ...prev, error: "정확히 초기화 라고 입력해주세요." }));
+      return;
+    }
+    try {
+      const action = resetDialog.action;
+      setResetDialog(null);
+      await executeReset(action);
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Firebase 초기화 실패");
+      alert("Firebase 초기화 중 오류가 발생했습니다. 콘솔을 확인해주세요.");
+    }
+  };
+
+  const resetSalesData = () => openResetDialog("sales");
+  const resetCreditData = () => openResetDialog("credits");
+  const resetOrderData = () => openResetDialog("orders");
+  const resetOperatingData = () => openResetDialog("operating");
 
   const openShortcutGuide = async () => {
     if (installPrompt) {
@@ -1031,17 +1079,22 @@ function App() {
 
   return (
     <div className="app" onClick={clearToast}>
-      <header className="top card">
-        <div>
-          <h1>{restaurantName} POS <span>{VERSION}</span></h1>
+      <header className="top card compactTop">
+        <div className="topLeft">
+          <h1>{restaurantName} POS <span>{VERSION} · {compactSyncStatus}</span></h1>
           <p>주문 · 외상장부 · 판매통계 · 관리자</p>
-          <p className={`subscriptionBadge ${subscriptionInfo.className}`}>{subscriptionInfo.text}</p>
           {subscriptionInfo.notice && <p className={`subscriptionNotice ${subscriptionInfo.className}`}>{subscriptionInfo.notice}</p>}
-          <p className="syncStatus">{syncStatus}</p>
         </div>
-        <div className="topBtns">
-          <button onClick={e => { e.stopPropagation(); openAdmin(); }} className="dark">관리자모드</button>
-                  </div>
+        <div className="topRightInfo" onClick={e => e.stopPropagation()}>
+          <div className={`subscriptionBadge ${subscriptionInfo.className}`}>{subscriptionInfo.text}</div>
+          <div className="billingLine">
+            <span>{subscription?.bankName || "입금계좌"} {subscription?.accountNumber || "미설정"}</span>
+            <span>월 이용료 {money(subscription?.monthlyFee || 0)}</span>
+            <button className="copyBtn" onClick={copyAccountNumber}>복사</button>
+          </div>
+          <div className="referralLine">소개 할인: {Number(subscription?.referralActiveCount || 0)}곳 적용 · 소개 1곳마다 현재 이용료 10% 추가 할인</div>
+          <button onClick={e => { e.stopPropagation(); openAdmin(); }} className="dark adminBtn">관리자모드</button>
+        </div>
       </header>
 
       <div className="layout">
@@ -1278,6 +1331,33 @@ function App() {
       )}
 
       {/* 영수증 추가 안내창은 V21에서 제거했습니다. 재출력은 최근 결제내역에서 가능합니다. */}
+
+      {resetDialog && (
+        <div className="modal">
+          <div className={`modalBox resetConfirmBox ${resetDialog.mode === "danger" ? "dangerReset" : ""}`} onClick={e => e.stopPropagation()}>
+            <button className="xBtn" onClick={() => setResetDialog(null)}>×</button>
+            <h2>{resetDialog.title}</h2>
+            {resetDialog.mode === "danger" ? (
+              <div className="dangerMessage">
+                <p>⚠ {resetDialog.message}</p>
+                <p>정말 초기화하려면 아래 칸에 <b>초기화</b> 라고 입력해주세요.</p>
+                <input autoFocus value={resetDialog.confirmText} onChange={e => setResetDialog(prev => ({ ...prev, confirmText: e.target.value, error: "" }))} placeholder="초기화 입력" />
+              </div>
+            ) : (
+              <div className="normalMessage">
+                <p>{resetDialog.message}</p>
+                <p>관리자 비밀번호를 입력해주세요.</p>
+                <input autoFocus type="password" value={resetDialog.password} onChange={e => setResetDialog(prev => ({ ...prev, password: e.target.value, error: "" }))} placeholder="관리자 비밀번호" onKeyDown={e => { if (e.key === "Enter") confirmResetDialog(); }} />
+              </div>
+            )}
+            {resetDialog.error && <p className="warnText">{resetDialog.error}</p>}
+            <div className="resetActions">
+              <button className={resetDialog.mode === "danger" ? "dangerBtn" : "green"} onClick={confirmResetDialog}>초기화 실행</button>
+              <button onClick={() => setResetDialog(null)}>취소</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {shortcutModal && (
         <div className="modal">
@@ -1564,15 +1644,15 @@ function AdminModal(props) {
             <label className="checkLabel"><input type="checkbox" checked={props.pinOrder} onChange={e => props.setPinOrder(e.target.checked)} /> 주문내역 영역 고정</label>
             <label className="checkLabel"><input type="checkbox" checked={props.scrollTopAfterPay} onChange={e => props.setScrollTopAfterPay(e.target.checked)} /> 결제완료 후 화면 맨 위로 이동</label>
           </div>
-          <div className="subscriptionSettings">
-            <h4>이용기간 표시</h4>
-            <div className="grid2">
-              <label>이용 시작일<input type="date" value={props.subscription?.startDate || ""} onChange={e => props.setSubscription(prev => ({ ...prev, startDate: e.target.value }))} /></label>
-              <label>이용 만료일<input type="date" value={props.subscription?.expireDate || ""} onChange={e => props.setSubscription(prev => ({ ...prev, expireDate: e.target.value }))} /></label>
-              <label>유예기간<input type="number" value={props.subscription?.graceDays ?? 7} onChange={e => props.setSubscription(prev => ({ ...prev, graceDays: Number(e.target.value) || 0 }))} /></label>
-              <label>월 이용료<input type="number" value={props.subscription?.monthlyFee ?? 0} onChange={e => props.setSubscription(prev => ({ ...prev, monthlyFee: Number(e.target.value) || 0 }))} /></label>
+          <div className="subscriptionSettings readOnlyBilling">
+            <h4>이용정보 / 납부정보</h4>
+            <div className="billingInfoGrid">
+              <div><b>이용기간</b><span>{props.subscription?.expireDate ? `${formatKoreanDate(props.subscription.expireDate)}까지` : "미설정"}</span></div>
+              <div><b>월 이용료</b><span>{money(props.subscription?.monthlyFee || 0)}</span></div>
+              <div><b>입금계좌</b><span>{props.subscription?.bankName || "미설정"} {props.subscription?.accountNumber || ""}</span></div>
+              <div><b>소개 할인</b><span>{Number(props.subscription?.referralActiveCount || 0)}곳 적용중</span></div>
             </div>
-            <p className="muted">나중에 종합관리프로그램에서 이 날짜를 수정하면 각 식당 POS에 자동 반영하는 구조로 확장할 수 있습니다.</p>
+            <p className="muted">이용기간, 월 이용료, 입금계좌, 소개할인은 식당 POS에서 수정하지 않고 추후 종합관리프로그램에서 자동 반영되도록 사용할 예정입니다.</p>
           </div>
           <div className="passwordRow">
             <label>새 비밀번호</label>
@@ -1596,7 +1676,7 @@ function AdminModal(props) {
             <button onClick={props.resetOrderData}>현재 주문내역 초기화</button>
             <button className="dangerBtn" onClick={props.resetOperatingData}>운영 데이터 전체 초기화</button>
           </div>
-          <p className="muted">초기화 실행 시 Firebase 데이터도 함께 삭제됩니다. 실수 방지를 위해 '초기화' 문구를 입력해야 합니다.</p>
+          <p className="muted">일반 초기화는 관리자 비밀번호 확인 후 실행됩니다. 외상장부와 운영 데이터 전체 초기화는 빨간 경고 확인 후 굵게 표시된 '초기화' 문구를 입력해야 합니다.</p>
         </div>
       </div>
     </div>
