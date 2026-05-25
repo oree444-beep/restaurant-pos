@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V20";
+const VERSION = "V21";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAC3W2CNOW7-GzgSHeecILfMHv3KsIis7Y",
@@ -48,7 +48,8 @@ const LS = {
   takeoutSetting: "takeoutSetting",
   pinTables: "pinTables",
   pinOrder: "pinOrder",
-  scrollTopAfterPay: "scrollTopAfterPay"
+  scrollTopAfterPay: "scrollTopAfterPay",
+  subscription: "subscription"
 };
 
 const getLS = (key, fallback) => {
@@ -106,6 +107,18 @@ const firestoreGetCollection = async path => {
   const data = await response.json();
   return (data.documents || []).map(item => fromFirestoreFields(item.fields || {}));
 };
+
+const firestoreDeleteDoc = async path => {
+  const response = await fetch(firestoreUrl(path), { method: "DELETE" });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(await response.text());
+  return null;
+};
+const firestoreDeleteMany = async (collectionName, ids) => {
+  for (const id of ids || []) {
+    await firestoreDeleteDoc(`restaurants/${RESTAURANT_ID}/${collectionName}/${firebaseId(id)}`);
+  }
+};
 const saveSettingsToFirebase = async data => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/config/settings`, { ...cleanData(data), initialized: true, updatedAt: new Date().toISOString() });
 const saveSaleToFirebase = async sale => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/sales/${firebaseId(sale.id)}`, { ...cleanData(sale), updatedAt: new Date().toISOString() });
 const saveCreditToFirebase = async credit => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/credits/${firebaseId(credit.id)}`, { ...cleanData(credit), updatedAt: new Date().toISOString() });
@@ -117,6 +130,23 @@ const batchUploadCollection = async (collectionName, items) => {
 };
 const money = value => `${(Number(value) || 0).toLocaleString()}원`;
 const todayValue = () => new Date().toISOString().slice(0, 10);
+const addDaysValue = (dateValue, days) => {
+  const base = dateValue ? new Date(`${dateValue}T00:00:00`) : new Date();
+  base.setDate(base.getDate() + Number(days || 0));
+  return base.toISOString().slice(0, 10);
+};
+const defaultSubscription = () => ({
+  startDate: todayValue(),
+  expireDate: addDaysValue(todayValue(), 30),
+  graceDays: 7,
+  monthlyFee: 30000,
+  status: "active"
+});
+const formatKoreanDate = value => {
+  const date = safeDateObj(value);
+  if (!date) return "미설정";
+  return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+};
 const timeName = () => {
   const d = new Date();
   return `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
@@ -399,6 +429,9 @@ function App() {
   const [pinTables, setPinTables] = useState(() => getLS(LS.pinTables, true));
   const [pinOrder, setPinOrder] = useState(() => getLS(LS.pinOrder, true));
   const [scrollTopAfterPay, setScrollTopAfterPay] = useState(() => getLS(LS.scrollTopAfterPay, true));
+  const [subscription, setSubscription] = useState(() => getLS(LS.subscription, defaultSubscription()));
+  const [shortcutModal, setShortcutModal] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
   const [screenWidth, setScreenWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1400));
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [firebaseLoading, setFirebaseLoading] = useState(true);
@@ -414,6 +447,19 @@ function App() {
       window.removeEventListener("orientationchange", onResize);
     };
   }, []);
+
+  useEffect(() => {
+    const onInstall = event => {
+      event.preventDefault();
+      setInstallPrompt(event);
+    };
+    window.addEventListener("beforeinstallprompt", onInstall);
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+    return () => window.removeEventListener("beforeinstallprompt", onInstall);
+  }, []);
+
 
 
   useEffect(() => {
@@ -438,11 +484,12 @@ function App() {
           setPinTables(data.pinTables ?? pinTables);
           setPinOrder(data.pinOrder ?? pinOrder);
           setScrollTopAfterPay(data.scrollTopAfterPay ?? scrollTopAfterPay);
+          setSubscription(data.subscription ?? subscription);
         } else {
           await saveSettingsToFirebase({
             restaurantName, menus, categories, tableCount, tableRows, orders,
             popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-            pinTables, pinOrder, scrollTopAfterPay
+            pinTables, pinOrder, scrollTopAfterPay, subscription
           });
         }
 
@@ -493,13 +540,14 @@ function App() {
   useEffect(() => setLS(LS.pinTables, pinTables), [pinTables]);
   useEffect(() => setLS(LS.pinOrder, pinOrder), [pinOrder]);
   useEffect(() => setLS(LS.scrollTopAfterPay, scrollTopAfterPay), [scrollTopAfterPay]);
+  useEffect(() => setLS(LS.subscription, subscription), [subscription]);
   useEffect(() => {
     if (!firebaseReady) return;
     const timer = window.setTimeout(() => {
       saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders,
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay
+        pinTables, pinOrder, scrollTopAfterPay, subscription
       })
         .then(() => setSyncStatus("Firebase 자동저장 완료"))
         .catch(error => {
@@ -508,7 +556,7 @@ function App() {
         });
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay]);
+  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay, subscription]);
 
   const currentOrder = orders[selectedTable] || [];
   const total = currentOrder.reduce((sum, item) => sum + item.price * item.qty, 0);
@@ -517,6 +565,33 @@ function App() {
   const cols = Math.ceil(tables.length / rows);
   const tableColumns = screenWidth <= 1200 ? Math.min(3, tables.length) : cols;
   const fixedEnabled = !openCredit && !openStats;
+  const subscriptionInfo = useMemo(() => {
+    const expire = safeDateObj(subscription?.expireDate);
+    const graceDays = Number(subscription?.graceDays ?? 7);
+    if (!expire) return { className: "ok", text: "이용기간: 미설정", notice: "" };
+    const end = new Date(expire);
+    end.setHours(23, 59, 59, 999);
+    const now = new Date();
+    const daysLeft = Math.ceil((end.getTime() - now.getTime()) / 86400000);
+    if (daysLeft >= 0) {
+      return {
+        className: daysLeft <= 3 ? "warn" : "ok",
+        text: `이용기간: ${formatKoreanDate(subscription.expireDate)}까지`,
+        notice: daysLeft <= 7 ? `이용기간이 ${daysLeft}일 남았습니다. 안정적인 이용을 위해 연장 입금을 부탁드립니다.` : ""
+      };
+    }
+    const graceEnd = new Date(end);
+    graceEnd.setDate(graceEnd.getDate() + graceDays);
+    const graceLeft = Math.ceil((graceEnd.getTime() - now.getTime()) / 86400000);
+    if (graceLeft >= 0) {
+      return {
+        className: "warn",
+        text: `유예기간 이용중 · ${Math.max(0, graceLeft)}일 남음`,
+        notice: `이용기간이 종료되었습니다. 현재 유예기간으로 이용 중입니다. 연장 입금 확인을 부탁드립니다.`
+      };
+    }
+    return { className: "danger", text: "이용기간 확인 필요", notice: "이용기간 및 유예기간이 종료되었습니다. 관리자에게 문의해주세요." };
+  }, [subscription]);
 
   const sortedCats = useMemo(
     () => [...categories].sort((a, b) => Number(a.order) - Number(b.order)),
@@ -704,10 +779,103 @@ function App() {
     setCreditWarn("");
     showToast(`${selectedTable}번테이블 ${payment}결제 완료했습니다`);
     if (withPrint) {
-      setReceiptPrintSale(sale);
+      showToast("영수증 인쇄창을 여는 중입니다. 출력이 안 되면 최근 결제내역에서 재출력해주세요");
       window.setTimeout(() => printReceipt(sale), 250);
     }
     if (scrollTopAfterPay) window.setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 120);
+  };
+
+
+  const confirmReset = label => window.prompt(`${label}\n정말 초기화하려면 아래 칸에 초기화 라고 입력해주세요.`) === "초기화";
+
+  const resetSalesData = async () => {
+    if (!confirmReset("판매내역/판매통계/인기메뉴 기록을 초기화합니다. 메뉴와 설정은 유지됩니다.")) return;
+    const ids = sales.map(item => item.id);
+    setSales([]);
+    setLS(LS.salesHistory, []);
+    try {
+      await firestoreDeleteMany("sales", ids);
+      setSyncStatus("판매내역 Firebase 초기화 완료");
+      showToast("판매내역/판매통계가 초기화되었습니다");
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("판매내역 Firebase 초기화 실패");
+      alert("Firebase 판매내역 초기화 중 오류가 발생했습니다. 콘솔을 확인해주세요.");
+    }
+  };
+
+  const resetCreditData = async () => {
+    if (!confirmReset("외상장부를 초기화합니다. 이 작업은 매우 중요하니 실제 운영 중에는 백업 후 진행해주세요.")) return;
+    const ids = credits.map(item => item.id);
+    setCredits([]);
+    setSelectedCreditIds([]);
+    setLS(LS.creditLedger, []);
+    try {
+      await firestoreDeleteMany("credits", ids);
+      setSyncStatus("외상장부 Firebase 초기화 완료");
+      showToast("외상장부가 초기화되었습니다");
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("외상장부 Firebase 초기화 실패");
+      alert("Firebase 외상장부 초기화 중 오류가 발생했습니다. 콘솔을 확인해주세요.");
+    }
+  };
+
+  const resetOrderData = async () => {
+    if (!confirmReset("현재 테이블 주문내역을 초기화합니다.")) return;
+    setOrders({});
+    setLS(LS.orders, {});
+    try {
+      await saveSettingsToFirebase({
+        restaurantName, menus, categories, tableCount, tableRows, orders: {},
+        popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
+        pinTables, pinOrder, scrollTopAfterPay, subscription
+      });
+      setSyncStatus("현재 주문내역 초기화 완료");
+      showToast("현재 주문내역이 초기화되었습니다");
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("현재 주문내역 Firebase 초기화 실패");
+    }
+  };
+
+  const resetOperatingData = async () => {
+    if (!confirmReset("운영 데이터 전체를 초기화합니다. 판매내역, 외상장부, 현재 주문내역이 삭제되고 메뉴/설정은 유지됩니다.")) return;
+    const saleIds = sales.map(item => item.id);
+    const creditIds = credits.map(item => item.id);
+    setSales([]);
+    setCredits([]);
+    setOrders({});
+    setSelectedCreditIds([]);
+    setLS(LS.salesHistory, []);
+    setLS(LS.creditLedger, []);
+    setLS(LS.orders, {});
+    try {
+      await firestoreDeleteMany("sales", saleIds);
+      await firestoreDeleteMany("credits", creditIds);
+      await saveSettingsToFirebase({
+        restaurantName, menus, categories, tableCount, tableRows, orders: {},
+        popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
+        pinTables, pinOrder, scrollTopAfterPay, subscription
+      });
+      setSyncStatus("운영 데이터 전체 초기화 완료");
+      showToast("운영 데이터가 초기화되었습니다");
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("운영 데이터 Firebase 초기화 실패");
+      alert("Firebase 운영 데이터 초기화 중 오류가 발생했습니다. 콘솔을 확인해주세요.");
+    }
+  };
+
+  const openShortcutGuide = async () => {
+    if (installPrompt) {
+      try {
+        await installPrompt.prompt();
+        setInstallPrompt(null);
+        return;
+      } catch {}
+    }
+    setShortcutModal(true);
   };
 
   const openAdmin = () => {
@@ -867,6 +1035,8 @@ function App() {
         <div>
           <h1>{restaurantName} POS <span>{VERSION}</span></h1>
           <p>주문 · 외상장부 · 판매통계 · 관리자</p>
+          <p className={`subscriptionBadge ${subscriptionInfo.className}`}>{subscriptionInfo.text}</p>
+          {subscriptionInfo.notice && <p className={`subscriptionNotice ${subscriptionInfo.className}`}>{subscriptionInfo.notice}</p>}
           <p className="syncStatus">{syncStatus}</p>
         </div>
         <div className="topBtns">
@@ -1082,7 +1252,14 @@ function App() {
             pinOrder,
             setPinOrder,
             scrollTopAfterPay,
-            setScrollTopAfterPay
+            setScrollTopAfterPay,
+            resetSalesData,
+            resetCreditData,
+            resetOrderData,
+            resetOperatingData,
+            openShortcutGuide,
+            subscription,
+            setSubscription
           }}
         />
       )}
@@ -1100,19 +1277,22 @@ function App() {
         </div>
       )}
 
-      {receiptPrintSale && (
+      {/* 영수증 추가 안내창은 V21에서 제거했습니다. 재출력은 최근 결제내역에서 가능합니다. */}
+
+      {shortcutModal && (
         <div className="modal">
-          <div className="modalBox receiptConfirm">
-            <button className="xBtn" onClick={() => setReceiptPrintSale(null)}>×</button>
-            <h2>영수증 출력</h2>
-            <p>결제는 완료되었습니다. 인쇄창이 안 뜨면 아래 버튼을 눌러 다시 출력해주세요.</p>
-            <div className="summaryBox">
-              {receiptPrintSale.table}번 / {receiptPrintSale.payment}{receiptPrintSale.creditGroup ? `-${receiptPrintSale.creditGroup}` : ""} / {money(receiptPrintSale.total)}
+          <div className="modalBox wide">
+            <button className="xBtn" onClick={() => setShortcutModal(false)}>×</button>
+            <h2>바탕화면 바로가기 만들기</h2>
+            <div className="guideBox">
+              <h3>안드로이드 / 크롬</h3>
+              <p>오른쪽 위 ⋮ 버튼 → 홈 화면에 추가 → 추가</p>
+              <h3>아이패드 / 아이폰 사파리</h3>
+              <p>공유 버튼 → 홈 화면에 추가 → 추가</p>
+              <h3>PC 크롬</h3>
+              <p>주소창 오른쪽 설치 아이콘 또는 ⋮ → 저장 및 공유 → 바로가기 만들기</p>
             </div>
-            <div className="receiptActions">
-              <button className="green" onClick={() => printReceipt(receiptPrintSale)}>영수증 다시 출력</button>
-              <button className="dark" onClick={() => setReceiptPrintSale(null)}>POS 화면으로 돌아가기</button>
-            </div>
+            <p className="muted">브라우저 보안 때문에 프로그램이 자동으로 아이콘을 만들 수는 없고, 마지막 추가 버튼은 사용자가 직접 눌러야 합니다.</p>
           </div>
         </div>
       )}
@@ -1384,11 +1564,39 @@ function AdminModal(props) {
             <label className="checkLabel"><input type="checkbox" checked={props.pinOrder} onChange={e => props.setPinOrder(e.target.checked)} /> 주문내역 영역 고정</label>
             <label className="checkLabel"><input type="checkbox" checked={props.scrollTopAfterPay} onChange={e => props.setScrollTopAfterPay(e.target.checked)} /> 결제완료 후 화면 맨 위로 이동</label>
           </div>
+          <div className="subscriptionSettings">
+            <h4>이용기간 표시</h4>
+            <div className="grid2">
+              <label>이용 시작일<input type="date" value={props.subscription?.startDate || ""} onChange={e => props.setSubscription(prev => ({ ...prev, startDate: e.target.value }))} /></label>
+              <label>이용 만료일<input type="date" value={props.subscription?.expireDate || ""} onChange={e => props.setSubscription(prev => ({ ...prev, expireDate: e.target.value }))} /></label>
+              <label>유예기간<input type="number" value={props.subscription?.graceDays ?? 7} onChange={e => props.setSubscription(prev => ({ ...prev, graceDays: Number(e.target.value) || 0 }))} /></label>
+              <label>월 이용료<input type="number" value={props.subscription?.monthlyFee ?? 0} onChange={e => props.setSubscription(prev => ({ ...prev, monthlyFee: Number(e.target.value) || 0 }))} /></label>
+            </div>
+            <p className="muted">나중에 종합관리프로그램에서 이 날짜를 수정하면 각 식당 POS에 자동 반영하는 구조로 확장할 수 있습니다.</p>
+          </div>
           <div className="passwordRow">
             <label>새 비밀번호</label>
             <input type="password" placeholder="새 비밀번호" value={pass} onChange={e => setPass(e.target.value)} />
             <button onClick={() => { if (pass) { props.setAdminPw(pass); setPass(""); alert("비밀번호가 변경되었습니다"); } }}>비밀번호 변경</button>
           </div>
+        </div>
+
+        <div className="adminCard">
+          <h3>바탕화면 바로가기</h3>
+          <p className="muted">태블릿이나 핸드폰에서 링크를 매번 입력하지 않고 앱처럼 실행할 수 있게 안내합니다.</p>
+          <button className="green" onClick={props.openShortcutGuide}>바탕화면 바로가기 만들기</button>
+        </div>
+
+        <div className="adminCard dangerCard">
+          <h3>데이터 초기화</h3>
+          <p className="muted">설치 후 테스트 주문을 지우고 실제 운영을 시작할 때 사용하세요. 메뉴와 설정은 유지할 수 있습니다.</p>
+          <div className="resetGrid">
+            <button onClick={props.resetSalesData}>판매내역/판매통계 초기화</button>
+            <button onClick={props.resetCreditData}>외상장부 초기화</button>
+            <button onClick={props.resetOrderData}>현재 주문내역 초기화</button>
+            <button className="dangerBtn" onClick={props.resetOperatingData}>운영 데이터 전체 초기화</button>
+          </div>
+          <p className="muted">초기화 실행 시 Firebase 데이터도 함께 삭제됩니다. 실수 방지를 위해 '초기화' 문구를 입력해야 합니다.</p>
         </div>
       </div>
     </div>
