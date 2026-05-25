@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V22";
+const VERSION = "V23";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAC3W2CNOW7-GzgSHeecILfMHv3KsIis7Y",
@@ -143,6 +143,7 @@ const defaultSubscription = () => ({
   bankName: "농협",
   accountNumber: "123-456-7890",
   referralActiveCount: 0,
+  referredRestaurants: [],
   referralDiscountRate: 10,
   referralGraceDays: 90,
   status: "active"
@@ -436,6 +437,7 @@ function App() {
   const [scrollTopAfterPay, setScrollTopAfterPay] = useState(() => getLS(LS.scrollTopAfterPay, true));
   const [subscription, setSubscription] = useState(() => getLS(LS.subscription, defaultSubscription()));
   const [shortcutModal, setShortcutModal] = useState(false);
+  const [referralModal, setReferralModal] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [screenWidth, setScreenWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1400));
   const [firebaseReady, setFirebaseReady] = useState(false);
@@ -1085,14 +1087,8 @@ function App() {
           <p>주문 · 외상장부 · 판매통계 · 관리자</p>
           {subscriptionInfo.notice && <p className={`subscriptionNotice ${subscriptionInfo.className}`}>{subscriptionInfo.notice}</p>}
         </div>
-        <div className="topRightInfo" onClick={e => e.stopPropagation()}>
+        <div className="topRightInfo topRightCompact" onClick={e => e.stopPropagation()}>
           <div className={`subscriptionBadge ${subscriptionInfo.className}`}>{subscriptionInfo.text}</div>
-          <div className="billingLine">
-            <span>{subscription?.bankName || "입금계좌"} {subscription?.accountNumber || "미설정"}</span>
-            <span>월 이용료 {money(subscription?.monthlyFee || 0)}</span>
-            <button className="copyBtn" onClick={copyAccountNumber}>복사</button>
-          </div>
-          <div className="referralLine">소개 할인: {Number(subscription?.referralActiveCount || 0)}곳 적용 · 소개 1곳마다 현재 이용료 10% 추가 할인</div>
           <button onClick={e => { e.stopPropagation(); openAdmin(); }} className="dark adminBtn">관리자모드</button>
         </div>
       </header>
@@ -1312,7 +1308,9 @@ function App() {
             resetOperatingData,
             openShortcutGuide,
             subscription,
-            setSubscription
+            setSubscription,
+            copyAccountNumber,
+            openReferralInfo: () => setReferralModal(true)
           }}
         />
       )}
@@ -1355,6 +1353,33 @@ function App() {
               <button className={resetDialog.mode === "danger" ? "dangerBtn" : "green"} onClick={confirmResetDialog}>초기화 실행</button>
               <button onClick={() => setResetDialog(null)}>취소</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {referralModal && (
+        <div className="modal">
+          <div className="modalBox wide" onClick={e => e.stopPropagation()}>
+            <button className="xBtn" onClick={() => setReferralModal(false)}>×</button>
+            <h2>소개 할인 안내</h2>
+            <div className="summaryBox referralGuideBox">
+              <p><b>주변 식당을 소개해주시면 현재 월 이용료에서 10% 추가 할인됩니다.</b></p>
+              <p>소개한 식당이 이용 중일 때 할인 혜택이 적용됩니다. 미납/사용중단 시에는 설정된 유예기간 이후 할인 적용에서 제외될 수 있습니다.</p>
+            </div>
+            <h3>소개한 업체</h3>
+            <div className="referralList">
+              {(subscription?.referredRestaurants || []).length ? (
+                subscription.referredRestaurants.map((item, idx) => (
+                  <div key={idx} className="referralItem">
+                    <b>{item.name || item.restaurantName || "이름 미설정"}</b>
+                    <span>{item.status || "상태 미설정"}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="emptyBox">현재 POS에 등록된 소개 업체가 없습니다.<br />추후 종합관리프로그램에서 등록하면 이곳에 자동 표시됩니다.</div>
+              )}
+            </div>
+            <button className="dark full" onClick={() => setReferralModal(false)}>확인</button>
           </div>
         </div>
       )}
@@ -1649,8 +1674,19 @@ function AdminModal(props) {
             <div className="billingInfoGrid">
               <div><b>이용기간</b><span>{props.subscription?.expireDate ? `${formatKoreanDate(props.subscription.expireDate)}까지` : "미설정"}</span></div>
               <div><b>월 이용료</b><span>{money(props.subscription?.monthlyFee || 0)}</span></div>
-              <div><b>입금계좌</b><span>{props.subscription?.bankName || "미설정"} {props.subscription?.accountNumber || ""}</span></div>
-              <div><b>소개 할인</b><span>{Number(props.subscription?.referralActiveCount || 0)}곳 적용중</span></div>
+              <div className="accountInfoBox">
+                <b>입금계좌</b>
+                <span>{props.subscription?.bankName || "미설정"} {props.subscription?.accountNumber || ""}</span>
+                <button className="copyBtn accountCopyBtn" onClick={props.copyAccountNumber}>계좌번호 복사</button>
+              </div>
+              <button className="billingClickBox" onClick={props.openReferralInfo}>
+                <b>소개 할인</b>
+                <span>{Number(props.subscription?.referralActiveCount || 0)}곳 적용중</span>
+                <small>클릭하면 소개업체와 할인 안내를 볼 수 있습니다</small>
+              </button>
+            </div>
+            <div className="referralAdminNote">
+              주변 식당을 소개해주시면 현재 월 이용료에서 <b>10% 추가 할인</b>됩니다.
             </div>
             <p className="muted">이용기간, 월 이용료, 입금계좌, 소개할인은 식당 POS에서 수정하지 않고 추후 종합관리프로그램에서 자동 반영되도록 사용할 예정입니다.</p>
           </div>
