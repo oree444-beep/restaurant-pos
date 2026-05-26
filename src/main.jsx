@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V24";
+const VERSION = "V25";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAC3W2CNOW7-GzgSHeecILfMHv3KsIis7Y",
@@ -51,7 +51,9 @@ const LS = {
   scrollTopAfterPay: "scrollTopAfterPay",
   subscription: "subscription",
   showReceiptPrint: "showReceiptPrint",
-  kitchenSettings: "kitchenSettings"
+  kitchenSettings: "kitchenSettings",
+  screenMode: "screenMode",
+  tableLayout: "tableLayout"
 };
 
 const getLS = (key, fallback) => {
@@ -149,6 +151,10 @@ const defaultSubscription = () => ({
   referredRestaurants: [],
   referralDiscountRate: 10,
   referralGraceDays: 90,
+  baseMonthlyFee: 10000,
+  optionMonthlyFee: 0,
+  kitchenOptionEnabled: false,
+  kitchenOptionFee: 5000,
   status: "active"
 });
 const defaultKitchenSettings = () => ({
@@ -157,6 +163,43 @@ const defaultKitchenSettings = () => ({
   excludedCategories: ["주류", "음료", "기타", "포장용기"]
 });
 const defaultKitchenSendForCategory = category => !["주류", "음료", "기타", "포장용기"].includes(String(category || "").trim());
+
+const floorMarkers = [
+  { id: "entrance", label: "식당입구", icon: "🚪" },
+  { id: "door", label: "식당문", icon: "↔️" },
+  { id: "kitchen", label: "주방", icon: "👨‍🍳" },
+  { id: "restroom", label: "화장실", icon: "🚻" },
+  { id: "counter", label: "카운터", icon: "💳" },
+  { id: "window", label: "창가", icon: "🪟" }
+];
+const makeDefaultTableLayout = count => {
+  const total = Number(count) || 12;
+  const tablePositions = {};
+  const cols = Math.ceil(Math.sqrt(total));
+  const rows = Math.ceil(total / cols);
+  for (let i = 1; i <= total; i += 1) {
+    const col = (i - 1) % cols;
+    const row = Math.floor((i - 1) / cols);
+    tablePositions[i] = {
+      x: Math.round(12 + (col * (76 / Math.max(1, cols - 1 || 1)))),
+      y: Math.round(18 + (row * (62 / Math.max(1, rows - 1 || 1))))
+    };
+  }
+  return {
+    editUnlocked: false,
+    tablePositions,
+    markers: {
+      entrance: { visible: true, x: 6, y: 82 },
+      kitchen: { visible: true, x: 76, y: 8 },
+      door: { visible: false, x: 6, y: 8 },
+      restroom: { visible: false, x: 82, y: 82 },
+      counter: { visible: false, x: 70, y: 82 },
+      window: { visible: false, x: 44, y: 4 }
+    }
+  };
+};
+const clampPercent = value => Math.max(3, Math.min(92, Number(value) || 0));
+const round100 = value => Math.round((Number(value) || 0) / 100) * 100;
 
 const formatKoreanDate = value => {
   const date = safeDateObj(value);
@@ -447,9 +490,15 @@ function App() {
   const [scrollTopAfterPay, setScrollTopAfterPay] = useState(() => getLS(LS.scrollTopAfterPay, true));
   const [showReceiptPrint, setShowReceiptPrint] = useState(() => getLS(LS.showReceiptPrint, true));
   const [kitchenSettings, setKitchenSettings] = useState(() => getLS(LS.kitchenSettings, defaultKitchenSettings()));
+  const [screenMode, setScreenMode] = useState(() => getLS(LS.screenMode, "basic"));
+  const [tableModeOrdering, setTableModeOrdering] = useState(false);
+  const [tableLayout, setTableLayout] = useState(() => getLS(LS.tableLayout, makeDefaultTableLayout(getLS(LS.tableCount, 12))));
   const [subscription, setSubscription] = useState(() => getLS(LS.subscription, defaultSubscription()));
   const [shortcutModal, setShortcutModal] = useState(false);
   const [referralModal, setReferralModal] = useState(false);
+  const [billingModal, setBillingModal] = useState(false);
+  const [kitchenPairModal, setKitchenPairModal] = useState(false);
+  const [tableEditOpen, setTableEditOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [screenWidth, setScreenWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1400));
   const [firebaseReady, setFirebaseReady] = useState(false);
@@ -510,7 +559,7 @@ function App() {
           await saveSettingsToFirebase({
             restaurantName, menus, categories, tableCount, tableRows, orders,
             popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-            pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, subscription
+            pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableLayout, subscription
           });
         }
 
@@ -563,6 +612,8 @@ function App() {
   useEffect(() => setLS(LS.scrollTopAfterPay, scrollTopAfterPay), [scrollTopAfterPay]);
   useEffect(() => setLS(LS.showReceiptPrint, showReceiptPrint), [showReceiptPrint]);
   useEffect(() => setLS(LS.kitchenSettings, kitchenSettings), [kitchenSettings]);
+  useEffect(() => setLS(LS.screenMode, screenMode), [screenMode]);
+  useEffect(() => setLS(LS.tableLayout, tableLayout), [tableLayout]);
   useEffect(() => setLS(LS.subscription, subscription), [subscription]);
   useEffect(() => {
     if (!firebaseReady) return;
@@ -570,7 +621,7 @@ function App() {
       saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders,
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableLayout, subscription
       })
         .then(() => setSyncStatus("Firebase 자동저장 완료"))
         .catch(error => {
@@ -579,12 +630,13 @@ function App() {
         });
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, subscription]);
+  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableLayout, subscription]);
 
   const currentOrder = orders[selectedTable] || [];
   const activeOrder = currentOrder.filter(item => Number(item.qty || 0) > 0);
   const total = activeOrder.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const kitchenEnabled = kitchenSettings?.enabled === true;
+  const kitchenOptionActive = subscription?.kitchenOptionEnabled === true;
+  const kitchenEnabled = kitchenOptionActive && kitchenSettings?.enabled === true;
   const isKitchenTarget = item => !item?.service && (item.kitchenSend ?? defaultKitchenSendForCategory(item.category));
   const kitchenTargets = currentOrder.filter(isKitchenTarget);
   const kitchenPendingItems = kitchenTargets.filter(item => Number(item.qty || 0) !== Number(item.kitchenSentQty || 0));
@@ -593,7 +645,7 @@ function App() {
     : !kitchenTargets.length
       ? "주방전송 대상 메뉴 없음"
       : kitchenPendingItems.length
-        ? "주방전송전"
+        ? "주방전송 전"
         : "주방전송 완료";
   const tables = Array.from({ length: Number(tableCount) || 1 }, (_, index) => index + 1);
   const rows = Math.max(1, Math.min(Number(tableRows) || 2, tables.length));
@@ -735,7 +787,8 @@ function App() {
   };
 
   const sendKitchenOrder = () => {
-    if (!kitchenEnabled) return showToast("관리자모드에서 주문서관리를 먼저 켜주세요");
+    if (!kitchenOptionActive) return showToast("주문서관리 유료 옵션이 활성화되어야 사용할 수 있습니다");
+    if (!kitchenEnabled) return showToast("관리자모드에서 주방전송 버튼 사용을 켜주세요");
     if (!currentOrder.length) return showToast("주문내역이 없습니다");
 
     const changes = currentOrder
@@ -946,7 +999,7 @@ function App() {
       await saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders: {},
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableLayout, subscription
       });
       setSyncStatus("현재 주문내역 초기화 완료");
       showToast("현재 주문내역이 초기화되었습니다");
@@ -967,7 +1020,7 @@ function App() {
       await saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders: {},
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableLayout, subscription
       });
       setSyncStatus("운영 데이터 전체 초기화 완료");
       showToast("운영 데이터가 초기화되었습니다");
@@ -1162,6 +1215,101 @@ function App() {
     return Array.from(map.values()).sort((a, b) => b.unpaidTotal - a.unpaidTotal || a.group.localeCompare(b.group, "ko"));
   }, [credits]);
 
+  const isTableModeHome = screenMode === "table" && !tableModeOrdering;
+  const billingDetails = useMemo(() => {
+    const base = Number(subscription?.baseMonthlyFee ?? 10000);
+    const option = Number(subscription?.optionMonthlyFee || 0) + (subscription?.kitchenOptionEnabled ? Number(subscription?.kitchenOptionFee || 0) : 0);
+    const count = Number(subscription?.referralActiveCount || 0);
+    const rate = Number(subscription?.referralDiscountRate || 10);
+    const discountFactor = Math.pow(1 - rate / 100, count);
+    const before = base + option;
+    const calculated = round100(before * discountFactor);
+    const finalFee = Number(subscription?.monthlyFee || calculated);
+    const totalDiscountRate = before ? Math.round((1 - finalFee / before) * 1000) / 10 : 0;
+    return { base, option, count, rate, before, calculated, finalFee, totalDiscountRate };
+  }, [subscription]);
+
+  const handleTableOrMarkerDown = (type, id, event) => {
+    if (!tableLayout?.editUnlocked) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const board = event.currentTarget.closest(".floorBoard");
+    const updateFromPointer = pointerEvent => {
+      const rect = board.getBoundingClientRect();
+      const x = clampPercent(((pointerEvent.clientX - rect.left) / rect.width) * 100);
+      const y = clampPercent(((pointerEvent.clientY - rect.top) / rect.height) * 100);
+      setTableLayout(prev => {
+        const base = prev || makeDefaultTableLayout(tableCount);
+        if (type === "table") {
+          return { ...base, tablePositions: { ...(base.tablePositions || {}), [id]: { x, y } } };
+        }
+        return { ...base, markers: { ...(base.markers || {}), [id]: { ...(base.markers?.[id] || {}), visible: true, x, y } } };
+      });
+    };
+    const move = pointerEvent => updateFromPointer(pointerEvent);
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    updateFromPointer(event);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
+  const renderFloorPlan = (editable = false) => {
+    const layout = tableLayout || makeDefaultTableLayout(tableCount);
+    return (
+      <section className={`tableModeFloor card ${editable ? "editing" : ""}`}>
+        <div className="floorHead">
+          <div>
+            <h2>테이블 배치도</h2>
+            <p className="muted">실제 식당 위치처럼 테이블을 눌러 주문을 시작합니다.</p>
+          </div>
+          {editable && (
+            <button
+              className={layout.editUnlocked ? "orangeAction" : "dark"}
+              onClick={() => setTableLayout(prev => ({ ...(prev || makeDefaultTableLayout(tableCount)), editUnlocked: !(prev?.editUnlocked) }))}
+            >
+              {layout.editUnlocked ? "🔓 수정중" : "🔒 잠금"}
+            </button>
+          )}
+        </div>
+        <div className="floorBoard">
+          {floorMarkers.map(marker => {
+            const info = layout.markers?.[marker.id] || { visible: false, x: 8, y: 8 };
+            if (!info.visible) return null;
+            return (
+              <div key={marker.id} className="floorMarker" style={{ left: `${info.x}%`, top: `${info.y}%` }} onPointerDown={e => handleTableOrMarkerDown("marker", marker.id, e)}>
+                <span>{marker.icon}</span>{marker.label}
+              </div>
+            );
+          })}
+          {tables.map(table => {
+            const pos = layout.tablePositions?.[table] || makeDefaultTableLayout(tableCount).tablePositions?.[table] || { x: 10, y: 10 };
+            const hasOrder = (orders[table] || []).some(item => Number(item.qty || 0) > 0);
+            return (
+              <button
+                key={table}
+                className={`floorTable ${selectedTable === table ? "sel" : ""} ${hasOrder ? "has" : ""}`}
+                style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                onPointerDown={editable ? e => handleTableOrMarkerDown("table", table, e) : undefined}
+                onClick={e => {
+                  e.stopPropagation();
+                  if (editable && layout.editUnlocked) return;
+                  setSelectedTable(table);
+                  setTableModeOrdering(true);
+                }}
+              >
+                {table}번
+              </button>
+            );
+          })}
+        </div>
+        {editable && <p className="muted">수정중 상태에서 테이블과 표시 아이콘을 드래그해 위치를 조정하세요. 잠금 상태에서는 클릭 시 주문화면으로 이동합니다.</p>}
+      </section>
+    );
+  };
+
   return (
     <div className="app" onClick={clearToast}>
       <header className="top card compactTop">
@@ -1176,22 +1324,31 @@ function App() {
         </div>
       </header>
 
-      <div className="layout">
+      {isTableModeHome && renderFloorPlan(false)}
+
+      {!isTableModeHome && <div className="layout">
         <div className="leftCol">
-          <section
-            className={`tables ${pinTables && fixedEnabled ? "pinTables" : ""}`}
-            style={{ gridTemplateColumns: `repeat(${tableColumns}, minmax(0, 1fr))` }}
-          >
-            {tables.map(table => (
-              <button
-                key={table}
-                onClick={() => { clearToast(); setSelectedTable(table); }}
-                className={`tableBtn ${selectedTable === table ? "sel" : (orders[table] || []).length ? "has" : ""}`}
-              >
-                {table}번
-              </button>
-            ))}
-          </section>
+          {screenMode !== "table" ? (
+            <section
+              className={`tables ${pinTables && fixedEnabled ? "pinTables" : ""}`}
+              style={{ gridTemplateColumns: `repeat(${tableColumns}, minmax(0, 1fr))` }}
+            >
+              {tables.map(table => (
+                <button
+                  key={table}
+                  onClick={() => { clearToast(); setSelectedTable(table); }}
+                  className={`tableBtn ${selectedTable === table ? "sel" : (orders[table] || []).length ? "has" : ""}`}
+                >
+                  {table}번
+                </button>
+              ))}
+            </section>
+          ) : (
+            <div className="tableModeBack card">
+              <button className="dark" onClick={() => setTableModeOrdering(false)}>← 테이블 배치로 돌아가기</button>
+              <b>{selectedTable}번 테이블 주문중</b>
+            </div>
+          )}
 
           {showPopular && (
             <section className="popular card yellow">
@@ -1277,7 +1434,12 @@ function App() {
               <button key={type} onClick={() => { setPayment(type); setCreditWarn(""); }} className={payment === type ? "active" : ""}>{type}</button>
             ))}
           </div>
-          {kitchenEnabled && (
+          {!kitchenOptionActive ? (
+            <div className="kitchenSendBox locked">
+              <div><b>주문서관리 옵션 🔒</b><span>주방 주문현황판은 유료 추가옵션입니다. 사용을 원하시면 관리자에게 문의해주세요.</span></div>
+              <button disabled>주문</button>
+            </div>
+          ) : kitchenEnabled && (
             <div className={`kitchenSendBox ${kitchenPendingItems.length ? "pending" : "done"}`}>
               <div><b>{kitchenStatusText}</b><span>주방에 필요한 메뉴만 전송됩니다</span></div>
               <button onClick={sendKitchenOrder}>{kitchenSettings?.buttonLabel || "주문"}</button>
@@ -1288,7 +1450,7 @@ function App() {
           {showReceiptPrint && <button className="pay print" onClick={() => complete(true)}>결제완료 + 영수증 출력</button>}
           <button className="ghost" onClick={() => setReceiptModal(true)}>최근 결제내역 / 영수증재출력</button>
         </aside>
-      </div>
+      </div>}
 
       <div className="bottomBars">
         <button className="orange" onClick={() => setOpenCredit(!openCredit)}>외상장부 {openCredit ? "▲" : "▼"}</button>
@@ -1395,6 +1557,13 @@ function App() {
             setShowReceiptPrint,
             kitchenSettings,
             setKitchenSettings,
+            screenMode,
+            setScreenMode,
+            tableLayout,
+            setTableLayout,
+            tableEditOpen,
+            setTableEditOpen,
+            renderFloorPlan,
             resetSalesData,
             resetCreditData,
             resetOrderData,
@@ -1403,7 +1572,9 @@ function App() {
             subscription,
             setSubscription,
             copyAccountNumber,
-            openReferralInfo: () => setReferralModal(true)
+            openReferralInfo: () => setReferralModal(true),
+            openBillingDetail: () => setBillingModal(true),
+            openKitchenPair: () => setKitchenPairModal(true)
           }}
         />
       )}
@@ -1473,6 +1644,43 @@ function App() {
               )}
             </div>
             <button className="dark full" onClick={() => setReferralModal(false)}>확인</button>
+          </div>
+        </div>
+      )}
+
+      {billingModal && (
+        <div className="modal">
+          <div className="modalBox wide" onClick={e => e.stopPropagation()}>
+            <button className="xBtn" onClick={() => setBillingModal(false)}>×</button>
+            <h2>월 이용료 상세</h2>
+            <div className="billingDetailBox">
+              <div><span>기본요금</span><b>{money(billingDetails.base)}</b></div>
+              <div><span>추가옵션</span><b>{money(billingDetails.option)}</b></div>
+              <div><span>할인 전 금액</span><b>{money(billingDetails.before)}</b></div>
+              <div><span>소개할인</span><b>{billingDetails.count}곳 적용 / 1곳마다 {billingDetails.rate}%</b></div>
+              <div><span>총 할인률</span><b>{billingDetails.totalDiscountRate}%</b></div>
+              <div className="finalFee"><span>최종 월 이용료</span><b>{money(billingDetails.finalFee)}</b></div>
+            </div>
+            <p className="muted">소개할인은 현재 이용료 기준으로 10%씩 반복 적용됩니다. 실제 금액은 추후 종합관리프로그램 설정값을 기준으로 자동 반영됩니다.</p>
+            <button className="dark full" onClick={() => setBillingModal(false)}>확인</button>
+          </div>
+        </div>
+      )}
+
+      {kitchenPairModal && (
+        <div className="modal">
+          <div className="modalBox wide" onClick={e => e.stopPropagation()}>
+            <button className="xBtn" onClick={() => setKitchenPairModal(false)}>×</button>
+            <h2>주방기기 연결</h2>
+            <div className="qrBox">
+              <div className="fakeQr">QR</div>
+              <div>
+                <b>처음 1회만 주방 태블릿에서 QR을 스캔하세요.</b>
+                <p>연결 후에는 주방 태블릿에 식당 정보가 저장되어 다음 실행부터 자동으로 주방 주문현황판이 열리도록 만들 예정입니다.</p>
+                <p className="muted">주방화면 주소: {window.location.origin}{window.location.pathname}?kitchen=1&restaurant={RESTAURANT_ID}</p>
+              </div>
+            </div>
+            <button className="green full" onClick={() => window.open(`${window.location.origin}${window.location.pathname}?kitchen=1&restaurant=${RESTAURANT_ID}`, "kitchen")}>주방화면 열기</button>
           </div>
         </div>
       )}
@@ -1762,18 +1970,45 @@ function AdminModal(props) {
             <label className="checkLabel"><input type="checkbox" checked={props.pinTables} onChange={e => props.setPinTables(e.target.checked)} /> 테이블번호 영역 고정</label>
             <label className="checkLabel"><input type="checkbox" checked={props.pinOrder} onChange={e => props.setPinOrder(e.target.checked)} /> 주문내역 영역 고정</label>
             <label className="checkLabel"><input type="checkbox" checked={props.scrollTopAfterPay} onChange={e => props.setScrollTopAfterPay(e.target.checked)} /> 결제완료 후 화면 맨 위로 이동</label>
+            <label>화면 모드
+              <select value={props.screenMode || "basic"} onChange={e => props.setScreenMode(e.target.value)}>
+                <option value="basic">기본모드</option>
+                <option value="table">테이블모드</option>
+              </select>
+            </label>
             <label className="checkLabel"><input type="checkbox" checked={props.showReceiptPrint} onChange={e => props.setShowReceiptPrint(e.target.checked)} /> 결제완료 + 영수증 출력 버튼 표시</label>
-            <label className="checkLabel"><input type="checkbox" checked={props.kitchenSettings?.enabled === true} onChange={e => props.setKitchenSettings(prev => ({ ...(prev || defaultKitchenSettings()), enabled: e.target.checked }))} /> 주문서관리 / 주방전송 버튼 사용</label>
+            <label className={`checkLabel ${props.subscription?.kitchenOptionEnabled ? "" : "disabledCheck"}`}><input type="checkbox" disabled={!props.subscription?.kitchenOptionEnabled} checked={props.subscription?.kitchenOptionEnabled && props.kitchenSettings?.enabled === true} onChange={e => props.setKitchenSettings(prev => ({ ...(prev || defaultKitchenSettings()), enabled: e.target.checked }))} /> 주문서관리 / 주방전송 버튼 사용</label>
           </div>
-          <div className="kitchenAdminNote">
-            <b>주문서관리 안내</b>
+          <div className={`kitchenAdminNote ${props.subscription?.kitchenOptionEnabled ? "active" : "locked"}`}>
+            <b>주문서관리 옵션 {props.subscription?.kitchenOptionEnabled ? "사용중" : "미사용 🔒"}</b>
             <p>메뉴관리의 <b>주방</b> 체크가 켜진 메뉴만 [주문] 버튼으로 주방전송됩니다. 주류·음료·기타·포장용기는 기본 제외를 권장합니다.</p>
+            {!props.subscription?.kitchenOptionEnabled && <p><b>유료 추가옵션입니다.</b> 사용을 원하시면 관리자에게 문의해주세요.</p>}
+            <div className="kitchenAdminActions">
+              <button disabled={!props.subscription?.kitchenOptionEnabled} onClick={props.openKitchenPair}>주방기기 연결 QR</button>
+              <button disabled={!props.subscription?.kitchenOptionEnabled} onClick={props.openKitchenPair}>주방화면 열기</button>
+            </div>
+          </div>
+          <div className="tableModeAdmin">
+            <div className="tableModeAdminHead">
+              <b>테이블 사각틀</b>
+              <button onClick={() => props.setTableEditOpen(!props.tableEditOpen)}>{props.tableEditOpen ? "수정모드 닫기" : "테이블 사각틀 수정모드"}</button>
+            </div>
+            {props.tableEditOpen && (
+              <div>
+                <div className="markerChecks">
+                  {floorMarkers.map(marker => (
+                    <label key={marker.id}><input type="checkbox" checked={props.tableLayout?.markers?.[marker.id]?.visible === true} onChange={e => props.setTableLayout(prev => { const base = prev || makeDefaultTableLayout(props.tableCount); return { ...base, markers: { ...(base.markers || {}), [marker.id]: { ...(base.markers?.[marker.id] || { x: 8, y: 8 }), visible: e.target.checked } } }; })} /> {marker.icon} {marker.label}</label>
+                  ))}
+                </div>
+                {props.renderFloorPlan(true)}
+              </div>
+            )}
           </div>
           <div className="subscriptionSettings readOnlyBilling">
             <h4>이용정보 / 납부정보</h4>
             <div className="billingInfoGrid">
               <div><b>이용기간</b><span>{props.subscription?.expireDate ? `${formatKoreanDate(props.subscription.expireDate)}까지` : "미설정"}</span></div>
-              <div><b>월 이용료</b><span>{money(props.subscription?.monthlyFee || 0)}</span></div>
+              <button className="billingClickBox" onClick={props.openBillingDetail}><b>월 이용료</b><span>{money(props.subscription?.monthlyFee || 0)}</span><small>클릭하면 기본요금/옵션/할인 상세를 볼 수 있습니다</small></button>
               <div className="accountInfoBox">
                 <b>입금계좌</b>
                 <span>{props.subscription?.bankName || "미설정"} {props.subscription?.accountNumber || ""}</span>
