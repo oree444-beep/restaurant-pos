@@ -117,7 +117,7 @@
 /* V24 receipt toggle and kitchen order send */
 .kitchenSendBox{display:grid;grid-template-columns:1fr 120px;gap:10px;align-items:center;border:2px solid #bfdbfe;background:#eff6ff;border-radius:16px;padding:12px;margin:12px 0}.kitchenSendBox.pending{border-color:#f59e0b;background:#fffbeb}.kitchenSendBox.done{border-color:#22c55e;background:#f0fdf4}.kitchenSendBox b{display:block;font-size:18px}.kitchenSendBox span{display:block;color:#64748b;font-size:13px;margin-top:3px;font-weight:800}.kitchenSendBox button{background:#f97316;color:white;border-radius:14px;padding:14px;font-size:20px;font-weight:900}.kitchenSendBox.done button{background:#16a34a}.kitchenAdminNote{margin-top:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:12px;color:#334155}.kitchenAdminNote p{margin:6px 0 0;line-height:1.5}.kitchenCell input[type="checkbox"]{accent-color:#f97316}.adminMenu,.adminMenu.adminMenuHead{grid-template-columns:58px 58px minmax(240px,1.4fr) 120px 140px 86px 74px!important}.adminMenu.adminMenuHead b:nth-child(1),.adminMenu.adminMenuHead b:nth-child(2),.soldOutCell{width:58px!important;min-width:58px!important}.adminMenu.adminMenuHead b{justify-content:center}.adminMenu.adminMenuHead b:nth-child(3){justify-content:flex-start}@media(max-width:1000px){.adminMenu,.adminMenu.adminMenuHead{grid-template-columns:58px 58px 1fr!important}.adminMenuHead b:nth-child(n+4){display:none}.adminMenuName,.adminMenu input,.adminMenu select,.adminMenu .moveBtns,.adminMenu button:last-child{grid-column:3}.kitchenSendBox{grid-template-columns:1fr}.kitchenSendBox button{width:100%}}
 
-/* V25 paid kitchen option, table/floor mode and billing detail */
+/* Paid kitchen option, table/floor mode and billing detail */
 .kitchenSendBox.locked{border-color:#cbd5e1;background:#f8fafc;color:#475569}
 .kitchenSendBox.locked button,.kitchenAdminActions button:disabled{background:#cbd5e1!important;color:#64748b!important;cursor:not-allowed}
 .disabledCheck{opacity:.58}
@@ -155,3 +155,21 @@
 .qrBox{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin:12px 0;text-align:left}
 .fakeQr{width:130px;height:130px;background:repeating-linear-gradient(45deg,#111827 0 8px,#fff 8px 16px);border:8px solid white;box-shadow:0 0 0 2px #111827;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#2563eb;text-shadow:0 1px #fff;background-color:#fff}
 @media(max-width:700px){.floorBoard{height:440px}.floorTable{min-width:72px;height:56px;font-size:17px}.floorMarker{font-size:13px;padding:7px 9px}.qrBox{grid-template-columns:1fr}.fakeQr{margin:auto}.tableModeBack{align-items:stretch}.tableModeBack button{width:100%}}
+
+/* V26 table mode refinements */
+.floorEditTools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:12px 0;background:#eef2ff;border:1px solid #c7d2fe;border-radius:16px;padding:12px}
+.tableSizeCtl,.markerDirectionPad{display:flex;align-items:center;gap:8px;font-weight:900}
+.tableSizeCtl button,.markerDirectionPad button{background:#fff;border:1px solid #cbd5e1;color:#111827;border-radius:12px;min-width:42px;height:38px;font-size:18px;font-weight:1000}
+.tableSizeCtl .sizeReset{min-width:58px;background:#111827;color:#fff;border-color:#111827}
+.markerDirectionPad{display:grid;grid-template-columns:48px 88px 48px;grid-template-rows:auto auto auto;justify-items:center;align-items:center}
+.markerDirectionPad>b{grid-column:1 / 4;font-size:14px;color:#334155}
+.markerDirectionPad>button:first-of-type{grid-column:2;grid-row:2}
+.markerDirectionPad>div{grid-column:2;grid-row:3;display:flex;gap:8px}
+.markerDirectionPad>button:last-of-type{grid-column:2;grid-row:4}
+.markerChecks label.selectedMarker{background:#dbeafe;border-color:#2563eb;color:#1e40af}
+.floorMarker.selected{outline:4px solid #fde68a}
+.floorMarker.vertical{writing-mode:vertical-rl;text-orientation:mixed;border-radius:16px;padding:12px 8px;gap:4px}
+.floorMarker.horizontal{writing-mode:horizontal-tb}
+.floorTable{transform:translate(-50%,-50%) scale(var(--tableScale,1));transform-origin:center center}
+.tableModeFloor.editing .floorBoard,.tableModeFloor .floorBoard{aspect-ratio:16 / 9;height:auto;min-height:420px;max-height:70vh}
+@media(max-width:700px){.floorEditTools{align-items:stretch}.tableSizeCtl,.markerDirectionPad{width:100%;justify-content:center}.tableModeFloor.editing .floorBoard,.tableModeFloor .floorBoard{min-height:360px}}

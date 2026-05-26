@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V25";
+const VERSION = "V26";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAC3W2CNOW7-GzgSHeecILfMHv3KsIis7Y",
@@ -53,7 +53,8 @@ const LS = {
   showReceiptPrint: "showReceiptPrint",
   kitchenSettings: "kitchenSettings",
   screenMode: "screenMode",
-  tableLayout: "tableLayout"
+  tableLayout: "tableLayout",
+  tableAutoReturnSeconds: "tableAutoReturnSeconds"
 };
 
 const getLS = (key, fallback) => {
@@ -187,19 +188,52 @@ const makeDefaultTableLayout = count => {
   }
   return {
     editUnlocked: false,
+    tableSize: 100,
+    selectedMarkerId: "entrance",
     tablePositions,
     markers: {
-      entrance: { visible: true, x: 6, y: 82 },
-      kitchen: { visible: true, x: 76, y: 8 },
-      door: { visible: false, x: 6, y: 8 },
-      restroom: { visible: false, x: 82, y: 82 },
-      counter: { visible: false, x: 70, y: 82 },
-      window: { visible: false, x: 44, y: 4 }
+      entrance: { visible: true, edge: "bottom", pos: 18, x: 18, y: 94 },
+      kitchen: { visible: true, edge: "top", pos: 78, x: 78, y: 6 },
+      door: { visible: false, edge: "left", pos: 18, x: 5, y: 18 },
+      restroom: { visible: false, edge: "right", pos: 82, x: 95, y: 82 },
+      counter: { visible: false, edge: "bottom", pos: 70, x: 70, y: 94 },
+      window: { visible: false, edge: "top", pos: 44, x: 44, y: 6 }
     }
   };
 };
 const clampPercent = value => Math.max(3, Math.min(92, Number(value) || 0));
 const round100 = value => Math.round((Number(value) || 0) / 100) * 100;
+const normalizeTableLayout = (layout, count) => {
+  const base = makeDefaultTableLayout(count);
+  const mergedMarkers = { ...base.markers, ...(layout?.markers || {}) };
+  Object.keys(mergedMarkers).forEach(id => {
+    const m = mergedMarkers[id] || {};
+    if (!m.edge) {
+      const x = Number(m.x ?? base.markers[id]?.x ?? 50);
+      const y = Number(m.y ?? base.markers[id]?.y ?? 50);
+      const distances = { top: y, bottom: 100 - y, left: x, right: 100 - x };
+      const edge = Object.entries(distances).sort((a, b) => a[1] - b[1])[0][0];
+      mergedMarkers[id] = { ...m, edge, pos: edge === "top" || edge === "bottom" ? clampPercent(x) : clampPercent(y) };
+    }
+  });
+  return {
+    ...base,
+    ...(layout || {}),
+    tableSize: Number(layout?.tableSize || 100),
+    selectedMarkerId: layout?.selectedMarkerId || "entrance",
+    tablePositions: { ...base.tablePositions, ...(layout?.tablePositions || {}) },
+    markers: mergedMarkers
+  };
+};
+const markerStyleFromInfo = info => {
+  const edge = info?.edge || "top";
+  const pos = clampPercent(info?.pos ?? (edge === "top" || edge === "bottom" ? info?.x : info?.y) ?? 50);
+  if (edge === "top") return { left: `${pos}%`, top: "4%" };
+  if (edge === "bottom") return { left: `${pos}%`, top: "96%" };
+  if (edge === "left") return { left: "4%", top: `${pos}%` };
+  return { left: "96%", top: `${pos}%` };
+};
+const markerOrientClass = info => ["left", "right"].includes(info?.edge) ? "vertical" : "horizontal";
 
 const formatKoreanDate = value => {
   const date = safeDateObj(value);
@@ -492,7 +526,9 @@ function App() {
   const [kitchenSettings, setKitchenSettings] = useState(() => getLS(LS.kitchenSettings, defaultKitchenSettings()));
   const [screenMode, setScreenMode] = useState(() => getLS(LS.screenMode, "basic"));
   const [tableModeOrdering, setTableModeOrdering] = useState(false);
-  const [tableLayout, setTableLayout] = useState(() => getLS(LS.tableLayout, makeDefaultTableLayout(getLS(LS.tableCount, 12))));
+  const [tableAutoReturnSeconds, setTableAutoReturnSeconds] = useState(() => getLS(LS.tableAutoReturnSeconds, 10));
+  const [tableActivityTick, setTableActivityTick] = useState(0);
+  const [tableLayout, setTableLayout] = useState(() => normalizeTableLayout(getLS(LS.tableLayout, makeDefaultTableLayout(getLS(LS.tableCount, 12))), getLS(LS.tableCount, 12)));
   const [subscription, setSubscription] = useState(() => getLS(LS.subscription, defaultSubscription()));
   const [shortcutModal, setShortcutModal] = useState(false);
   const [referralModal, setReferralModal] = useState(false);
@@ -554,12 +590,15 @@ function App() {
           setScrollTopAfterPay(data.scrollTopAfterPay ?? scrollTopAfterPay);
           setShowReceiptPrint(data.showReceiptPrint ?? showReceiptPrint);
           setKitchenSettings(data.kitchenSettings ?? kitchenSettings);
+          setScreenMode(data.screenMode ?? screenMode);
+          setTableAutoReturnSeconds(data.tableAutoReturnSeconds ?? tableAutoReturnSeconds);
+          setTableLayout(normalizeTableLayout(data.tableLayout ?? tableLayout, data.tableCount ?? tableCount));
           setSubscription(data.subscription ?? subscription);
         } else {
           await saveSettingsToFirebase({
             restaurantName, menus, categories, tableCount, tableRows, orders,
             popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-            pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableLayout, subscription
+            pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableAutoReturnSeconds, tableLayout, subscription
           });
         }
 
@@ -613,6 +652,7 @@ function App() {
   useEffect(() => setLS(LS.showReceiptPrint, showReceiptPrint), [showReceiptPrint]);
   useEffect(() => setLS(LS.kitchenSettings, kitchenSettings), [kitchenSettings]);
   useEffect(() => setLS(LS.screenMode, screenMode), [screenMode]);
+  useEffect(() => setLS(LS.tableAutoReturnSeconds, tableAutoReturnSeconds), [tableAutoReturnSeconds]);
   useEffect(() => setLS(LS.tableLayout, tableLayout), [tableLayout]);
   useEffect(() => setLS(LS.subscription, subscription), [subscription]);
   useEffect(() => {
@@ -621,7 +661,7 @@ function App() {
       saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders,
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableLayout, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableAutoReturnSeconds, tableLayout, subscription
       })
         .then(() => setSyncStatus("Firebase 자동저장 완료"))
         .catch(error => {
@@ -630,7 +670,7 @@ function App() {
         });
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableLayout, subscription]);
+  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableAutoReturnSeconds, tableLayout, subscription]);
 
   const currentOrder = orders[selectedTable] || [];
   const activeOrder = currentOrder.filter(item => Number(item.qty || 0) > 0);
@@ -679,6 +719,17 @@ function App() {
     }
     return { className: "danger", text: "이용기간 확인 필요", notice: "관리자에게 문의해주세요" };
   }, [subscription]);
+
+  useEffect(() => {
+    if (screenMode !== "table" || !tableModeOrdering) return undefined;
+    const seconds = Math.max(1, Number(tableAutoReturnSeconds) || 10);
+    const timer = window.setTimeout(() => setTableModeOrdering(false), seconds * 1000);
+    return () => window.clearTimeout(timer);
+  }, [screenMode, tableModeOrdering, tableAutoReturnSeconds, tableActivityTick, selectedTable]);
+
+  const noteTableActivity = () => {
+    if (screenMode === "table" && tableModeOrdering) setTableActivityTick(tick => tick + 1);
+  };
 
   const compactSyncStatus = firebaseReady ? "자동저장 완료" : firebaseLoading ? "자동저장 확인중" : "기기저장 유지중";
   const copyAccountNumber = async event => {
@@ -999,7 +1050,7 @@ function App() {
       await saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders: {},
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableLayout, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableAutoReturnSeconds, tableLayout, subscription
       });
       setSyncStatus("현재 주문내역 초기화 완료");
       showToast("현재 주문내역이 초기화되었습니다");
@@ -1020,7 +1071,7 @@ function App() {
       await saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders: {},
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableLayout, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableAutoReturnSeconds, tableLayout, subscription
       });
       setSyncStatus("운영 데이터 전체 초기화 완료");
       showToast("운영 데이터가 초기화되었습니다");
@@ -1239,11 +1290,14 @@ function App() {
       const x = clampPercent(((pointerEvent.clientX - rect.left) / rect.width) * 100);
       const y = clampPercent(((pointerEvent.clientY - rect.top) / rect.height) * 100);
       setTableLayout(prev => {
-        const base = prev || makeDefaultTableLayout(tableCount);
+        const base = normalizeTableLayout(prev, tableCount);
         if (type === "table") {
           return { ...base, tablePositions: { ...(base.tablePositions || {}), [id]: { x, y } } };
         }
-        return { ...base, markers: { ...(base.markers || {}), [id]: { ...(base.markers?.[id] || {}), visible: true, x, y } } };
+        const current = base.markers?.[id] || {};
+        const edge = current.edge || "top";
+        const pos = edge === "top" || edge === "bottom" ? x : y;
+        return { ...base, markers: { ...(base.markers || {}), [id]: { ...current, visible: true, edge, pos } } };
       });
     };
     const move = pointerEvent => updateFromPointer(pointerEvent);
@@ -1256,8 +1310,32 @@ function App() {
     window.addEventListener("pointerup", up);
   };
 
+  const assignMarkerEdge = edge => {
+    setTableLayout(prev => {
+      const base = normalizeTableLayout(prev, tableCount);
+      const selected = base.selectedMarkerId || floorMarkers[0].id;
+      const current = base.markers?.[selected] || {};
+      const oldPos = current.pos ?? (edge === "top" || edge === "bottom" ? current.x : current.y) ?? 50;
+      return {
+        ...base,
+        markers: {
+          ...(base.markers || {}),
+          [selected]: { ...current, visible: true, edge, pos: clampPercent(oldPos) }
+        }
+      };
+    });
+  };
+
+  const changeTableSize = diff => {
+    setTableLayout(prev => {
+      const base = normalizeTableLayout(prev, tableCount);
+      const next = diff === 0 ? 100 : Math.max(70, Math.min(160, Number(base.tableSize || 100) + diff));
+      return { ...base, tableSize: next };
+    });
+  };
+
   const renderFloorPlan = (editable = false) => {
-    const layout = tableLayout || makeDefaultTableLayout(tableCount);
+    const layout = normalizeTableLayout(tableLayout, tableCount);
     return (
       <section className={`tableModeFloor card ${editable ? "editing" : ""}`}>
         <div className="floorHead">
@@ -1276,10 +1354,10 @@ function App() {
         </div>
         <div className="floorBoard">
           {floorMarkers.map(marker => {
-            const info = layout.markers?.[marker.id] || { visible: false, x: 8, y: 8 };
+            const info = layout.markers?.[marker.id] || { visible: false, edge: "top", pos: 50 };
             if (!info.visible) return null;
             return (
-              <div key={marker.id} className="floorMarker" style={{ left: `${info.x}%`, top: `${info.y}%` }} onPointerDown={e => handleTableOrMarkerDown("marker", marker.id, e)}>
+              <div key={marker.id} className={`floorMarker ${markerOrientClass(info)} ${layout.selectedMarkerId === marker.id ? "selected" : ""}`} style={markerStyleFromInfo(info)} onPointerDown={e => handleTableOrMarkerDown("marker", marker.id, e)}>
                 <span>{marker.icon}</span>{marker.label}
               </div>
             );
@@ -1291,7 +1369,7 @@ function App() {
               <button
                 key={table}
                 className={`floorTable ${selectedTable === table ? "sel" : ""} ${hasOrder ? "has" : ""}`}
-                style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                style={{ left: `${pos.x}%`, top: `${pos.y}%`, "--tableScale": Number(layout.tableSize || 100) / 100 }}
                 onPointerDown={editable ? e => handleTableOrMarkerDown("table", table, e) : undefined}
                 onClick={e => {
                   e.stopPropagation();
@@ -1305,13 +1383,13 @@ function App() {
             );
           })}
         </div>
-        {editable && <p className="muted">수정중 상태에서 테이블과 표시 아이콘을 드래그해 위치를 조정하세요. 잠금 상태에서는 클릭 시 주문화면으로 이동합니다.</p>}
+        {editable && <p className="muted">수정중 상태에서 테이블은 자유롭게, 표시 아이콘은 지정된 외곽선 안에서 드래그해 위치를 조정하세요. 잠금 상태에서는 클릭 시 주문화면으로 이동합니다.</p>}
       </section>
     );
   };
 
   return (
-    <div className="app" onClick={clearToast}>
+    <div className="app" onClick={clearToast} onPointerDown={noteTableActivity} onKeyDown={noteTableActivity}>
       <header className="top card compactTop">
         <div className="topLeft">
           <h1>{restaurantName} POS <span>{VERSION} · {compactSyncStatus}</span></h1>
@@ -1434,12 +1512,7 @@ function App() {
               <button key={type} onClick={() => { setPayment(type); setCreditWarn(""); }} className={payment === type ? "active" : ""}>{type}</button>
             ))}
           </div>
-          {!kitchenOptionActive ? (
-            <div className="kitchenSendBox locked">
-              <div><b>주문서관리 옵션 🔒</b><span>주방 주문현황판은 유료 추가옵션입니다. 사용을 원하시면 관리자에게 문의해주세요.</span></div>
-              <button disabled>주문</button>
-            </div>
-          ) : kitchenEnabled && (
+          {kitchenOptionActive && kitchenEnabled && (
             <div className={`kitchenSendBox ${kitchenPendingItems.length ? "pending" : "done"}`}>
               <div><b>{kitchenStatusText}</b><span>주방에 필요한 메뉴만 전송됩니다</span></div>
               <button onClick={sendKitchenOrder}>{kitchenSettings?.buttonLabel || "주문"}</button>
@@ -1559,10 +1632,14 @@ function App() {
             setKitchenSettings,
             screenMode,
             setScreenMode,
+            tableAutoReturnSeconds,
+            setTableAutoReturnSeconds,
             tableLayout,
             setTableLayout,
             tableEditOpen,
             setTableEditOpen,
+            assignMarkerEdge,
+            changeTableSize,
             renderFloorPlan,
             resetSalesData,
             resetCreditData,
@@ -1976,6 +2053,7 @@ function AdminModal(props) {
                 <option value="table">테이블모드</option>
               </select>
             </label>
+            <label>테이블모드 자동복귀(초)<input type="number" min="1" value={props.tableAutoReturnSeconds} onChange={e => props.setTableAutoReturnSeconds(Number(e.target.value) || 10)} /></label>
             <label className="checkLabel"><input type="checkbox" checked={props.showReceiptPrint} onChange={e => props.setShowReceiptPrint(e.target.checked)} /> 결제완료 + 영수증 출력 버튼 표시</label>
             <label className={`checkLabel ${props.subscription?.kitchenOptionEnabled ? "" : "disabledCheck"}`}><input type="checkbox" disabled={!props.subscription?.kitchenOptionEnabled} checked={props.subscription?.kitchenOptionEnabled && props.kitchenSettings?.enabled === true} onChange={e => props.setKitchenSettings(prev => ({ ...(prev || defaultKitchenSettings()), enabled: e.target.checked }))} /> 주문서관리 / 주방전송 버튼 사용</label>
           </div>
@@ -1995,11 +2073,16 @@ function AdminModal(props) {
             </div>
             {props.tableEditOpen && (
               <div>
+                <div className="floorEditTools">
+                  <div className="tableSizeCtl"><b>테이블 크기</b><button onClick={() => props.changeTableSize(-10)}>-</button><button className="sizeReset" onClick={() => props.changeTableSize(0)}>{props.tableLayout?.tableSize || 100}</button><button onClick={() => props.changeTableSize(10)}>+</button></div>
+                  <div className="markerDirectionPad"><b>표시 위치</b><button onClick={() => props.assignMarkerEdge("top")}>↑</button><div><button onClick={() => props.assignMarkerEdge("left")}>←</button><button onClick={() => props.assignMarkerEdge("right")}>→</button></div><button onClick={() => props.assignMarkerEdge("bottom")}>↓</button></div>
+                </div>
                 <div className="markerChecks">
                   {floorMarkers.map(marker => (
-                    <label key={marker.id}><input type="checkbox" checked={props.tableLayout?.markers?.[marker.id]?.visible === true} onChange={e => props.setTableLayout(prev => { const base = prev || makeDefaultTableLayout(props.tableCount); return { ...base, markers: { ...(base.markers || {}), [marker.id]: { ...(base.markers?.[marker.id] || { x: 8, y: 8 }), visible: e.target.checked } } }; })} /> {marker.icon} {marker.label}</label>
+                    <label key={marker.id} className={props.tableLayout?.selectedMarkerId === marker.id ? "selectedMarker" : ""} onClick={() => props.setTableLayout(prev => ({ ...normalizeTableLayout(prev, props.tableCount), selectedMarkerId: marker.id }))}><input type="checkbox" checked={props.tableLayout?.markers?.[marker.id]?.visible === true} onChange={e => props.setTableLayout(prev => { const base = normalizeTableLayout(prev, props.tableCount); return { ...base, selectedMarkerId: marker.id, markers: { ...(base.markers || {}), [marker.id]: { ...(base.markers?.[marker.id] || { edge: "top", pos: 50 }), visible: e.target.checked } } }; })} /> {marker.icon} {marker.label}</label>
                   ))}
                 </div>
+                <p className="muted">표시 항목을 선택한 뒤 공통 화살표로 상/하/좌/우 외곽을 정하고, 사각틀 안에서는 손가락이나 마우스로 위치를 조정하세요.</p>
                 {props.renderFloorPlan(true)}
               </div>
             )}
