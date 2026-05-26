@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V23";
+const VERSION = "V24";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAC3W2CNOW7-GzgSHeecILfMHv3KsIis7Y",
@@ -19,11 +19,11 @@ const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${firebaseC
 const firestoreUrl = path => `${FIRESTORE_BASE}/${path}?key=${firebaseConfig.apiKey}`;
 
 const D_M = [
-  { id: "m1", name: "생태탕", price: 12000, category: "식사류", emoji: "🍲", image: "", soldOut: false },
-  { id: "m2", name: "애호박찌개", price: 10000, category: "식사류", emoji: "🥘", image: "", soldOut: false },
-  { id: "m3", name: "소주", price: 5000, category: "주류", emoji: "🍶", image: "", soldOut: false },
-  { id: "m4", name: "맥주", price: 5000, category: "주류", emoji: "🍺", image: "", soldOut: false },
-  { id: "m5", name: "콜라", price: 2000, category: "음료", emoji: "🥤", image: "", soldOut: false }
+  { id: "m1", name: "생태탕", price: 12000, category: "식사류", emoji: "🍲", image: "", soldOut: false, kitchenSend: true },
+  { id: "m2", name: "애호박찌개", price: 10000, category: "식사류", emoji: "🥘", image: "", soldOut: false, kitchenSend: true },
+  { id: "m3", name: "소주", price: 5000, category: "주류", emoji: "🍶", image: "", soldOut: false, kitchenSend: false },
+  { id: "m4", name: "맥주", price: 5000, category: "주류", emoji: "🍺", image: "", soldOut: false, kitchenSend: false },
+  { id: "m5", name: "콜라", price: 2000, category: "음료", emoji: "🥤", image: "", soldOut: false, kitchenSend: false }
 ];
 
 const D_C = [
@@ -49,7 +49,9 @@ const LS = {
   pinTables: "pinTables",
   pinOrder: "pinOrder",
   scrollTopAfterPay: "scrollTopAfterPay",
-  subscription: "subscription"
+  subscription: "subscription",
+  showReceiptPrint: "showReceiptPrint",
+  kitchenSettings: "kitchenSettings"
 };
 
 const getLS = (key, fallback) => {
@@ -122,6 +124,7 @@ const firestoreDeleteMany = async (collectionName, ids) => {
 const saveSettingsToFirebase = async data => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/config/settings`, { ...cleanData(data), initialized: true, updatedAt: new Date().toISOString() });
 const saveSaleToFirebase = async sale => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/sales/${firebaseId(sale.id)}`, { ...cleanData(sale), updatedAt: new Date().toISOString() });
 const saveCreditToFirebase = async credit => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/credits/${firebaseId(credit.id)}`, { ...cleanData(credit), updatedAt: new Date().toISOString() });
+const saveKitchenOrderToFirebase = async order => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/kitchenOrders/${firebaseId(order.id)}`, { ...cleanData(order), updatedAt: new Date().toISOString() });
 const batchUploadCollection = async (collectionName, items) => {
   for (const item of (items || []).filter(Boolean)) {
     const path = `restaurants/${RESTAURANT_ID}/${collectionName}/${firebaseId(item.id)}`;
@@ -148,6 +151,13 @@ const defaultSubscription = () => ({
   referralGraceDays: 90,
   status: "active"
 });
+const defaultKitchenSettings = () => ({
+  enabled: false,
+  buttonLabel: "주문",
+  excludedCategories: ["주류", "음료", "기타", "포장용기"]
+});
+const defaultKitchenSendForCategory = category => !["주류", "음료", "기타", "포장용기"].includes(String(category || "").trim());
+
 const formatKoreanDate = value => {
   const date = safeDateObj(value);
   if (!date) return "미설정";
@@ -435,6 +445,8 @@ function App() {
   const [pinTables, setPinTables] = useState(() => getLS(LS.pinTables, true));
   const [pinOrder, setPinOrder] = useState(() => getLS(LS.pinOrder, true));
   const [scrollTopAfterPay, setScrollTopAfterPay] = useState(() => getLS(LS.scrollTopAfterPay, true));
+  const [showReceiptPrint, setShowReceiptPrint] = useState(() => getLS(LS.showReceiptPrint, true));
+  const [kitchenSettings, setKitchenSettings] = useState(() => getLS(LS.kitchenSettings, defaultKitchenSettings()));
   const [subscription, setSubscription] = useState(() => getLS(LS.subscription, defaultSubscription()));
   const [shortcutModal, setShortcutModal] = useState(false);
   const [referralModal, setReferralModal] = useState(false);
@@ -491,12 +503,14 @@ function App() {
           setPinTables(data.pinTables ?? pinTables);
           setPinOrder(data.pinOrder ?? pinOrder);
           setScrollTopAfterPay(data.scrollTopAfterPay ?? scrollTopAfterPay);
+          setShowReceiptPrint(data.showReceiptPrint ?? showReceiptPrint);
+          setKitchenSettings(data.kitchenSettings ?? kitchenSettings);
           setSubscription(data.subscription ?? subscription);
         } else {
           await saveSettingsToFirebase({
             restaurantName, menus, categories, tableCount, tableRows, orders,
             popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-            pinTables, pinOrder, scrollTopAfterPay, subscription
+            pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, subscription
           });
         }
 
@@ -547,6 +561,8 @@ function App() {
   useEffect(() => setLS(LS.pinTables, pinTables), [pinTables]);
   useEffect(() => setLS(LS.pinOrder, pinOrder), [pinOrder]);
   useEffect(() => setLS(LS.scrollTopAfterPay, scrollTopAfterPay), [scrollTopAfterPay]);
+  useEffect(() => setLS(LS.showReceiptPrint, showReceiptPrint), [showReceiptPrint]);
+  useEffect(() => setLS(LS.kitchenSettings, kitchenSettings), [kitchenSettings]);
   useEffect(() => setLS(LS.subscription, subscription), [subscription]);
   useEffect(() => {
     if (!firebaseReady) return;
@@ -554,7 +570,7 @@ function App() {
       saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders,
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, subscription
       })
         .then(() => setSyncStatus("Firebase 자동저장 완료"))
         .catch(error => {
@@ -563,10 +579,22 @@ function App() {
         });
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay, subscription]);
+  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, subscription]);
 
   const currentOrder = orders[selectedTable] || [];
-  const total = currentOrder.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const activeOrder = currentOrder.filter(item => Number(item.qty || 0) > 0);
+  const total = activeOrder.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const kitchenEnabled = kitchenSettings?.enabled === true;
+  const isKitchenTarget = item => !item?.service && (item.kitchenSend ?? defaultKitchenSendForCategory(item.category));
+  const kitchenTargets = currentOrder.filter(isKitchenTarget);
+  const kitchenPendingItems = kitchenTargets.filter(item => Number(item.qty || 0) !== Number(item.kitchenSentQty || 0));
+  const kitchenStatusText = !kitchenEnabled
+    ? "주문서관리 꺼짐"
+    : !kitchenTargets.length
+      ? "주방전송 대상 메뉴 없음"
+      : kitchenPendingItems.length
+        ? "주방전송전"
+        : "주방전송 완료";
   const tables = Array.from({ length: Number(tableCount) || 1 }, (_, index) => index + 1);
   const rows = Math.max(1, Math.min(Number(tableRows) || 2, tables.length));
   const cols = Math.ceil(tables.length / rows);
@@ -681,12 +709,19 @@ function App() {
 
   const changeQty = (id, diff) => {
     clearToast();
-    setOrders(prev => ({
-      ...prev,
-      [selectedTable]: (prev[selectedTable] || [])
-        .map(item => (item.id === id ? { ...item, qty: item.qty + diff } : item))
-        .filter(item => item.qty > 0)
-    }));
+    setOrders(prev => {
+      const next = (prev[selectedTable] || [])
+        .map(item => {
+          if (item.id !== id) return item;
+          const nextQty = Number(item.qty || 0) + diff;
+          if (nextQty <= 0 && Number(item.kitchenSentQty || 0) > 0 && isKitchenTarget(item)) {
+            return { ...item, qty: 0, pendingKitchenCancel: true };
+          }
+          return { ...item, qty: nextQty };
+        })
+        .filter(item => Number(item.qty || 0) > 0 || (Number(item.kitchenSentQty || 0) > 0 && item.pendingKitchenCancel));
+      return { ...prev, [selectedTable]: next };
+    });
   };
 
   const onCreditNameChange = value => {
@@ -697,6 +732,54 @@ function App() {
       setCreditPhone(found.phone || "");
       setCreditMemo(found.memo || "");
     }
+  };
+
+  const sendKitchenOrder = () => {
+    if (!kitchenEnabled) return showToast("관리자모드에서 주문서관리를 먼저 켜주세요");
+    if (!currentOrder.length) return showToast("주문내역이 없습니다");
+
+    const changes = currentOrder
+      .filter(isKitchenTarget)
+      .map(item => {
+        const beforeQty = Number(item.kitchenSentQty || 0);
+        const currentQty = Number(item.qty || 0);
+        const diff = currentQty - beforeQty;
+        if (diff === 0) return null;
+        return {
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          beforeQty,
+          currentQty,
+          diff,
+          qty: Math.abs(diff),
+          changeType: diff > 0 ? (beforeQty > 0 ? "추가주문" : "주문") : "취소"
+        };
+      })
+      .filter(Boolean);
+
+    if (!changes.length) return showToast("이미 주방전송 완료된 주문입니다");
+
+    const kitchenOrder = {
+      id: Date.now(),
+      table: selectedTable,
+      type: changes.every(item => item.changeType === "취소") ? "취소" : changes.some(item => item.changeType === "추가주문" || item.changeType === "취소") ? "수정" : "주문",
+      status: "sent",
+      createdAt: new Date().toISOString(),
+      items: changes
+    };
+
+    saveKitchenOrderToFirebase(kitchenOrder)
+      .then(() => setSyncStatus("주방주문 Firebase 전송 완료"))
+      .catch(error => { console.error(error); setSyncStatus("주방주문 Firebase 전송 실패 · 기기저장 유지중"); });
+
+    setOrders(prev => ({
+      ...prev,
+      [selectedTable]: (prev[selectedTable] || [])
+        .map(item => isKitchenTarget(item) ? { ...item, kitchenSentQty: Number(item.qty || 0), pendingKitchenCancel: false } : item)
+        .filter(item => Number(item.qty || 0) > 0)
+    }));
+    showToast("주방전송 완료");
   };
 
   const printReceipt = sale => {
@@ -739,7 +822,7 @@ function App() {
   };
 
   const complete = withPrint => {
-    if (!currentOrder.length) return showToast("주문내역이 없습니다");
+    if (!activeOrder.length) return showToast("주문내역이 없습니다");
     if (payment === "외상" && !creditName.trim()) {
       setCreditWarn("⚠️ 외상 단체명을 입력 또는 선택해주세요 ⚠️");
       return;
@@ -763,7 +846,7 @@ function App() {
       serviceType,
       total,
       createdAt: new Date().toISOString(),
-      items: currentOrder
+      items: activeOrder
     };
 
     setSales(prev => [sale, ...prev]);
@@ -782,7 +865,7 @@ function App() {
         remain: total,
         paid: false,
         createdAt: sale.createdAt,
-        items: currentOrder,
+        items: activeOrder,
         partialPayments: []
       };
       setCredits(prev => [credit, ...prev]);
@@ -863,7 +946,7 @@ function App() {
       await saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders: {},
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, subscription
       });
       setSyncStatus("현재 주문내역 초기화 완료");
       showToast("현재 주문내역이 초기화되었습니다");
@@ -884,7 +967,7 @@ function App() {
       await saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders: {},
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, subscription
       });
       setSyncStatus("운영 데이터 전체 초기화 완료");
       showToast("운영 데이터가 초기화되었습니다");
@@ -1148,7 +1231,7 @@ function App() {
           <h2>주문내역 ({selectedTable}번)</h2>
           {toast && <div className="toast">{toast}</div>}
           {!currentOrder.length && <p className="empty">메뉴를 선택해주세요</p>}
-          {currentOrder.map(item => (
+          {activeOrder.map(item => (
             <div className="orderItem" key={item.id}>
               <div>
                 <b>{item.name}</b>
@@ -1194,9 +1277,15 @@ function App() {
               <button key={type} onClick={() => { setPayment(type); setCreditWarn(""); }} className={payment === type ? "active" : ""}>{type}</button>
             ))}
           </div>
+          {kitchenEnabled && (
+            <div className={`kitchenSendBox ${kitchenPendingItems.length ? "pending" : "done"}`}>
+              <div><b>{kitchenStatusText}</b><span>주방에 필요한 메뉴만 전송됩니다</span></div>
+              <button onClick={sendKitchenOrder}>{kitchenSettings?.buttonLabel || "주문"}</button>
+            </div>
+          )}
           <div className="total"><b>총 금액</b><b>{money(total)}</b></div>
           <button className="pay" onClick={() => complete(false)}>결제완료</button>
-          <button className="pay print" onClick={() => complete(true)}>결제완료 + 영수증 출력</button>
+          {showReceiptPrint && <button className="pay print" onClick={() => complete(true)}>결제완료 + 영수증 출력</button>}
           <button className="ghost" onClick={() => setReceiptModal(true)}>최근 결제내역 / 영수증재출력</button>
         </aside>
       </div>
@@ -1302,6 +1391,10 @@ function App() {
             setPinOrder,
             scrollTopAfterPay,
             setScrollTopAfterPay,
+            showReceiptPrint,
+            setShowReceiptPrint,
+            kitchenSettings,
+            setKitchenSettings,
             resetSalesData,
             resetCreditData,
             resetOrderData,
@@ -1618,10 +1711,11 @@ function AdminModal(props) {
 
         <div className="adminCard">
           <h3>현재 메뉴</h3>
-          <div className="adminMenu adminMenuHead"><b>품절</b><b>메뉴</b><b>가격</b><b>구분</b><b>순서</b><b>삭제</b></div>
+          <div className="adminMenu adminMenuHead"><b>품절</b><b>주방</b><b>메뉴</b><b>가격</b><b>구분</b><b>순서</b><b>삭제</b></div>
           {props.menus.map(menu => (
             <div className="adminMenu" key={menu.id}>
               <div className="soldOutCell"><input type="checkbox" checked={menu.soldOut || false} onChange={e => props.setMenus(prev => prev.map(item => item.id === menu.id ? { ...item, soldOut: e.target.checked } : item))} /></div>
+              <div className="soldOutCell kitchenCell"><input type="checkbox" checked={menu.kitchenSend ?? defaultKitchenSendForCategory(menu.category)} onChange={e => props.setMenus(prev => prev.map(item => item.id === menu.id ? { ...item, kitchenSend: e.target.checked } : item))} /></div>
               <div className="adminMenuName">
                 {menu.image ? <img src={menu.image} alt="" /> : <span>{menu.emoji}</span>}
                 <input value={menu.name} onChange={e => props.setMenus(prev => prev.map(item => item.id === menu.id ? { ...item, name: e.target.value } : item))} />
@@ -1668,6 +1762,12 @@ function AdminModal(props) {
             <label className="checkLabel"><input type="checkbox" checked={props.pinTables} onChange={e => props.setPinTables(e.target.checked)} /> 테이블번호 영역 고정</label>
             <label className="checkLabel"><input type="checkbox" checked={props.pinOrder} onChange={e => props.setPinOrder(e.target.checked)} /> 주문내역 영역 고정</label>
             <label className="checkLabel"><input type="checkbox" checked={props.scrollTopAfterPay} onChange={e => props.setScrollTopAfterPay(e.target.checked)} /> 결제완료 후 화면 맨 위로 이동</label>
+            <label className="checkLabel"><input type="checkbox" checked={props.showReceiptPrint} onChange={e => props.setShowReceiptPrint(e.target.checked)} /> 결제완료 + 영수증 출력 버튼 표시</label>
+            <label className="checkLabel"><input type="checkbox" checked={props.kitchenSettings?.enabled === true} onChange={e => props.setKitchenSettings(prev => ({ ...(prev || defaultKitchenSettings()), enabled: e.target.checked }))} /> 주문서관리 / 주방전송 버튼 사용</label>
+          </div>
+          <div className="kitchenAdminNote">
+            <b>주문서관리 안내</b>
+            <p>메뉴관리의 <b>주방</b> 체크가 켜진 메뉴만 [주문] 버튼으로 주방전송됩니다. 주류·음료·기타·포장용기는 기본 제외를 권장합니다.</p>
           </div>
           <div className="subscriptionSettings readOnlyBilling">
             <h4>이용정보 / 납부정보</h4>
