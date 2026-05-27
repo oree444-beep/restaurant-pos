@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V29";
+const VERSION = "V30";
 const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
 const DESIGN_WIDTH = 1200;
 const DESIGN_HEIGHT = 800;
@@ -59,7 +59,8 @@ const LS = {
   displayMode: "displayMode",
   contactSettings: "contactSettings",
   tableLayout: "tableLayout",
-  tableAutoReturnSeconds: "tableAutoReturnSeconds"
+  tableAutoReturnSeconds: "tableAutoReturnSeconds",
+  messagePoints: "messagePoints"
 };
 
 const getLS = (key, fallback) => {
@@ -133,6 +134,7 @@ const saveSettingsToFirebase = async data => firestoreSetDoc(`restaurants/${REST
 const saveSaleToFirebase = async sale => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/sales/${firebaseId(sale.id)}`, { ...cleanData(sale), updatedAt: new Date().toISOString() });
 const saveCreditToFirebase = async credit => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/credits/${firebaseId(credit.id)}`, { ...cleanData(credit), updatedAt: new Date().toISOString() });
 const saveKitchenOrderToFirebase = async order => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/kitchenOrders/${firebaseId(order.id)}`, { ...cleanData(order), updatedAt: new Date().toISOString() });
+const saveMessagePointRequestToFirebase = async request => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/messagePointRequests/${firebaseId(request.id)}`, { ...cleanData(request), updatedAt: new Date().toISOString() });
 const batchUploadCollection = async (collectionName, items) => {
   for (const item of (items || []).filter(Boolean)) {
     const path = `restaurants/${RESTAURANT_ID}/${collectionName}/${firebaseId(item.id)}`;
@@ -176,6 +178,17 @@ const defaultContactSettings = () => ({
   kitchenMessage: "주문서관리/주방 주문현황판은 유료 추가옵션입니다. 사용을 원하시면 문의를 남겨주세요.",
   referralMessage: "소개한 식당이 이용 중일 때 현재 월 이용료에서 10%씩 반복 할인됩니다."
 });
+const defaultMessagePoints = () => ({
+  balance: 0,
+  recentHistory: [],
+  pendingRequests: []
+});
+const messagePointPlans = [
+  { amount: 10000, points: 10000 },
+  { amount: 20000, points: 21000 },
+  { amount: 30000, points: 32000 },
+  { amount: 50000, points: 54000 }
+];
 const defaultKitchenSendForCategory = category => !["주류", "음료", "기타", "포장용기"].includes(String(category || "").trim());
 
 const floorMarkers = [
@@ -540,6 +553,9 @@ function App() {
   const [screenMode, setScreenMode] = useState(() => getLS(LS.screenMode, "basic"));
   const [displayMode, setDisplayMode] = useState(() => getLS(LS.displayMode, "auto"));
   const [contactSettings, setContactSettings] = useState(() => getLS(LS.contactSettings, defaultContactSettings()));
+  const [messagePoints, setMessagePoints] = useState(() => getLS(LS.messagePoints, defaultMessagePoints()));
+  const [messagePointModal, setMessagePointModal] = useState(false);
+  const [messagePointSending, setMessagePointSending] = useState(false);
   const [contactModal, setContactModal] = useState(false);
   const [tableModeOrdering, setTableModeOrdering] = useState(false);
   const [tableAutoReturnSeconds, setTableAutoReturnSeconds] = useState(() => getLS(LS.tableAutoReturnSeconds, 10));
@@ -609,6 +625,7 @@ function App() {
           setScreenMode(data.screenMode ?? screenMode);
           setDisplayMode(data.displayMode ?? displayMode);
           setContactSettings(data.contactSettings ?? contactSettings);
+          setMessagePoints(data.messagePoints ?? messagePoints);
           setTableAutoReturnSeconds(data.tableAutoReturnSeconds ?? tableAutoReturnSeconds);
           setTableLayout(normalizeTableLayout(data.tableLayout ?? tableLayout, data.tableCount ?? tableCount));
           setSubscription(data.subscription ?? subscription);
@@ -616,7 +633,7 @@ function App() {
           await saveSettingsToFirebase({
             restaurantName, menus, categories, tableCount, tableRows, orders,
             popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-            pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, tableAutoReturnSeconds, tableLayout, subscription
+            pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, tableAutoReturnSeconds, tableLayout, subscription
           });
         }
 
@@ -703,6 +720,7 @@ function App() {
   useEffect(() => setLS(LS.screenMode, screenMode), [screenMode]);
   useEffect(() => setLS(LS.displayMode, displayMode), [displayMode]);
   useEffect(() => setLS(LS.contactSettings, contactSettings), [contactSettings]);
+  useEffect(() => setLS(LS.messagePoints, messagePoints), [messagePoints]);
   useEffect(() => setLS(LS.tableAutoReturnSeconds, tableAutoReturnSeconds), [tableAutoReturnSeconds]);
   useEffect(() => setLS(LS.tableLayout, tableLayout), [tableLayout]);
   useEffect(() => setLS(LS.subscription, subscription), [subscription]);
@@ -712,7 +730,7 @@ function App() {
       saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders,
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, tableAutoReturnSeconds, tableLayout, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, tableAutoReturnSeconds, tableLayout, subscription
       })
         .then(() => setSyncStatus("Firebase 자동저장 완료"))
         .catch(error => {
@@ -721,7 +739,7 @@ function App() {
         });
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, tableAutoReturnSeconds, tableLayout, subscription]);
+  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, tableAutoReturnSeconds, tableLayout, subscription]);
 
   const currentOrder = orders[selectedTable] || [];
   const activeOrder = currentOrder.filter(item => Number(item.qty || 0) > 0);
@@ -1104,7 +1122,7 @@ function App() {
       await saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders: {},
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, tableAutoReturnSeconds, tableLayout, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, tableAutoReturnSeconds, tableLayout, subscription
       });
       setSyncStatus("현재 주문내역 초기화 완료");
       showToast("현재 주문내역이 초기화되었습니다");
@@ -1125,7 +1143,7 @@ function App() {
       await saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders: {},
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, tableAutoReturnSeconds, tableLayout, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, tableAutoReturnSeconds, tableLayout, subscription
       });
       setSyncStatus("운영 데이터 전체 초기화 완료");
       showToast("운영 데이터가 초기화되었습니다");
@@ -1403,6 +1421,39 @@ function App() {
     const url = String(contactSettings?.kakaoChannelUrl || "").trim();
     if (!url) return showToast("관리자모드에서 카카오톡 채널 URL을 먼저 입력해주세요");
     window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const requestMessagePointCharge = async plan => {
+    if (!plan || messagePointSending) return;
+    const ok = window.confirm(`${plan.amount.toLocaleString()}원 충전요청을 보낼까요?\n지급예정 문자포인트: ${plan.points.toLocaleString()}P\n\n종합관리프로그램 연결 후 관리자가 입금 확인/승인하면 충전됩니다.`);
+    if (!ok) return;
+    const request = {
+      id: `mp_${Date.now()}`,
+      restaurantId: RESTAURANT_ID,
+      restaurantName,
+      amount: plan.amount,
+      points: plan.points,
+      status: "입금확인 대기",
+      createdAt: new Date().toISOString()
+    };
+    setMessagePointSending(true);
+    try {
+      await saveMessagePointRequestToFirebase(request);
+      setMessagePoints(prev => {
+        const base = prev || defaultMessagePoints();
+        return { ...base, pendingRequests: [request, ...(base.pendingRequests || [])].slice(0, 5) };
+      });
+      showToast("문자포인트 충전요청을 보냈습니다");
+    } catch (error) {
+      console.error(error);
+      setMessagePoints(prev => {
+        const base = prev || defaultMessagePoints();
+        return { ...base, pendingRequests: [{ ...request, status: "기기저장 · 전송대기" }, ...(base.pendingRequests || [])].slice(0, 5) };
+      });
+      showToast("Firebase 연결이 불안정해 기기에 요청을 임시 저장했습니다");
+    } finally {
+      setMessagePointSending(false);
+    }
   };
 
   const renderFloorPlan = (editable = false) => {
@@ -1720,6 +1771,8 @@ function App() {
             setDisplayMode,
             contactSettings,
             setContactSettings,
+            messagePoints,
+            openMessagePointModal: () => setMessagePointModal(true),
             tableAutoReturnSeconds,
             setTableAutoReturnSeconds,
             tableLayout,
@@ -1745,6 +1798,31 @@ function App() {
             billingDetails
           }}
         />
+      )}
+
+
+      {messagePointModal && (
+        <div className="modal">
+          <div className="modalBox wide messagePointModal">
+            <button className="xBtn" onClick={() => setMessagePointModal(false)}>×</button>
+            <h2>문자포인트 충전요청</h2>
+            <div className="summaryBox">현재 문자포인트 잔액 <b>{Number(messagePoints?.balance || 0).toLocaleString()}P</b></div>
+            <p className="muted">원하는 충전 금액을 선택하면 종합관리프로그램에 충전요청이 기록됩니다. 추후 관리자 카톡 알림과 승인 기능을 연결할 예정입니다.</p>
+            <div className="pointPlanGrid">
+              {messagePointPlans.map(plan => (
+                <button key={plan.amount} disabled={messagePointSending} onClick={() => requestMessagePointCharge(plan)}>
+                  <b>{plan.amount.toLocaleString()}원</b>
+                  <span>{plan.points.toLocaleString()}P 충전요청</span>
+                  {plan.points > plan.amount && <small>보너스 {(plan.points - plan.amount).toLocaleString()}P</small>}
+                </button>
+              ))}
+            </div>
+            <div className="pointNotice">
+              <b>초기 운영 방식</b>
+              <p>충전요청 접수 → 관리자 입금 확인 → 종합관리프로그램 승인 → 문자포인트 반영 순서로 처리합니다.</p>
+            </div>
+          </div>
+        </div>
       )}
 
       {msgModal && (
@@ -2234,6 +2312,21 @@ function AdminModal(props) {
               주변 식당을 소개해주시면 현재 월 이용료에서 <b>10% 추가 할인</b>됩니다.
             </div>
             <p className="muted">이용기간, 월 이용료, 입금계좌, 소개할인은 식당 POS에서 수정하지 않고 추후 종합관리프로그램에서 자동 반영되도록 사용할 예정입니다.</p>
+          </div>
+          <div className="adminCard messagePointBox">
+            <h3>문자포인트</h3>
+            <div className="messagePointSummary">
+              <div><b>현재 잔액</b><span>{Number(props.messagePoints?.balance || 0).toLocaleString()}P</span></div>
+              <div><b>최근 사용내역</b><span>{props.messagePoints?.recentHistory?.[0]?.label || "사용내역 없음"}</span></div>
+            </div>
+            <button className="green" onClick={props.openMessagePointModal}>문자충전 요청</button>
+            <p className="muted">요청을 보내면 종합관리프로그램에 충전요청이 표시되고, 추후 관리자 카톡 알림까지 연결할 예정입니다. 실제 포인트 충전은 관리자 승인 후 반영됩니다.</p>
+            {!!props.messagePoints?.pendingRequests?.length && (
+              <div className="pendingPointRequests">
+                <b>최근 충전요청</b>
+                {props.messagePoints.pendingRequests.slice(0, 3).map(req => <p key={req.id}>{new Date(req.createdAt).toLocaleDateString()} · {Number(req.amount || 0).toLocaleString()}원 → {Number(req.points || 0).toLocaleString()}P · {req.status}</p>)}
+              </div>
+            )}
           </div>
           <div className="adminCard contactSettingsBox">
             <h3>문의 연결 설정</h3>
