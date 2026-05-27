@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V28";
+const VERSION = "V29";
 const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
 const DESIGN_WIDTH = 1200;
 const DESIGN_HEIGHT = 800;
@@ -2226,7 +2226,7 @@ function AdminModal(props) {
               </button>
               <button className="billingClickBox contactClickBox" onClick={props.openContactModal}>
                 <b>문의하기</b>
-                <span>관리자 연락 남기기</span>
+                <span>관리자에게 연락 남기기</span>
                 <small>FAQ 확인 후 카카오톡 문의로 연결됩니다</small>
               </button>
             </div>
@@ -2236,14 +2236,12 @@ function AdminModal(props) {
             <p className="muted">이용기간, 월 이용료, 입금계좌, 소개할인은 식당 POS에서 수정하지 않고 추후 종합관리프로그램에서 자동 반영되도록 사용할 예정입니다.</p>
           </div>
           <div className="adminCard contactSettingsBox">
-            <h3>문의 / 상담 설정</h3>
+            <h3>문의 연결 설정</h3>
             <div className="grid2">
               <label>카카오톡 채널 URL<input placeholder="https://pf.kakao.com/..." value={props.contactSettings?.kakaoChannelUrl || ""} onChange={e => props.setContactSettings(prev => ({ ...(prev || defaultContactSettings()), kakaoChannelUrl: e.target.value }))} /></label>
               <label>관리자 연락처<input placeholder="예: 010-0000-0000" value={props.contactSettings?.adminPhone || ""} onChange={e => props.setContactSettings(prev => ({ ...(prev || defaultContactSettings()), adminPhone: e.target.value }))} /></label>
             </div>
-            <label>카드결제 요청 안내문<input value={props.contactSettings?.cardMessage || ""} onChange={e => props.setContactSettings(prev => ({ ...(prev || defaultContactSettings()), cardMessage: e.target.value }))} /></label>
-            <label>계좌 안내문<input value={props.contactSettings?.bankMessage || ""} onChange={e => props.setContactSettings(prev => ({ ...(prev || defaultContactSettings()), bankMessage: e.target.value }))} /></label>
-            <p className="muted">처음에는 버튼형 FAQ 자동응대로 안내하고, 해결이 안 되면 카카오톡 채널 상담으로 연결하는 방식입니다.</p>
+            <p className="muted">문의하기 버튼을 누르면 FAQ 안내 후 카카오톡 채널 또는 관리자 연락처로 연결됩니다. 카드결제/계좌/FAQ 상세 문구는 추후 종합관리프로그램에서 중앙 관리하는 방향으로 사용합니다.</p>
           </div>
           <div className="passwordRow">
             <label>새 비밀번호</label>
