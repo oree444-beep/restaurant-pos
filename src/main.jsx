@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V31";
+const VERSION = "V32";
 const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
 const DESIGN_WIDTH = 1200;
 const DESIGN_HEIGHT = 800;
@@ -1656,9 +1656,11 @@ function App() {
         <section className="card panel">
           <div className="sectionHead creditHead">
             <div>
-              <h2>외상장부</h2>
+              <div className="creditTitleLine">
+                <h2>외상장부</h2>
+                <div className="creditPointBadge">문자포인트 <b>{Number(messagePoints?.balance || 0).toLocaleString()}P</b></div>
+              </div>
               <p className="muted">선택 {selectedCreditIds.length}건 / 선택 미납합계 <b>{money(selectedCreditTotal)}</b></p>
-              <div className="creditPointBadge">문자포인트 잔액 <b>{Number(messagePoints?.balance || 0).toLocaleString()}P</b></div>
             </div>
             <div className="creditActions">
               <button onClick={selectAllUnpaid}>미결제 전체선택</button>
