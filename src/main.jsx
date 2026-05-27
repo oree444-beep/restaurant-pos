@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V30";
+const VERSION = "V31";
 const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
 const DESIGN_WIDTH = 1200;
 const DESIGN_HEIGHT = 800;
@@ -1658,6 +1658,7 @@ function App() {
             <div>
               <h2>외상장부</h2>
               <p className="muted">선택 {selectedCreditIds.length}건 / 선택 미납합계 <b>{money(selectedCreditTotal)}</b></p>
+              <div className="creditPointBadge">문자포인트 잔액 <b>{Number(messagePoints?.balance || 0).toLocaleString()}P</b></div>
             </div>
             <div className="creditActions">
               <button onClick={selectAllUnpaid}>미결제 전체선택</button>
@@ -1807,19 +1808,23 @@ function App() {
             <button className="xBtn" onClick={() => setMessagePointModal(false)}>×</button>
             <h2>문자포인트 충전요청</h2>
             <div className="summaryBox">현재 문자포인트 잔액 <b>{Number(messagePoints?.balance || 0).toLocaleString()}P</b></div>
-            <p className="muted">원하는 충전 금액을 선택하면 종합관리프로그램에 충전요청이 기록됩니다. 추후 관리자 카톡 알림과 승인 기능을 연결할 예정입니다.</p>
-            <div className="pointPlanGrid">
+            <div className="servicePreparingBox">
+              <b>서비스 준비중입니다</b>
+              <p>종합관리프로그램 연결 후 사용 가능합니다.</p>
+            </div>
+            <p className="muted">충전요청, 관리자 카톡 알림, 승인 후 포인트 반영 기능은 추후 종합관리프로그램 완성 시 연결할 예정입니다.</p>
+            <div className="pointPlanGrid disabledArea" aria-disabled="true">
               {messagePointPlans.map(plan => (
-                <button key={plan.amount} disabled={messagePointSending} onClick={() => requestMessagePointCharge(plan)}>
+                <button key={plan.amount} disabled type="button">
                   <b>{plan.amount.toLocaleString()}원</b>
                   <span>{plan.points.toLocaleString()}P 충전요청</span>
                   {plan.points > plan.amount && <small>보너스 {(plan.points - plan.amount).toLocaleString()}P</small>}
                 </button>
               ))}
             </div>
-            <div className="pointNotice">
-              <b>초기 운영 방식</b>
-              <p>충전요청 접수 → 관리자 입금 확인 → 종합관리프로그램 승인 → 문자포인트 반영 순서로 처리합니다.</p>
+            <div className="pointNotice disabledNotice">
+              <b>추후 연결 예정</b>
+              <p>충전요청 접수 → 관리자 입금 확인 → 종합관리프로그램 승인 → 문자포인트 반영 순서로 처리할 예정입니다.</p>
             </div>
           </div>
         </div>
@@ -2319,8 +2324,9 @@ function AdminModal(props) {
               <div><b>현재 잔액</b><span>{Number(props.messagePoints?.balance || 0).toLocaleString()}P</span></div>
               <div><b>최근 사용내역</b><span>{props.messagePoints?.recentHistory?.[0]?.label || "사용내역 없음"}</span></div>
             </div>
-            <button className="green" onClick={props.openMessagePointModal}>문자충전 요청</button>
-            <p className="muted">요청을 보내면 종합관리프로그램에 충전요청이 표시되고, 추후 관리자 카톡 알림까지 연결할 예정입니다. 실제 포인트 충전은 관리자 승인 후 반영됩니다.</p>
+            <button className="green disabledFeature" type="button" onClick={props.openMessagePointModal}>문자충전 요청</button>
+            <p className="serviceReadyText">서비스 준비중 · 종합관리프로그램 연결 후 사용 가능합니다.</p>
+            <p className="muted">추후 요청을 보내면 종합관리프로그램에 충전요청이 표시되고, 관리자 카톡 알림까지 연결할 예정입니다.</p>
             {!!props.messagePoints?.pendingRequests?.length && (
               <div className="pendingPointRequests">
                 <b>최근 충전요청</b>
