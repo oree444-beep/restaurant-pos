@@ -173,3 +173,56 @@
 .floorTable{transform:translate(-50%,-50%) scale(var(--tableScale,1));transform-origin:center center}
 .tableModeFloor.editing .floorBoard,.tableModeFloor .floorBoard{aspect-ratio:16 / 9;height:auto;min-height:420px;max-height:70vh}
 @media(max-width:700px){.floorEditTools{align-items:stretch}.tableSizeCtl,.markerDirectionPad{width:100%;justify-content:center}.tableModeFloor.editing .floorBoard,.tableModeFloor .floorBoard{min-height:360px}}
+
+
+/* V27: 테이블 배치도 실제 화면/수정 화면 비율 보정 + compact direction buttons */
+.tableModeFloor .floorBoard{
+  aspect-ratio:16 / 9;
+  height:auto !important;
+  min-height:420px;
+  max-height:70vh;
+  container-type:inline-size;
+}
+.floorTable{
+  width:calc(clamp(82px, 8.1cqw, 132px) * var(--tableScale, 1));
+  min-width:0;
+  height:calc(clamp(58px, 5.7cqw, 94px) * var(--tableScale, 1));
+  font-size:calc(clamp(18px, 1.9cqw, 30px) * var(--tableScale, 1));
+  transform:translate(-50%,-50%);
+}
+.floorMarker{
+  font-size:clamp(13px, 1.25cqw, 18px);
+  padding:clamp(7px, .9cqw, 11px) clamp(9px, 1.25cqw, 15px);
+}
+.floorMarker span{font-size:clamp(16px, 1.55cqw, 22px)}
+.floorMarker.vertical{padding:clamp(9px, 1.1cqw, 14px) clamp(6px, .75cqw, 10px)}
+.markerDirectionPad.compact{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  max-width:100%;
+}
+.markerDirectionPad.compact>b{
+  font-size:14px;
+  color:#334155;
+  margin-right:4px;
+}
+.markerDirectionPad.compact button{
+  min-width:auto;
+  height:36px;
+  padding:0 12px;
+  border-radius:999px;
+  border:1px solid #bfdbfe;
+  background:linear-gradient(180deg,#ffffff,#eff6ff);
+  color:#0f172a;
+  font-size:15px;
+  box-shadow:0 4px 10px #1d4ed814;
+}
+.markerDirectionPad.compact button:active{transform:translateY(1px);box-shadow:none}
+@media(max-width:700px){
+  .tableModeFloor .floorBoard{min-height:360px;max-height:none}
+  .markerDirectionPad.compact{justify-content:center}
+  .markerDirectionPad.compact button{flex:1 1 42%;}
+}

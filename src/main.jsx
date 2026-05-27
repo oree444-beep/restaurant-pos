@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V26";
+const VERSION = "V27";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAC3W2CNOW7-GzgSHeecILfMHv3KsIis7Y",
@@ -2075,7 +2075,7 @@ function AdminModal(props) {
               <div>
                 <div className="floorEditTools">
                   <div className="tableSizeCtl"><b>테이블 크기</b><button onClick={() => props.changeTableSize(-10)}>-</button><button className="sizeReset" onClick={() => props.changeTableSize(0)}>{props.tableLayout?.tableSize || 100}</button><button onClick={() => props.changeTableSize(10)}>+</button></div>
-                  <div className="markerDirectionPad"><b>표시 위치</b><button onClick={() => props.assignMarkerEdge("top")}>↑</button><div><button onClick={() => props.assignMarkerEdge("left")}>←</button><button onClick={() => props.assignMarkerEdge("right")}>→</button></div><button onClick={() => props.assignMarkerEdge("bottom")}>↓</button></div>
+                  <div className="markerDirectionPad compact"><b>표시 위치</b><button title="위쪽 배치" onClick={() => props.assignMarkerEdge("top")}>⬆️ 위</button><button title="왼쪽 배치" onClick={() => props.assignMarkerEdge("left")}>⬅️ 왼쪽</button><button title="오른쪽 배치" onClick={() => props.assignMarkerEdge("right")}>오른쪽 ➡️</button><button title="아래쪽 배치" onClick={() => props.assignMarkerEdge("bottom")}>⬇️ 아래</button></div>
                 </div>
                 <div className="markerChecks">
                   {floorMarkers.map(marker => (
