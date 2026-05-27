@@ -2,7 +2,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V27";
+const VERSION = "V28";
+const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
+const DESIGN_WIDTH = 1200;
+const DESIGN_HEIGHT = 800;
 
 const firebaseConfig = {
   apiKey: "AIzaSyAC3W2CNOW7-GzgSHeecILfMHv3KsIis7Y",
@@ -53,6 +56,8 @@ const LS = {
   showReceiptPrint: "showReceiptPrint",
   kitchenSettings: "kitchenSettings",
   screenMode: "screenMode",
+  displayMode: "displayMode",
+  contactSettings: "contactSettings",
   tableLayout: "tableLayout",
   tableAutoReturnSeconds: "tableAutoReturnSeconds"
 };
@@ -162,6 +167,14 @@ const defaultKitchenSettings = () => ({
   enabled: false,
   buttonLabel: "주문",
   excludedCategories: ["주류", "음료", "기타", "포장용기"]
+});
+const defaultContactSettings = () => ({
+  kakaoChannelUrl: "",
+  adminPhone: "",
+  bankMessage: "입금계좌는 관리자모드 > 이용정보/납부정보에서 확인할 수 있습니다.",
+  cardMessage: "카드결제 링크가 필요하시면 관리자에게 문의를 남겨주세요.",
+  kitchenMessage: "주문서관리/주방 주문현황판은 유료 추가옵션입니다. 사용을 원하시면 문의를 남겨주세요.",
+  referralMessage: "소개한 식당이 이용 중일 때 현재 월 이용료에서 10%씩 반복 할인됩니다."
 });
 const defaultKitchenSendForCategory = category => !["주류", "음료", "기타", "포장용기"].includes(String(category || "").trim());
 
@@ -525,6 +538,9 @@ function App() {
   const [showReceiptPrint, setShowReceiptPrint] = useState(() => getLS(LS.showReceiptPrint, true));
   const [kitchenSettings, setKitchenSettings] = useState(() => getLS(LS.kitchenSettings, defaultKitchenSettings()));
   const [screenMode, setScreenMode] = useState(() => getLS(LS.screenMode, "basic"));
+  const [displayMode, setDisplayMode] = useState(() => getLS(LS.displayMode, "auto"));
+  const [contactSettings, setContactSettings] = useState(() => getLS(LS.contactSettings, defaultContactSettings()));
+  const [contactModal, setContactModal] = useState(false);
   const [tableModeOrdering, setTableModeOrdering] = useState(false);
   const [tableAutoReturnSeconds, setTableAutoReturnSeconds] = useState(() => getLS(LS.tableAutoReturnSeconds, 10));
   const [tableActivityTick, setTableActivityTick] = useState(0);
@@ -591,6 +607,8 @@ function App() {
           setShowReceiptPrint(data.showReceiptPrint ?? showReceiptPrint);
           setKitchenSettings(data.kitchenSettings ?? kitchenSettings);
           setScreenMode(data.screenMode ?? screenMode);
+          setDisplayMode(data.displayMode ?? displayMode);
+          setContactSettings(data.contactSettings ?? contactSettings);
           setTableAutoReturnSeconds(data.tableAutoReturnSeconds ?? tableAutoReturnSeconds);
           setTableLayout(normalizeTableLayout(data.tableLayout ?? tableLayout, data.tableCount ?? tableCount));
           setSubscription(data.subscription ?? subscription);
@@ -598,7 +616,7 @@ function App() {
           await saveSettingsToFirebase({
             restaurantName, menus, categories, tableCount, tableRows, orders,
             popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-            pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableAutoReturnSeconds, tableLayout, subscription
+            pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, tableAutoReturnSeconds, tableLayout, subscription
           });
         }
 
@@ -633,6 +651,37 @@ function App() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    const title = buildAppTitle(restaurantName);
+    document.title = title;
+
+    const manifest = {
+      name: title,
+      short_name: `${String(restaurantName || "식당").trim() || "식당"} POS`,
+      start_url: "/",
+      display: "standalone",
+      background_color: "#f3f4f6",
+      theme_color: "#2563eb",
+      description: `${String(restaurantName || "식당").trim() || "식당"} 주문, 외상장부, 판매통계 관리 POS`
+    };
+
+    let manifestLink = document.querySelector('link[rel="manifest"]');
+    if (!manifestLink) {
+      manifestLink = document.createElement("link");
+      manifestLink.rel = "manifest";
+      document.head.appendChild(manifestLink);
+    }
+
+    const previousUrl = manifestLink.dataset.dynamicUrl;
+    const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+    const manifestUrl = URL.createObjectURL(blob);
+    manifestLink.href = manifestUrl;
+    manifestLink.dataset.dynamicUrl = manifestUrl;
+    if (previousUrl) URL.revokeObjectURL(previousUrl);
+
+    return () => URL.revokeObjectURL(manifestUrl);
+  }, [restaurantName]);
+
   useEffect(() => setLS(LS.restaurantName, restaurantName), [restaurantName]);
   useEffect(() => setLS(LS.menus, menus), [menus]);
   useEffect(() => setLS(LS.categories, categories), [categories]);
@@ -652,6 +701,8 @@ function App() {
   useEffect(() => setLS(LS.showReceiptPrint, showReceiptPrint), [showReceiptPrint]);
   useEffect(() => setLS(LS.kitchenSettings, kitchenSettings), [kitchenSettings]);
   useEffect(() => setLS(LS.screenMode, screenMode), [screenMode]);
+  useEffect(() => setLS(LS.displayMode, displayMode), [displayMode]);
+  useEffect(() => setLS(LS.contactSettings, contactSettings), [contactSettings]);
   useEffect(() => setLS(LS.tableAutoReturnSeconds, tableAutoReturnSeconds), [tableAutoReturnSeconds]);
   useEffect(() => setLS(LS.tableLayout, tableLayout), [tableLayout]);
   useEffect(() => setLS(LS.subscription, subscription), [subscription]);
@@ -661,7 +712,7 @@ function App() {
       saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders,
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableAutoReturnSeconds, tableLayout, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, tableAutoReturnSeconds, tableLayout, subscription
       })
         .then(() => setSyncStatus("Firebase 자동저장 완료"))
         .catch(error => {
@@ -670,7 +721,7 @@ function App() {
         });
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableAutoReturnSeconds, tableLayout, subscription]);
+  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, tableAutoReturnSeconds, tableLayout, subscription]);
 
   const currentOrder = orders[selectedTable] || [];
   const activeOrder = currentOrder.filter(item => Number(item.qty || 0) > 0);
@@ -719,6 +770,9 @@ function App() {
     }
     return { className: "danger", text: "이용기간 확인 필요", notice: "관리자에게 문의해주세요" };
   }, [subscription]);
+
+  const isSubscriptionLocked = subscriptionInfo?.className === "danger";
+  const displayScale = displayMode === "scale" ? Math.max(0.35, Math.min(1, screenWidth / DESIGN_WIDTH)) : 1;
 
   useEffect(() => {
     if (screenMode !== "table" || !tableModeOrdering) return undefined;
@@ -1050,7 +1104,7 @@ function App() {
       await saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders: {},
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableAutoReturnSeconds, tableLayout, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, tableAutoReturnSeconds, tableLayout, subscription
       });
       setSyncStatus("현재 주문내역 초기화 완료");
       showToast("현재 주문내역이 초기화되었습니다");
@@ -1071,7 +1125,7 @@ function App() {
       await saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders: {},
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, tableAutoReturnSeconds, tableLayout, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, tableAutoReturnSeconds, tableLayout, subscription
       });
       setSyncStatus("운영 데이터 전체 초기화 완료");
       showToast("운영 데이터가 초기화되었습니다");
@@ -1268,15 +1322,16 @@ function App() {
 
   const isTableModeHome = screenMode === "table" && !tableModeOrdering;
   const billingDetails = useMemo(() => {
-    const base = Number(subscription?.baseMonthlyFee ?? 10000);
-    const option = Number(subscription?.optionMonthlyFee || 0) + (subscription?.kitchenOptionEnabled ? Number(subscription?.kitchenOptionFee || 0) : 0);
-    const count = Number(subscription?.referralActiveCount || 0);
-    const rate = Number(subscription?.referralDiscountRate || 10);
-    const discountFactor = Math.pow(1 - rate / 100, count);
+    const base = Math.max(0, Number(subscription?.baseMonthlyFee ?? 10000));
+    const option = Math.max(0, Number(subscription?.optionMonthlyFee || 0)) + (subscription?.kitchenOptionEnabled ? Math.max(0, Number(subscription?.kitchenOptionFee || 0)) : 0);
+    const count = Math.max(0, Number(subscription?.referralActiveCount || 0));
+    const rawRate = Number(subscription?.referralDiscountRate ?? 10);
+    const rate = Math.max(0, Math.min(100, Number.isFinite(rawRate) ? rawRate : 10));
     const before = base + option;
+    const discountFactor = count > 0 ? Math.pow(1 - rate / 100, count) : 1;
     const calculated = round100(before * discountFactor);
-    const finalFee = Number(subscription?.monthlyFee || calculated);
-    const totalDiscountRate = before ? Math.round((1 - finalFee / before) * 1000) / 10 : 0;
+    const finalFee = Math.max(0, calculated);
+    const totalDiscountRate = before ? Math.max(0, Math.min(100, Math.round((1 - finalFee / before) * 1000) / 10)) : 0;
     return { base, option, count, rate, before, calculated, finalFee, totalDiscountRate };
   }, [subscription]);
 
@@ -1334,6 +1389,22 @@ function App() {
     });
   };
 
+  const resetTablePositions = () => {
+    if (!window.confirm("테이블 위치를 기본 배치로 되돌릴까요?\n현재 수정한 테이블 위치만 초기화되고, 테이블 크기와 표시 아이콘 설정은 유지됩니다.")) return;
+    setTableLayout(prev => {
+      const base = normalizeTableLayout(prev, tableCount);
+      const defaults = makeDefaultTableLayout(tableCount);
+      return { ...base, tablePositions: defaults.tablePositions };
+    });
+    showToast("테이블 위치를 기본 배치로 초기화했습니다");
+  };
+
+  const openKakaoChannel = () => {
+    const url = String(contactSettings?.kakaoChannelUrl || "").trim();
+    if (!url) return showToast("관리자모드에서 카카오톡 채널 URL을 먼저 입력해주세요");
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const renderFloorPlan = (editable = false) => {
     const layout = normalizeTableLayout(tableLayout, tableCount);
     return (
@@ -1389,7 +1460,7 @@ function App() {
   };
 
   return (
-    <div className="app" onClick={clearToast} onPointerDown={noteTableActivity} onKeyDown={noteTableActivity}>
+    <div className={`app ${displayMode === "scale" ? "scaleMode" : ""}`} style={{ "--posScale": displayScale }} onClick={clearToast} onPointerDown={noteTableActivity} onKeyDown={noteTableActivity}>
       <header className="top card compactTop">
         <div className="topLeft">
           <h1>{restaurantName} POS <span>{VERSION} · {compactSyncStatus}</span></h1>
@@ -1402,9 +1473,9 @@ function App() {
         </div>
       </header>
 
-      {isTableModeHome && renderFloorPlan(false)}
+      {isTableModeHome && <div className={isSubscriptionLocked ? "lockedContent" : ""}>{renderFloorPlan(false)}</div>}
 
-      {!isTableModeHome && <div className="layout">
+      {!isTableModeHome && <div className={`layout ${isSubscriptionLocked ? "lockedContent" : ""}`}>
         <div className="leftCol">
           {screenMode !== "table" ? (
             <section
@@ -1582,6 +1653,19 @@ function App() {
 
       {openStats && <section className="card panel"><Stats sales={sales} credits={credits} menus={menus} restaurantName={restaurantName} /></section>}
 
+      {isSubscriptionLocked && (
+        <div className="lockOverlay" onClick={e => e.stopPropagation()}>
+          <div className="lockBox">
+            <b>이용기간이 종료되었습니다</b>
+            <p>현재 이용기간과 유예기간이 모두 지나 사용이 제한되었습니다.<br />계속 이용하시려면 이용 연장 등록이 필요합니다.</p>
+            <div className="lockActions">
+              <button className="dark" onClick={() => setContactModal(true)}>문의하기</button>
+              <button onClick={openAdmin}>관리자모드</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPw && (
         <div className="modal">
           <div className="modalBox">
@@ -1632,6 +1716,10 @@ function App() {
             setKitchenSettings,
             screenMode,
             setScreenMode,
+            displayMode,
+            setDisplayMode,
+            contactSettings,
+            setContactSettings,
             tableAutoReturnSeconds,
             setTableAutoReturnSeconds,
             tableLayout,
@@ -1640,6 +1728,7 @@ function App() {
             setTableEditOpen,
             assignMarkerEdge,
             changeTableSize,
+            resetTablePositions,
             renderFloorPlan,
             resetSalesData,
             resetCreditData,
@@ -1651,7 +1740,9 @@ function App() {
             copyAccountNumber,
             openReferralInfo: () => setReferralModal(true),
             openBillingDetail: () => setBillingModal(true),
-            openKitchenPair: () => setKitchenPairModal(true)
+            openKitchenPair: () => setKitchenPairModal(true),
+            openContactModal: () => setContactModal(true),
+            billingDetails
           }}
         />
       )}
@@ -1735,11 +1826,30 @@ function App() {
               <div><span>추가옵션</span><b>{money(billingDetails.option)}</b></div>
               <div><span>할인 전 금액</span><b>{money(billingDetails.before)}</b></div>
               <div><span>소개할인</span><b>{billingDetails.count}곳 적용 / 1곳마다 {billingDetails.rate}%</b></div>
-              <div><span>총 할인률</span><b>{billingDetails.totalDiscountRate}%</b></div>
+              <div><span>적용 할인율</span><b>{billingDetails.totalDiscountRate}%</b></div>
               <div className="finalFee"><span>최종 월 이용료</span><b>{money(billingDetails.finalFee)}</b></div>
             </div>
             <p className="muted">소개할인은 현재 이용료 기준으로 10%씩 반복 적용됩니다. 실제 금액은 추후 종합관리프로그램 설정값을 기준으로 자동 반영됩니다.</p>
             <button className="dark full" onClick={() => setBillingModal(false)}>확인</button>
+          </div>
+        </div>
+      )}
+
+
+      {contactModal && (
+        <div className="modal">
+          <div className="modalBox wide" onClick={e => e.stopPropagation()}>
+            <button className="xBtn" onClick={() => setContactModal(false)}>×</button>
+            <h2>문의하기</h2>
+            <p className="muted">자주 묻는 내용을 먼저 확인하고, 해결이 안 되면 카카오톡으로 문의를 남겨주세요.</p>
+            <div className="faqGrid">
+              <button onClick={() => alert("이용 연장은 월 이용료 입금 또는 카드결제 확인 후 처리됩니다. 결제 후 관리자에게 문의를 남겨주세요.")}>이용 연장 문의</button>
+              <button onClick={() => alert(contactSettings?.bankMessage || "입금계좌는 이용정보/납부정보에서 확인할 수 있습니다.")}>입금 계좌 확인</button>
+              <button onClick={() => alert(contactSettings?.cardMessage || "카드결제 링크가 필요하시면 관리자에게 문의를 남겨주세요.")}>카드결제 링크 요청</button>
+              <button onClick={() => alert(contactSettings?.kitchenMessage || "주문서관리 옵션은 관리자에게 문의해주세요.")}>주문서 옵션 문의</button>
+              <button onClick={() => alert(contactSettings?.referralMessage || "소개한 식당이 이용 중일 때 할인됩니다.")}>소개할인 문의</button>
+              <button className="dark" onClick={openKakaoChannel}>관리자에게 카톡 남기기</button>
+            </div>
           </div>
         </div>
       )}
@@ -2053,6 +2163,18 @@ function AdminModal(props) {
                 <option value="table">테이블모드</option>
               </select>
             </label>
+            <label>화면 표시 방식
+              <select value={props.displayMode || "auto"} onChange={e => props.setDisplayMode(e.target.value)}>
+                <option value="auto">자동배치 모드</option>
+                <option value="scale">원본비율 유지 모드</option>
+              </select>
+            </label>
+            <div className="screenModeHelp">
+              <b>화면 표시 방식 안내</b>
+              <p><b>자동배치 모드</b>는 기기 화면 크기에 맞춰 주문내역이 아래로 내려가는 등 위치가 자동 조정됩니다.</p>
+              <p><b>원본비율 유지 모드</b>는 11~12인치 태블릿 기준 화면을 유지하면서, 현재 기기 가로폭에 맞춰 전체 화면을 비율대로 축소합니다.</p>
+              <p>예시) 기준 화면 크기: 1200px × 800px(약 11~12인치 태블릿 기준)<br />현재 기기 가로폭이 1000px이면 전체 화면을 1000 / 1200 비율로 축소합니다.</p>
+            </div>
             <label>테이블모드 자동복귀(초)<input type="number" min="1" value={props.tableAutoReturnSeconds} onChange={e => props.setTableAutoReturnSeconds(Number(e.target.value) || 10)} /></label>
             <label className="checkLabel"><input type="checkbox" checked={props.showReceiptPrint} onChange={e => props.setShowReceiptPrint(e.target.checked)} /> 결제완료 + 영수증 출력 버튼 표시</label>
             <label className={`checkLabel ${props.subscription?.kitchenOptionEnabled ? "" : "disabledCheck"}`}><input type="checkbox" disabled={!props.subscription?.kitchenOptionEnabled} checked={props.subscription?.kitchenOptionEnabled && props.kitchenSettings?.enabled === true} onChange={e => props.setKitchenSettings(prev => ({ ...(prev || defaultKitchenSettings()), enabled: e.target.checked }))} /> 주문서관리 / 주방전송 버튼 사용</label>
@@ -2075,7 +2197,7 @@ function AdminModal(props) {
               <div>
                 <div className="floorEditTools">
                   <div className="tableSizeCtl"><b>테이블 크기</b><button onClick={() => props.changeTableSize(-10)}>-</button><button className="sizeReset" onClick={() => props.changeTableSize(0)}>{props.tableLayout?.tableSize || 100}</button><button onClick={() => props.changeTableSize(10)}>+</button></div>
-                  <div className="markerDirectionPad compact"><b>표시 위치</b><button title="위쪽 배치" onClick={() => props.assignMarkerEdge("top")}>⬆️ 위</button><button title="왼쪽 배치" onClick={() => props.assignMarkerEdge("left")}>⬅️ 왼쪽</button><button title="오른쪽 배치" onClick={() => props.assignMarkerEdge("right")}>오른쪽 ➡️</button><button title="아래쪽 배치" onClick={() => props.assignMarkerEdge("bottom")}>⬇️ 아래</button></div>
+                  <div className="markerDirectionPad compact"><b>표시 위치</b><button title="위쪽 배치" onClick={() => props.assignMarkerEdge("top")}>🔼 위</button><button title="왼쪽 배치" onClick={() => props.assignMarkerEdge("left")}>◀️ 왼쪽</button><button title="오른쪽 배치" onClick={() => props.assignMarkerEdge("right")}>오른쪽 ▶️</button><button title="아래쪽 배치" onClick={() => props.assignMarkerEdge("bottom")}>🔽 아래</button><button className="resetLayoutBtn" title="테이블 위치만 기본 배치로 되돌리기" onClick={props.resetTablePositions}>배치 초기화</button></div>
                 </div>
                 <div className="markerChecks">
                   {floorMarkers.map(marker => (
@@ -2091,7 +2213,7 @@ function AdminModal(props) {
             <h4>이용정보 / 납부정보</h4>
             <div className="billingInfoGrid">
               <div><b>이용기간</b><span>{props.subscription?.expireDate ? `${formatKoreanDate(props.subscription.expireDate)}까지` : "미설정"}</span></div>
-              <button className="billingClickBox" onClick={props.openBillingDetail}><b>월 이용료</b><span>{money(props.subscription?.monthlyFee || 0)}</span><small>클릭하면 기본요금/옵션/할인 상세를 볼 수 있습니다</small></button>
+              <button className="billingClickBox" onClick={props.openBillingDetail}><b>월 이용료</b><span>{money(props.billingDetails?.finalFee || props.subscription?.monthlyFee || 0)}</span><small>클릭하면 기본요금/옵션/할인 상세를 볼 수 있습니다</small></button>
               <div className="accountInfoBox">
                 <b>입금계좌</b>
                 <span>{props.subscription?.bankName || "미설정"} {props.subscription?.accountNumber || ""}</span>
@@ -2102,11 +2224,26 @@ function AdminModal(props) {
                 <span>{Number(props.subscription?.referralActiveCount || 0)}곳 적용중</span>
                 <small>클릭하면 소개업체와 할인 안내를 볼 수 있습니다</small>
               </button>
+              <button className="billingClickBox contactClickBox" onClick={props.openContactModal}>
+                <b>문의하기</b>
+                <span>관리자 연락 남기기</span>
+                <small>FAQ 확인 후 카카오톡 문의로 연결됩니다</small>
+              </button>
             </div>
             <div className="referralAdminNote">
               주변 식당을 소개해주시면 현재 월 이용료에서 <b>10% 추가 할인</b>됩니다.
             </div>
             <p className="muted">이용기간, 월 이용료, 입금계좌, 소개할인은 식당 POS에서 수정하지 않고 추후 종합관리프로그램에서 자동 반영되도록 사용할 예정입니다.</p>
+          </div>
+          <div className="adminCard contactSettingsBox">
+            <h3>문의 / 상담 설정</h3>
+            <div className="grid2">
+              <label>카카오톡 채널 URL<input placeholder="https://pf.kakao.com/..." value={props.contactSettings?.kakaoChannelUrl || ""} onChange={e => props.setContactSettings(prev => ({ ...(prev || defaultContactSettings()), kakaoChannelUrl: e.target.value }))} /></label>
+              <label>관리자 연락처<input placeholder="예: 010-0000-0000" value={props.contactSettings?.adminPhone || ""} onChange={e => props.setContactSettings(prev => ({ ...(prev || defaultContactSettings()), adminPhone: e.target.value }))} /></label>
+            </div>
+            <label>카드결제 요청 안내문<input value={props.contactSettings?.cardMessage || ""} onChange={e => props.setContactSettings(prev => ({ ...(prev || defaultContactSettings()), cardMessage: e.target.value }))} /></label>
+            <label>계좌 안내문<input value={props.contactSettings?.bankMessage || ""} onChange={e => props.setContactSettings(prev => ({ ...(prev || defaultContactSettings()), bankMessage: e.target.value }))} /></label>
+            <p className="muted">처음에는 버튼형 FAQ 자동응대로 안내하고, 해결이 안 되면 카카오톡 채널 상담으로 연결하는 방식입니다.</p>
           </div>
           <div className="passwordRow">
             <label>새 비밀번호</label>
