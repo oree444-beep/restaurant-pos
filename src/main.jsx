@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V34";
+const VERSION = "V35";
 const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
 const DESIGN_WIDTH = 1200;
 const DESIGN_HEIGHT = 800;
@@ -184,6 +184,24 @@ const statsPointCost = (reportType, weekdayMode = false) => {
   if (reportType === "summary") return weekdayMode ? statsPricingPolicy.prices.weekdaySummary : statsPricingPolicy.prices.summary;
   return weekdayMode ? statsPricingPolicy.prices.weekdayIngredients : statsPricingPolicy.prices.ingredients;
 };
+const statsPeriodInfo = subscription => {
+  const start = safeDateObj(subscription?.startDate) || new Date();
+  const today = safeDateObj(todayValue()) || new Date();
+  const dayNo = Math.max(1, Math.floor((today - start) / 86400000) + 1);
+  if (dayNo <= statsPricingPolicy.freeDays) {
+    return { type: "free", title: "무료기간 적용 중", badge: "무료기간", dayNo, multiplier: 0, description: "현재 통계 기능은 무료로 이용할 수 있습니다. 가입 후 2개월(60일)까지 무료로 제공됩니다." };
+  }
+  if (dayNo <= statsPricingPolicy.trialDays) {
+    return { type: "trial", title: "체험가 적용 중", badge: "체험가", dayNo, multiplier: 1, description: "3~4개월차 초기 체험가가 적용됩니다." };
+  }
+  return { type: "normal", title: "정상가 적용 중", badge: "정상가", dayNo, multiplier: 1, description: "5개월차부터 정상가가 적용됩니다. 정상가 포인트는 추후 종합관리프로그램에서 조정할 수 있습니다." };
+};
+const effectiveStatsPointCost = (reportType, weekdayMode = false, subscription) => {
+  const period = statsPeriodInfo(subscription);
+  if (period.type === "free") return 0;
+  return statsPointCost(reportType, weekdayMode);
+};
+const statsPointText = (cost, period) => cost === 0 ? "무료" : `${period.badge} ${cost}P`;
 
 const defaultSubscription = () => ({
   startDate: todayValue(),
@@ -1781,7 +1799,7 @@ function App() {
         </section>
       )}
 
-      {openStats && <section className="card panel"><Stats sales={sales} credits={credits} menus={menus} restaurantName={restaurantName} menuIngredients={menuIngredients} messagePoints={messagePoints} /></section>}
+      {openStats && <section className="card panel"><Stats sales={sales} credits={credits} menus={menus} restaurantName={restaurantName} menuIngredients={menuIngredients} messagePoints={messagePoints} subscription={subscription} /></section>}
 
       {isSubscriptionLocked && (
         <div className="lockOverlay" onClick={e => e.stopPropagation()}>
@@ -2105,7 +2123,7 @@ function CreditRow({ c, selected, setSelectedCreditIds, partialPay }) {
   );
 }
 
-function Stats({ sales, credits, menus, restaurantName, menuIngredients = {}, messagePoints }) {
+function Stats({ sales, credits, menus, restaurantName, menuIngredients = {}, messagePoints, subscription }) {
   const basicRange = defaultStatsRange();
   const [startDate, setStartDate] = useState(basicRange.startDate);
   const [endDate, setEndDate] = useState(basicRange.endDate);
@@ -2113,6 +2131,18 @@ function Stats({ sales, credits, menus, restaurantName, menuIngredients = {}, me
   const [weekdayMode, setWeekdayMode] = useState(false);
   const [weekday, setWeekday] = useState("");
   const [quickRange, setQuickRange] = useState("1m");
+  const statsPeriod = statsPeriodInfo(subscription);
+  const hasAnyIngredients = Object.values(menuIngredients || {}).some(rows => normalizeIngredientRows(rows).length > 0);
+  const labelForReport = type => statsPointText(effectiveStatsPointCost(type, weekdayMode, subscription), statsPeriod);
+  const excelPointCost = statsPeriod.type === "free" ? 0 : statsPricingPolicy.prices.excel;
+  const excelPointLabel = statsPointText(excelPointCost, statsPeriod);
+  const selectReportType = type => {
+    if (type === "ingredients" && !hasAnyIngredients) {
+      window.alert("관리자모드에서 메뉴별 재료를 입력하시면 사용 가능합니다.\n포인트는 차감되지 않았습니다.");
+      return;
+    }
+    setReportType(type);
+  };
 
   const applyQuickRange = type => {
     const end = yesterdayValue();
@@ -2188,8 +2218,8 @@ function Stats({ sales, credits, menus, restaurantName, menuIngredients = {}, me
   const totalSales = filteredSales.reduce((sum, sale) => sum + saleTotal(sale), 0);
   const totalOrders = filteredSales.length;
   const topMenu = soldMenuEntries[0];
-  const pointCost = statsPointCost(reportType, weekdayMode);
-  const pointLabel = pointCost ? `${pointCost}P` : "무료";
+  const pointCost = effectiveStatsPointCost(reportType, weekdayMode, subscription);
+  const pointLabel = statsPointText(pointCost, statsPeriod);
   const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
   const weekdayWaiting = weekdayMode && weekday === "";
   const noWeekdayRecords = weekdayMode && weekday !== "" && filteredSales.length === 0;
@@ -2223,16 +2253,16 @@ function Stats({ sales, credits, menus, restaurantName, menuIngredients = {}, me
         </div>
         <div className="pointMiniBadge">이용포인트 <b>{Number(messagePoints?.balance || 0).toLocaleString()}P</b></div>
       </div>
-      <div className="statsPolicyBox">
-        <b>통계 이용요금</b>
-        <span>기본형 무료 · 종합형 20P · 세부재료 50P · 엑셀다운 30P</span>
-        <small>가입 후 2개월(60일) 무료, 3~4개월차 체험가, 5개월차부터 정상가 적용 예정입니다. 요금 정책은 종합관리프로그램에서 1개 문서로 관리하고 POS는 필요할 때만 읽어 캐시하는 구조로 연결할 예정입니다.</small>
+      <div className={`statsPolicyBox ${statsPeriod.type}`}>
+        <b>통계 이용요금 · {statsPeriod.title}</b>
+        <span>{statsPeriod.type === "free" ? "기본형 무료 · 종합형 무료 · 세부재료 무료 · 엑셀다운 무료" : `기본형 무료 · 종합형 ${statsPricingPolicy.prices.summary}P · 세부재료 ${statsPricingPolicy.prices.ingredients}P · 엑셀다운 ${statsPricingPolicy.prices.excel}P`}</span>
+        <small>{statsPeriod.description} 요금 정책은 추후 종합관리프로그램에서 1개 문서로 관리하고, POS는 필요할 때만 읽어 캐시하는 구조로 연결할 예정입니다.</small>
       </div>
       <div className="statsControls">
         <div className="reportTypeBtns">
-          <button className={reportType === "basic" ? "selected" : ""} onClick={() => setReportType("basic")}>기본형 <small>무료</small></button>
-          <button className={reportType === "summary" ? "selected" : ""} onClick={() => setReportType("summary")}>종합형 <small>20P 예정</small></button>
-          <button className={reportType === "ingredients" ? "selected" : ""} onClick={() => setReportType("ingredients")}>세부재료분석형 <small>50P 예정</small></button>
+          <button className={reportType === "basic" ? "selected" : ""} onClick={() => selectReportType("basic")}>기본형 <small>{labelForReport("basic")}</small></button>
+          <button className={reportType === "summary" ? "selected" : ""} onClick={() => selectReportType("summary")}>종합형 <small>{labelForReport("summary")}</small></button>
+          <button className={reportType === "ingredients" ? "selected" : ""} disabled={!hasAnyIngredients} onClick={() => selectReportType("ingredients")} title={!hasAnyIngredients ? "관리자모드에서 메뉴별 재료를 입력하시면 사용 가능합니다." : ""}>세부재료분석형 <small>{hasAnyIngredients ? labelForReport("ingredients") : "재료 입력 후"}</small></button>
         </div>
         <div className="dateRange statsDateRange">
           <button className={quickRange === "1m" ? "activeRange" : ""} onClick={() => applyQuickRange("1m")}>최근 1달</button>
@@ -2240,7 +2270,7 @@ function Stats({ sales, credits, menus, restaurantName, menuIngredients = {}, me
           <button className={quickRange === "1y" ? "activeRange" : ""} onClick={() => applyQuickRange("1y")}>최근 1년</button>
           <label>시작 <input type="date" value={startDate} onChange={e => setManualStart(e.target.value)} /></label>
           <label>종료 <input type="date" value={endDate} onChange={e => setManualEnd(e.target.value)} /></label>
-          <button className="green" onClick={exportSalesExcel}>엑셀 다운로드 <small>30P</small></button>
+          <button className="green" onClick={exportSalesExcel}>엑셀 다운로드 <small>{excelPointLabel}</small></button>
         </div>
         <div className="weekdayStatsLine">
           <label className="checkLabel"><input type="checkbox" checked={weekdayMode} onChange={e => toggleWeekdayMode(e.target.checked)} /> 요일별 통계 보기</label>
@@ -2282,10 +2312,14 @@ function Stats({ sales, credits, menus, restaurantName, menuIngredients = {}, me
           )}
 
           {reportType === "ingredients" && (
-            <div className="statsGrid wideStatsGrid">
-              <div className="statBox fullStatBox"><h3>세부 재료 준비 추천</h3>{ingredientRows.length ? ingredientRows.map((row, index) => <p key={`${row.menuName}-${row.name}-${index}`}><b>{row.menuName}</b> 기준 · {row.name}: <b>{row.min}~{row.max}{row.unit}</b></p>) : <p className="muted">관리자모드의 메뉴별 재료 설정에 재료를 입력하면 재료별 준비량이 표시됩니다.</p>}</div>
-              <div className="statBox fullStatBox"><h3>메뉴별 기준 준비량</h3>{prepRows.map(row => <p key={row.id}>{row.name}: 하루 {row.min}~{row.max}개</p>)}</div>
-            </div>
+            hasAnyIngredients ? (
+              <div className="statsGrid wideStatsGrid">
+                <div className="statBox fullStatBox"><h3>세부 재료 준비 추천</h3>{ingredientRows.length ? ingredientRows.map((row, index) => <p key={`${row.menuName}-${row.name}-${index}`}><b>{row.menuName}</b> 기준 · {row.name}: <b>{row.min}~{row.max}{row.unit}</b></p>) : <p className="muted">입력된 재료가 있는 메뉴의 판매 기록이 있을 때 재료별 준비량이 표시됩니다.</p>}</div>
+                <div className="statBox fullStatBox"><h3>메뉴별 기준 준비량</h3>{prepRows.map(row => <p key={row.id}>{row.name}: 하루 {row.min}~{row.max}개</p>)}</div>
+              </div>
+            ) : (
+              <div className="statNoticeBox">관리자모드에서 메뉴별 재료를 입력하시면 사용 가능합니다.<br />포인트는 차감되지 않았습니다.</div>
+            )
           )}
         </>
       )}
@@ -2428,11 +2462,11 @@ function AdminModal(props) {
             <>
               <div className="ingredientExampleBox">
                 <b>입력 예시</b>
-                <div className="exampleTable">
-                  <span>재료명</span><span>수량</span><span>단위</span>
-                  <b>생태</b><b>1</b><b>마리</b>
-                  <b>다대기</b><b>30</b><b>g</b>
-                  <b>무</b><b>100</b><b>g</b>
+                <p className="muted">아래 실제 입력칸과 같은 순서로 적으면 됩니다.</p>
+                <div className="exampleInputRows">
+                  <div className="ingredientRow exampleIngredientRow"><input value="재료명 예: 생태" readOnly /><input value="수량 예: 1" readOnly /><input value="단위 예: 마리" readOnly /><button type="button" disabled>삭제</button></div>
+                  <div className="ingredientRow exampleIngredientRow"><input value="재료명 예: 다대기" readOnly /><input value="수량 예: 30" readOnly /><input value="단위 예: g" readOnly /><button type="button" disabled>삭제</button></div>
+                  <div className="ingredientRow exampleIngredientRow"><input value="재료명 예: 무" readOnly /><input value="수량 예: 100" readOnly /><input value="단위 예: g" readOnly /><button type="button" disabled>삭제</button></div>
                 </div>
               </div>
               <div className="ingredientList">
@@ -2456,8 +2490,8 @@ function AdminModal(props) {
                       {visibleRows.map((row, index) => (
                         <div className="ingredientRow" key={`${menu.id}-${index}`}>
                           <input placeholder="재료명 예: 생태" value={row.name || ""} onChange={e => updateIngredientRow(index, "name", e.target.value)} />
-                          <input type="number" step="0.1" placeholder="수량" value={row.amount || ""} onChange={e => updateIngredientRow(index, "amount", e.target.value)} />
-                          <input placeholder="단위 예: 마리, g" value={row.unit || ""} onChange={e => updateIngredientRow(index, "unit", e.target.value)} />
+                          <input type="number" step="0.1" placeholder="수량 예: 1" value={row.amount || ""} onChange={e => updateIngredientRow(index, "amount", e.target.value)} />
+                          <input placeholder="단위 예: 마리" value={row.unit || ""} onChange={e => updateIngredientRow(index, "unit", e.target.value)} />
                           <button type="button" onClick={() => removeIngredientRow(index)}>삭제</button>
                         </div>
                       ))}
