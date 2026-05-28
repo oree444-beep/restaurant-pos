@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V32";
+const VERSION = "V33";
 const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
 const DESIGN_WIDTH = 1200;
 const DESIGN_HEIGHT = 800;
@@ -60,7 +60,8 @@ const LS = {
   contactSettings: "contactSettings",
   tableLayout: "tableLayout",
   tableAutoReturnSeconds: "tableAutoReturnSeconds",
-  messagePoints: "messagePoints"
+  messagePoints: "messagePoints",
+  menuIngredients: "menuIngredients"
 };
 
 const getLS = (key, fallback) => {
@@ -148,6 +149,21 @@ const addDaysValue = (dateValue, days) => {
   base.setDate(base.getDate() + Number(days || 0));
   return base.toISOString().slice(0, 10);
 };
+
+const addMonthsValue = (dateValue, months) => {
+  const base = dateValue ? new Date(`${dateValue}T00:00:00`) : new Date();
+  base.setMonth(base.getMonth() + Number(months || 0));
+  return base.toISOString().slice(0, 10);
+};
+const addYearsValue = (dateValue, years) => {
+  const base = dateValue ? new Date(`${dateValue}T00:00:00`) : new Date();
+  base.setFullYear(base.getFullYear() + Number(years || 0));
+  return base.toISOString().slice(0, 10);
+};
+const yesterdayValue = () => addDaysValue(todayValue(), -1);
+const defaultStatsRange = () => ({ startDate: addMonthsValue(yesterdayValue(), -1), endDate: yesterdayValue() });
+const defaultWeekdayStatsRange = () => ({ startDate: addMonthsValue(yesterdayValue(), -2), endDate: yesterdayValue() });
+
 const defaultSubscription = () => ({
   startDate: todayValue(),
   expireDate: addDaysValue(todayValue(), 30),
@@ -183,6 +199,7 @@ const defaultMessagePoints = () => ({
   recentHistory: [],
   pendingRequests: []
 });
+const normalizeIngredientRows = rows => (Array.isArray(rows) ? rows : []).map(row => ({ name: row?.name || "", amount: row?.amount || "", unit: row?.unit || "" })).filter(row => row.name || row.amount || row.unit);
 const messagePointPlans = [
   { amount: 10000, points: 10000 },
   { amount: 20000, points: 21000 },
@@ -554,6 +571,7 @@ function App() {
   const [displayMode, setDisplayMode] = useState(() => getLS(LS.displayMode, "auto"));
   const [contactSettings, setContactSettings] = useState(() => getLS(LS.contactSettings, defaultContactSettings()));
   const [messagePoints, setMessagePoints] = useState(() => getLS(LS.messagePoints, defaultMessagePoints()));
+  const [menuIngredients, setMenuIngredients] = useState(() => getLS(LS.menuIngredients, {}));
   const [messagePointModal, setMessagePointModal] = useState(false);
   const [messagePointSending, setMessagePointSending] = useState(false);
   const [contactModal, setContactModal] = useState(false);
@@ -626,6 +644,7 @@ function App() {
           setDisplayMode(data.displayMode ?? displayMode);
           setContactSettings(data.contactSettings ?? contactSettings);
           setMessagePoints(data.messagePoints ?? messagePoints);
+          setMenuIngredients(data.menuIngredients ?? menuIngredients);
           setTableAutoReturnSeconds(data.tableAutoReturnSeconds ?? tableAutoReturnSeconds);
           setTableLayout(normalizeTableLayout(data.tableLayout ?? tableLayout, data.tableCount ?? tableCount));
           setSubscription(data.subscription ?? subscription);
@@ -633,7 +652,7 @@ function App() {
           await saveSettingsToFirebase({
             restaurantName, menus, categories, tableCount, tableRows, orders,
             popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-            pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, tableAutoReturnSeconds, tableLayout, subscription
+            pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, menuIngredients, tableAutoReturnSeconds, tableLayout, subscription
           });
         }
 
@@ -721,6 +740,7 @@ function App() {
   useEffect(() => setLS(LS.displayMode, displayMode), [displayMode]);
   useEffect(() => setLS(LS.contactSettings, contactSettings), [contactSettings]);
   useEffect(() => setLS(LS.messagePoints, messagePoints), [messagePoints]);
+  useEffect(() => setLS(LS.menuIngredients, menuIngredients), [menuIngredients]);
   useEffect(() => setLS(LS.tableAutoReturnSeconds, tableAutoReturnSeconds), [tableAutoReturnSeconds]);
   useEffect(() => setLS(LS.tableLayout, tableLayout), [tableLayout]);
   useEffect(() => setLS(LS.subscription, subscription), [subscription]);
@@ -730,7 +750,7 @@ function App() {
       saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders,
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, tableAutoReturnSeconds, tableLayout, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, menuIngredients, tableAutoReturnSeconds, tableLayout, subscription
       })
         .then(() => setSyncStatus("Firebase 자동저장 완료"))
         .catch(error => {
@@ -739,7 +759,7 @@ function App() {
         });
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, tableAutoReturnSeconds, tableLayout, subscription]);
+  }, [firebaseReady, restaurantName, menus, categories, tableCount, tableRows, orders, popularCount, showPopular, adminPw, diningSetting, takeoutSetting, pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, menuIngredients, tableAutoReturnSeconds, tableLayout, subscription]);
 
   const currentOrder = orders[selectedTable] || [];
   const activeOrder = currentOrder.filter(item => Number(item.qty || 0) > 0);
@@ -1122,7 +1142,7 @@ function App() {
       await saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders: {},
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, tableAutoReturnSeconds, tableLayout, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, menuIngredients, tableAutoReturnSeconds, tableLayout, subscription
       });
       setSyncStatus("현재 주문내역 초기화 완료");
       showToast("현재 주문내역이 초기화되었습니다");
@@ -1143,7 +1163,7 @@ function App() {
       await saveSettingsToFirebase({
         restaurantName, menus, categories, tableCount, tableRows, orders: {},
         popularCount, showPopular, adminPw, diningSetting, takeoutSetting,
-        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, tableAutoReturnSeconds, tableLayout, subscription
+        pinTables, pinOrder, scrollTopAfterPay, showReceiptPrint, kitchenSettings, screenMode, displayMode, contactSettings, messagePoints, menuIngredients, tableAutoReturnSeconds, tableLayout, subscription
       });
       setSyncStatus("운영 데이터 전체 초기화 완료");
       showToast("운영 데이터가 초기화되었습니다");
@@ -1425,7 +1445,7 @@ function App() {
 
   const requestMessagePointCharge = async plan => {
     if (!plan || messagePointSending) return;
-    const ok = window.confirm(`${plan.amount.toLocaleString()}원 충전요청을 보낼까요?\n지급예정 문자포인트: ${plan.points.toLocaleString()}P\n\n종합관리프로그램 연결 후 관리자가 입금 확인/승인하면 충전됩니다.`);
+    const ok = window.confirm(`${plan.amount.toLocaleString()}원 충전요청을 보낼까요?\n지급예정 이용포인트: ${plan.points.toLocaleString()}P\n\n종합관리프로그램 연결 후 관리자가 입금 확인/승인하면 충전됩니다.`);
     if (!ok) return;
     const request = {
       id: `mp_${Date.now()}`,
@@ -1443,7 +1463,7 @@ function App() {
         const base = prev || defaultMessagePoints();
         return { ...base, pendingRequests: [request, ...(base.pendingRequests || [])].slice(0, 5) };
       });
-      showToast("문자포인트 충전요청을 보냈습니다");
+      showToast("이용포인트 충전요청을 보냈습니다");
     } catch (error) {
       console.error(error);
       setMessagePoints(prev => {
@@ -1658,7 +1678,7 @@ function App() {
             <div>
               <div className="creditTitleLine">
                 <h2>외상장부</h2>
-                <div className="creditPointBadge">문자포인트 <b>{Number(messagePoints?.balance || 0).toLocaleString()}P</b></div>
+                <div className="creditPointBadge">이용포인트 <b>{Number(messagePoints?.balance || 0).toLocaleString()}P</b></div>
               </div>
               <p className="muted">선택 {selectedCreditIds.length}건 / 선택 미납합계 <b>{money(selectedCreditTotal)}</b></p>
             </div>
@@ -1705,7 +1725,7 @@ function App() {
         </section>
       )}
 
-      {openStats && <section className="card panel"><Stats sales={sales} credits={credits} menus={menus} restaurantName={restaurantName} /></section>}
+      {openStats && <section className="card panel"><Stats sales={sales} credits={credits} menus={menus} restaurantName={restaurantName} menuIngredients={menuIngredients} messagePoints={messagePoints} /></section>}
 
       {isSubscriptionLocked && (
         <div className="lockOverlay" onClick={e => e.stopPropagation()}>
@@ -1775,6 +1795,8 @@ function App() {
             contactSettings,
             setContactSettings,
             messagePoints,
+            menuIngredients,
+            setMenuIngredients,
             openMessagePointModal: () => setMessagePointModal(true),
             tableAutoReturnSeconds,
             setTableAutoReturnSeconds,
@@ -1808,8 +1830,8 @@ function App() {
         <div className="modal">
           <div className="modalBox wide messagePointModal">
             <button className="xBtn" onClick={() => setMessagePointModal(false)}>×</button>
-            <h2>문자포인트 충전요청</h2>
-            <div className="summaryBox">현재 문자포인트 잔액 <b>{Number(messagePoints?.balance || 0).toLocaleString()}P</b></div>
+            <h2>이용포인트 충전요청</h2>
+            <div className="summaryBox">현재 이용포인트 잔액 <b>{Number(messagePoints?.balance || 0).toLocaleString()}P</b></div>
             <div className="servicePreparingBox">
               <b>서비스 준비중입니다</b>
               <p>종합관리프로그램 연결 후 사용 가능합니다.</p>
@@ -1826,7 +1848,7 @@ function App() {
             </div>
             <div className="pointNotice disabledNotice">
               <b>추후 연결 예정</b>
-              <p>충전요청 접수 → 관리자 입금 확인 → 종합관리프로그램 승인 → 문자포인트 반영 순서로 처리할 예정입니다.</p>
+              <p>충전요청 접수 → 관리자 입금 확인 → 종합관리프로그램 승인 → 이용포인트 반영 순서로 처리할 예정입니다.</p>
             </div>
           </div>
         </div>
@@ -1839,7 +1861,7 @@ function App() {
             <h2>{msgModal.title || "문자전송"}</h2>
             <div className="summaryBox">선택한 외상 {msgModal.selected?.length || 0}건 / 미납총액 <b>{money(msgModal.total || 0)}</b></div>
             <p>문자전송 기능 준비중입니다 😊</p>
-            <p className="muted">현재는 체크한 내역 기준으로 미납총액만 계산합니다. 추후 외상 독려문자, 자동 금액 입력, 문자포인트, 발송내역 기능을 연결할 예정입니다.</p>
+            <p className="muted">현재는 체크한 내역 기준으로 미납총액만 계산합니다. 추후 외상 독려문자, 자동 금액 입력, 이용포인트, 발송내역 기능을 연결할 예정입니다.</p>
             {(msgModal.selected || []).map(item => <p key={item.id}>{item.group} / {new Date(item.createdAt).toLocaleDateString()} / 잔액 {money(item.remain)}</p>)}
           </div>
         </div>
@@ -2027,65 +2049,164 @@ function CreditRow({ c, selected, setSelectedCreditIds, partialPay }) {
   );
 }
 
-function Stats({ sales, credits, menus, restaurantName }) {
-  const [startDate, setStartDate] = useState(todayValue());
-  const [endDate, setEndDate] = useState(todayValue());
-  const filteredSales = useMemo(() => filterSalesByRange(sales, startDate, endDate), [sales, startDate, endDate]);
+function Stats({ sales, credits, menus, restaurantName, menuIngredients = {}, messagePoints }) {
+  const basicRange = defaultStatsRange();
+  const [startDate, setStartDate] = useState(basicRange.startDate);
+  const [endDate, setEndDate] = useState(basicRange.endDate);
+  const [reportType, setReportType] = useState("basic");
+  const [weekdayMode, setWeekdayMode] = useState(false);
+  const [weekday, setWeekday] = useState(String(new Date().getDay()));
+
+  const applyQuickRange = type => {
+    const end = yesterdayValue();
+    const start = type === "1y" ? addYearsValue(end, -1) : addMonthsValue(end, type === "2m" ? -2 : -1);
+    setStartDate(start);
+    setEndDate(end);
+  };
+  const toggleWeekdayMode = checked => {
+    setWeekdayMode(checked);
+    if (checked) {
+      const range = defaultWeekdayStatsRange();
+      setStartDate(range.startDate);
+      setEndDate(range.endDate);
+    } else {
+      const range = defaultStatsRange();
+      setStartDate(range.startDate);
+      setEndDate(range.endDate);
+    }
+  };
+
+  const filteredSales = useMemo(() => {
+    const base = filterSalesByRange(sales, startDate, endDate);
+    if (!weekdayMode) return base;
+    return base.filter(sale => String(safeDateObj(saleTimeValue(sale))?.getDay()) === String(weekday));
+  }, [sales, startDate, endDate, weekdayMode, weekday]);
   const exportSalesExcel = () => {
-    const sheets = buildSalesWorkbook({ restaurantName, sales, credits, menus, startDate, endDate });
+    const sheets = buildSalesWorkbook({ restaurantName, sales: filteredSales, credits, menus, startDate, endDate });
     downloadXlsx(`${restaurantName || "식당"}_판매통계_${startDate}_${endDate}_${timeName()}.xlsx`, sheets);
   };
 
-  const byPay = {}, byService = {}, byHour = {}, byMenu = {};
+  const byPay = {}, byService = {}, byHour = {}, byMenu = {}, menuDaily = {};
+  const businessDays = new Set();
   filteredSales.forEach(sale => {
+    const saleDate = dateText(saleTimeValue(sale));
+    if (saleDate) businessDays.add(saleDate);
     const total = saleTotal(sale);
     byPay[sale.payment || "미지정"] = (byPay[sale.payment || "미지정"] || 0) + total;
     byService[saleService(sale)] = (byService[saleService(sale)] || 0) + total;
     const date = safeDateObj(saleTimeValue(sale));
     const hour = date ? `${date.getHours()}시` : "시간없음";
     byHour[hour] = (byHour[hour] || 0) + total;
-    sale.items.forEach(item => {
+    (sale.items || []).forEach(item => {
       if (item.service) return;
-      byMenu[item.name] = byMenu[item.name] || { qty: 0, total: 0 };
-      byMenu[item.name].qty += item.qty;
-      byMenu[item.name].total += item.qty * item.price;
+      const key = item.id || item.name;
+      const menuName = item.name || menus.find(m => String(m.id) === String(key))?.name || "메뉴";
+      byMenu[key] = byMenu[key] || { id: key, name: menuName, qty: 0, total: 0 };
+      byMenu[key].qty += Number(item.qty || 0);
+      byMenu[key].total += Number(item.qty || 0) * Number(item.price || 0);
+      if (saleDate) {
+        menuDaily[key] = menuDaily[key] || {};
+        menuDaily[key][saleDate] = (menuDaily[key][saleDate] || 0) + Number(item.qty || 0);
+      }
     });
   });
-  const menuEntries = Object.entries(byMenu).sort((a, b) => b[1].total - a[1].total);
-  const lowEntries = [...menuEntries].sort((a, b) => a[1].qty - b[1].qty).slice(0, 5);
-  const zeroMenus = menus.filter(menu => !byMenu[menu.name]);
+  menus.forEach(menu => {
+    const key = menu.id || menu.name;
+    if (!byMenu[key]) byMenu[key] = { id: key, name: menu.name, qty: 0, total: 0 };
+  });
+  const businessDayCount = businessDays.size;
+  const menuEntries = Object.values(byMenu).sort((a, b) => b.total - a.total);
+  const soldMenuEntries = menuEntries.filter(item => item.qty > 0);
+  const lowEntries = [...soldMenuEntries].sort((a, b) => a.qty - b.qty).slice(0, 5);
+  const zeroMenus = menus.filter(menu => !byMenu[menu.id || menu.name]?.qty);
   const totalSales = filteredSales.reduce((sum, sale) => sum + saleTotal(sale), 0);
+  const totalOrders = filteredSales.length;
+  const topMenu = soldMenuEntries[0];
+  const pointLabel = reportType === "basic" ? "무료" : reportType === "summary" ? "100P 예정" : "300P 예정";
+  const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+  const prepRows = soldMenuEntries.map(menu => {
+    const dailyValues = Object.values(menuDaily[menu.id] || {});
+    const avg = businessDayCount ? menu.qty / businessDayCount : 0;
+    const max = dailyValues.length ? Math.max(...dailyValues) : 0;
+    return { ...menu, avg, min: Math.ceil(avg), max: Math.max(Math.ceil(avg), max) };
+  }).filter(row => row.qty > 0);
+
+  const ingredientRows = prepRows.flatMap(menu => {
+    const ingredients = normalizeIngredientRows(menuIngredients?.[menu.id] || []);
+    return ingredients.map(ing => {
+      const amount = Number(ing.amount || 0);
+      return {
+        menuName: menu.name,
+        name: ing.name,
+        min: Math.ceil((menu.min || 0) * amount * 10) / 10,
+        max: Math.ceil((menu.max || 0) * amount * 10) / 10,
+        unit: ing.unit || ""
+      };
+    });
+  }).filter(row => row.name && (row.min || row.max));
 
   return (
     <>
-      <div className="sectionHead">
-        <h2>판매통계</h2>
-        <div className="dateRange">
+      <div className="sectionHead statsTitleRow">
+        <div>
+          <h2>판매통계</h2>
+          <p className="statsCatch">오늘 재료를 얼마나 준비할까요? 지난 판매기록을 기준으로 메뉴별 준비량을 알려드려요.</p>
+        </div>
+        <div className="pointMiniBadge">이용포인트 <b>{Number(messagePoints?.balance || 0).toLocaleString()}P</b></div>
+      </div>
+      <div className="statsControls">
+        <div className="reportTypeBtns">
+          <button className={reportType === "basic" ? "selected" : ""} onClick={() => setReportType("basic")}>기본형 <small>무료</small></button>
+          <button className={reportType === "summary" ? "selected" : ""} onClick={() => setReportType("summary")}>종합형 <small>100P 예정</small></button>
+          <button className={reportType === "ingredients" ? "selected" : ""} onClick={() => setReportType("ingredients")}>세부재료분석형 <small>300P 예정</small></button>
+        </div>
+        <div className="dateRange statsDateRange">
+          <button onClick={() => applyQuickRange("1m")}>최근 1달</button>
+          <button onClick={() => applyQuickRange("2m")}>최근 2달</button>
+          <button onClick={() => applyQuickRange("1y")}>최근 1년</button>
           <label>시작 <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></label>
           <label>종료 <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></label>
           <button className="green" onClick={exportSalesExcel}>엑셀 다운로드</button>
         </div>
-      </div>
-      <div className="summaryBox">선택기간 매출: <b>{money(totalSales)}</b></div>
-      <div className="statsGrid">
-        <Box title="결제방식별" data={byPay} />
-        <Box title="식당/포장별" data={byService} />
-        <Box title="시간대별" data={byHour} />
-        <div className="statBox">
-          <h3>메뉴별 판매</h3>
-          {menuEntries.map(([name, value]) => <p key={name}>{name}: {value.qty}개 / {money(value.total)}</p>)}
-        </div>
-        <div className="statBox">
-          <h3>인기 메뉴 TOP</h3>
-          {menuEntries.slice(0, 5).map(([name, value], index) => <p key={name}>{index + 1}. {name}: {value.qty}개</p>)}
-          <h3>판매 적은 메뉴</h3>
-          {lowEntries.map(([name, value]) => <p key={name}>{name}: {value.qty}개</p>)}
-        </div>
-        <div className="statBox">
-          <h3>소외 메뉴</h3>
-          {zeroMenus.length ? zeroMenus.map(menu => <p key={menu.id}>{menu.name}</p>) : <p>선택기간 내 모든 메뉴 판매 기록 있음</p>}
+        <div className="weekdayStatsLine">
+          <label className="checkLabel"><input type="checkbox" checked={weekdayMode} onChange={e => toggleWeekdayMode(e.target.checked)} /> 요일별 통계 보기</label>
+          {weekdayMode && <select value={weekday} onChange={e => setWeekday(e.target.value)}>{weekdays.map((day, index) => <option value={String(index)} key={day}>{day}요일</option>)}</select>}
+          <span>일반 통계 기본은 최근 1달~어제, 요일별 통계 기본은 최근 2달~어제입니다.</span>
         </div>
       </div>
+      <div className="summaryBox statsSummaryBox">
+        <div><b>선택기간 매출</b><span>{money(totalSales)}</span></div>
+        <div><b>주문건수</b><span>{totalOrders}건</span></div>
+        <div><b>영업기준일</b><span>{businessDayCount}일</span></div>
+        <div><b>통계 이용포인트</b><span>{pointLabel}</span></div>
+      </div>
+      <p className="muted">통계는 주문이 1건이라도 있었던 날만 영업기준일로 포함합니다. 주문이 없는 날은 휴무일 가능성이 있어 평균 계산에서 제외합니다.</p>
+
+      {reportType === "basic" && (
+        <div className="statsGrid">
+          <div className="statBox"><h3>짧은 요약</h3><p>가장 많이 팔린 메뉴: <b>{topMenu ? `${topMenu.name} ${topMenu.qty}개` : "기록 없음"}</b></p><p>하루 평균 주문: <b>{businessDayCount ? (totalOrders / businessDayCount).toFixed(1) : 0}건</b></p><p>판매 없는 메뉴: <b>{zeroMenus.length ? zeroMenus.slice(0, 5).map(m => m.name).join(", ") : "없음"}</b></p></div>
+          <Box title="결제방식별" data={byPay} />
+          <Box title="식당/포장별" data={byService} />
+          <div className="statBox"><h3>인기 메뉴 TOP</h3>{soldMenuEntries.slice(0, 5).map((menu, index) => <p key={menu.id}>{index + 1}. {menu.name}: {menu.qty}개</p>)}</div>
+          <div className="statBox"><h3>팔리지 않는 메뉴</h3>{zeroMenus.length ? zeroMenus.map(menu => <p key={menu.id}>{menu.name}</p>) : <p>선택기간 내 모든 메뉴 판매 기록 있음</p>}</div>
+        </div>
+      )}
+
+      {reportType === "summary" && (
+        <div className="statsGrid wideStatsGrid">
+          <div className="statBox fullStatBox"><h3>메뉴별 하루 준비 추천</h3>{prepRows.length ? prepRows.map(row => <p key={row.id}><b>{row.name}</b> · 총 {row.qty}개 / 하루 평균 {row.avg.toFixed(1)}개 / 하루 최대 {row.max}개 → <b>하루 {row.min}~{row.max}개 준비 추천</b></p>) : <p className="muted">선택 기간 판매 기록이 없습니다.</p>}</div>
+          <div className="statBox"><h3>메뉴별 판매</h3>{soldMenuEntries.map(menu => <p key={menu.id}>{menu.name}: {menu.qty}개 / {money(menu.total)}</p>)}</div>
+          <div className="statBox"><h3>판매 적은 메뉴</h3>{lowEntries.map(menu => <p key={menu.id}>{menu.name}: {menu.qty}개</p>)}</div>
+          <Box title="시간대별" data={byHour} />
+        </div>
+      )}
+
+      {reportType === "ingredients" && (
+        <div className="statsGrid wideStatsGrid">
+          <div className="statBox fullStatBox"><h3>세부 재료 준비 추천</h3>{ingredientRows.length ? ingredientRows.map((row, index) => <p key={`${row.menuName}-${row.name}-${index}`}><b>{row.menuName}</b> 기준 · {row.name}: <b>{row.min}~{row.max}{row.unit}</b></p>) : <p className="muted">관리자모드의 메뉴별 재료 설정에 재료를 입력하면 재료별 준비량이 표시됩니다.</p>}</div>
+          <div className="statBox fullStatBox"><h3>메뉴별 기준 준비량</h3>{prepRows.map(row => <p key={row.id}>{row.name}: 하루 {row.min}~{row.max}개</p>)}</div>
+        </div>
+      )}
     </>
   );
 }
@@ -2210,6 +2331,42 @@ function AdminModal(props) {
           ))}
         </div>
 
+
+
+        <div className="adminCard ingredientSettingsBox">
+          <h3>메뉴별 재료 설정</h3>
+          <p className="muted">세부재료분석형 통계에서 사용할 재료를 메뉴별로 적어두는 공간입니다. 필요한 메뉴만 입력해도 됩니다.</p>
+          <div className="ingredientList">
+            {props.menus.map(menu => {
+              const rows = normalizeIngredientRows(props.menuIngredients?.[menu.id] || []);
+              const visibleRows = rows.length ? rows : [{ name: "", amount: "", unit: "" }];
+              const updateIngredientRow = (index, field, value) => {
+                props.setMenuIngredients(prev => {
+                  const current = normalizeIngredientRows(prev?.[menu.id] || []);
+                  const copy = current.length ? [...current] : [{ name: "", amount: "", unit: "" }];
+                  copy[index] = { ...(copy[index] || { name: "", amount: "", unit: "" }), [field]: value };
+                  return { ...(prev || {}), [menu.id]: normalizeIngredientRows(copy) };
+                });
+              };
+              const addIngredientRow = () => props.setMenuIngredients(prev => ({ ...(prev || {}), [menu.id]: [...normalizeIngredientRows(prev?.[menu.id] || []), { name: "", amount: "", unit: "" }] }));
+              const removeIngredientRow = index => props.setMenuIngredients(prev => ({ ...(prev || {}), [menu.id]: normalizeIngredientRows(prev?.[menu.id] || []).filter((_, i) => i !== index) }));
+              return (
+                <div className="ingredientMenuCard" key={menu.id}>
+                  <div className="ingredientMenuHead"><b>{menu.emoji} {menu.name}</b><button type="button" onClick={addIngredientRow}>재료추가</button></div>
+                  {visibleRows.map((row, index) => (
+                    <div className="ingredientRow" key={`${menu.id}-${index}`}>
+                      <input placeholder="재료명 예: 생태" value={row.name} onChange={e => updateIngredientRow(index, "name", e.target.value)} />
+                      <input type="number" step="0.1" placeholder="수량" value={row.amount} onChange={e => updateIngredientRow(index, "amount", e.target.value)} />
+                      <input placeholder="단위 예: 마리, g" value={row.unit} onChange={e => updateIngredientRow(index, "unit", e.target.value)} />
+                      <button type="button" onClick={() => removeIngredientRow(index)}>삭제</button>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="adminCard">
           <h3>메뉴구분 순서</h3>
           {props.categories.map((category, index) => (
@@ -2321,12 +2478,12 @@ function AdminModal(props) {
             <p className="muted">이용기간, 월 이용료, 입금계좌, 소개할인은 식당 POS에서 수정하지 않고 추후 종합관리프로그램에서 자동 반영되도록 사용할 예정입니다.</p>
           </div>
           <div className="adminCard messagePointBox">
-            <h3>문자포인트</h3>
+            <h3>이용포인트</h3>
             <div className="messagePointSummary">
               <div><b>현재 잔액</b><span>{Number(props.messagePoints?.balance || 0).toLocaleString()}P</span></div>
               <div><b>최근 사용내역</b><span>{props.messagePoints?.recentHistory?.[0]?.label || "사용내역 없음"}</span></div>
             </div>
-            <button className="green disabledFeature" type="button" onClick={props.openMessagePointModal}>문자충전 요청</button>
+            <button className="green disabledFeature" type="button" onClick={props.openMessagePointModal}>이용포인트 충전 요청</button>
             <p className="serviceReadyText">서비스 준비중 · 종합관리프로그램 연결 후 사용 가능합니다.</p>
             <p className="muted">추후 요청을 보내면 종합관리프로그램에 충전요청이 표시되고, 관리자 카톡 알림까지 연결할 예정입니다.</p>
             {!!props.messagePoints?.pendingRequests?.length && (
