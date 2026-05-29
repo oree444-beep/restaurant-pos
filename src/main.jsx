@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V35";
+const VERSION = "V36";
 const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
 const DESIGN_WIDTH = 1200;
 const DESIGN_HEIGHT = 800;
@@ -207,13 +207,16 @@ const defaultSubscription = () => ({
   startDate: todayValue(),
   expireDate: addDaysValue(todayValue(), 30),
   graceDays: 7,
-  monthlyFee: 30000,
+  monthlyFee: 5000,
   bankName: "농협",
   accountNumber: "123-456-7890",
   referralActiveCount: 0,
   referredRestaurants: [],
   referralDiscountRate: 10,
   referralGraceDays: 90,
+  newEventDiscountName: "신규 이벤트 할인",
+  newEventDiscountDays: 60,
+  newEventDiscountRate: 50,
   baseMonthlyFee: 10000,
   optionMonthlyFee: 0,
   kitchenOptionEnabled: false,
@@ -1427,12 +1430,23 @@ function App() {
     const count = Math.max(0, Number(subscription?.referralActiveCount || 0));
     const rawRate = Number(subscription?.referralDiscountRate ?? 10);
     const rate = Math.max(0, Math.min(100, Number.isFinite(rawRate) ? rawRate : 10));
+    const rawEventRate = Number(subscription?.newEventDiscountRate ?? 50);
+    const eventRate = Math.max(0, Math.min(100, Number.isFinite(rawEventRate) ? rawEventRate : 50));
+    const eventDays = Math.max(0, Number(subscription?.newEventDiscountDays ?? 60));
+    const start = safeDateObj(subscription?.startDate) || new Date();
+    const today = safeDateObj(todayValue()) || new Date();
+    const dayNo = Math.max(1, Math.floor((today - start) / 86400000) + 1);
+    const eventActive = eventDays > 0 && dayNo <= eventDays;
+    const eventDiscountName = subscription?.newEventDiscountName || "신규 이벤트 할인";
+    const eventDiscount = eventActive ? Math.min(base, round100(base * eventRate / 100)) : 0;
     const before = base + option;
-    const discountFactor = count > 0 ? Math.pow(1 - rate / 100, count) : 1;
-    const calculated = round100(before * discountFactor);
+    const afterEvent = Math.max(0, base - eventDiscount) + option;
+    const referralDiscountFactor = count > 0 ? Math.pow(1 - rate / 100, count) : 1;
+    const calculated = round100(afterEvent * referralDiscountFactor);
     const finalFee = Math.max(0, calculated);
+    const referralDiscount = Math.max(0, afterEvent - finalFee);
     const totalDiscountRate = before ? Math.max(0, Math.min(100, Math.round((1 - finalFee / before) * 1000) / 10)) : 0;
-    return { base, option, count, rate, before, calculated, finalFee, totalDiscountRate };
+    return { base, option, count, rate, before, afterEvent, eventActive, eventRate, eventDays, eventDiscountName, eventDiscount, referralDiscount, calculated, finalFee, totalDiscountRate };
   }, [subscription]);
 
   const handleTableOrMarkerDown = (type, id, event) => {
@@ -2006,11 +2020,12 @@ function App() {
               <div><span>기본요금</span><b>{money(billingDetails.base)}</b></div>
               <div><span>추가옵션</span><b>{money(billingDetails.option)}</b></div>
               <div><span>할인 전 금액</span><b>{money(billingDetails.before)}</b></div>
-              <div><span>소개할인</span><b>{billingDetails.count}곳 적용 / 1곳마다 {billingDetails.rate}%</b></div>
+              <div><span>{billingDetails.eventDiscountName}</span><b>{billingDetails.eventActive ? `${billingDetails.eventRate}% / -${money(billingDetails.eventDiscount)}` : "미적용"}</b></div>
+              <div><span>소개할인</span><b>{billingDetails.count}곳 적용 / 1곳마다 {billingDetails.rate}%{billingDetails.referralDiscount > 0 ? ` / -${money(billingDetails.referralDiscount)}` : ""}</b></div>
               <div><span>적용 할인율</span><b>{billingDetails.totalDiscountRate}%</b></div>
               <div className="finalFee"><span>최종 월 이용료</span><b>{money(billingDetails.finalFee)}</b></div>
             </div>
-            <p className="muted">소개할인은 현재 이용료 기준으로 10%씩 반복 적용됩니다. 실제 금액은 추후 종합관리프로그램 설정값을 기준으로 자동 반영됩니다.</p>
+            <p className="muted">신규 이벤트 기간에는 기본요금 10,000원 기준 50% 할인이 적용되어 월 5,000원으로 표시됩니다. 소개할인은 할인 적용 후 이용료 기준으로 10%씩 반복 적용됩니다. 실제 기간과 금액은 추후 종합관리프로그램 설정값을 기준으로 자동 반영됩니다.</p>
             <button className="dark full" onClick={() => setBillingModal(false)}>확인</button>
           </div>
         </div>
@@ -2611,7 +2626,7 @@ function AdminModal(props) {
             <div className="referralAdminNote">
               주변 식당을 소개해주시면 현재 월 이용료에서 <b>10% 추가 할인</b>됩니다.
             </div>
-            <p className="muted">이용기간, 월 이용료, 입금계좌, 소개할인은 식당 POS에서 수정하지 않고 추후 종합관리프로그램에서 자동 반영되도록 사용할 예정입니다.</p>
+            <p className="muted">이용기간, 월 이용료, 입금계좌, 이벤트 할인, 소개할인은 식당 POS에서 수정하지 않고 추후 종합관리프로그램에서 자동 반영되도록 사용할 예정입니다.</p>
           </div>
           <div className="adminCard messagePointBox">
             <h3>이용포인트</h3>
