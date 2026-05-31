@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V37";
+const VERSION = "V38";
 const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
 const DESIGN_WIDTH = 1200;
 const DESIGN_HEIGHT = 800;
@@ -1757,7 +1757,7 @@ function App() {
           <section className="menuArea card">
             {sortedCats.map(category => (
               <div key={category.name}>
-                <h2>{category.name}</h2>
+                <h2 className="menuCategoryTitle"><span>{category.name}</span></h2>
                 <div className="menuGrid">
                   {sortedMenus.filter(menu => menu.category === category.name).map(menu => <MenuCard key={menu.id} m={menu} addMenu={addMenu} />)}
                 </div>
