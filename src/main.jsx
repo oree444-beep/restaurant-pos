@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V36";
+const VERSION = "V37";
 const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
 const DESIGN_WIDTH = 1200;
 const DESIGN_HEIGHT = 800;
@@ -17,7 +17,22 @@ const firebaseConfig = {
   measurementId: "G-HW3ESNTVR4"
 };
 
-const RESTAURANT_ID = "mom-restaurant";
+const POS_DATA_SCHEMA_VERSION = 2;
+const LEGACY_RESTAURANT_ID = "mom-restaurant";
+const resolveRestaurantId = () => {
+  if (typeof window === "undefined") return LEGACY_RESTAURANT_ID;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("restaurantId") || params.get("restaurant") || params.get("rid");
+    const saved = localStorage.getItem("restaurantId");
+    const resolved = String(fromUrl || saved || LEGACY_RESTAURANT_ID).trim() || LEGACY_RESTAURANT_ID;
+    localStorage.setItem("restaurantId", resolved);
+    return resolved;
+  } catch {
+    return LEGACY_RESTAURANT_ID;
+  }
+};
+const RESTAURANT_ID = resolveRestaurantId();
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents`;
 const firestoreUrl = path => `${FIRESTORE_BASE}/${path}?key=${firebaseConfig.apiKey}`;
 
@@ -65,16 +80,26 @@ const LS = {
   menuIngredients: "menuIngredients"
 };
 
+const scopedLSKey = key => `${RESTAURANT_ID}:${key}`;
 const getLS = (key, fallback) => {
   try {
-    const value = localStorage.getItem(key);
-    return value ? JSON.parse(value) : fallback;
+    const scopedValue = localStorage.getItem(scopedLSKey(key));
+    if (scopedValue) return JSON.parse(scopedValue);
+    const legacyValue = localStorage.getItem(key);
+    if (legacyValue) {
+      localStorage.setItem(scopedLSKey(key), legacyValue);
+      return JSON.parse(legacyValue);
+    }
+    return fallback;
   } catch {
     return fallback;
   }
 };
 
-const setLS = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+const setLS = (key, value) => localStorage.setItem(scopedLSKey(key), JSON.stringify(value));
+const setRestaurantId = value => {
+  try { localStorage.setItem("restaurantId", String(value || LEGACY_RESTAURANT_ID)); } catch {}
+};
 const cleanData = value => JSON.parse(JSON.stringify(value ?? null));
 const firebaseId = value => String(value ?? Date.now()).replace(/[^a-zA-Z0-9_-]/g, "_");
 const toFirestoreValue = value => {
@@ -132,15 +157,33 @@ const firestoreDeleteMany = async (collectionName, ids) => {
     await firestoreDeleteDoc(`restaurants/${RESTAURANT_ID}/${collectionName}/${firebaseId(id)}`);
   }
 };
-const saveSettingsToFirebase = async data => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/config/settings`, { ...cleanData(data), initialized: true, updatedAt: new Date().toISOString() });
-const saveSaleToFirebase = async sale => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/sales/${firebaseId(sale.id)}`, { ...cleanData(sale), updatedAt: new Date().toISOString() });
-const saveCreditToFirebase = async credit => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/credits/${firebaseId(credit.id)}`, { ...cleanData(credit), updatedAt: new Date().toISOString() });
-const saveKitchenOrderToFirebase = async order => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/kitchenOrders/${firebaseId(order.id)}`, { ...cleanData(order), updatedAt: new Date().toISOString() });
-const saveMessagePointRequestToFirebase = async request => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/messagePointRequests/${firebaseId(request.id)}`, { ...cleanData(request), updatedAt: new Date().toISOString() });
+const withDataMeta = data => ({
+  ...cleanData(data),
+  initialized: true,
+  restaurantId: RESTAURANT_ID,
+  schemaVersion: POS_DATA_SCHEMA_VERSION,
+  posVersion: VERSION,
+  updatedAt: new Date().toISOString()
+});
+const migrateSettingsData = data => {
+  if (!data) return null;
+  const migrated = { ...data };
+  migrated.restaurantId = migrated.restaurantId || RESTAURANT_ID;
+  migrated.schemaVersion = Number(migrated.schemaVersion || 1);
+  migrated.posVersion = migrated.posVersion || "legacy";
+  migrated.migratedToSchemaVersion = POS_DATA_SCHEMA_VERSION;
+  migrated.lastMigrationAt = migrated.schemaVersion < POS_DATA_SCHEMA_VERSION ? new Date().toISOString() : migrated.lastMigrationAt;
+  return migrated;
+};
+const saveSettingsToFirebase = async data => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/config/settings`, withDataMeta(data));
+const saveSaleToFirebase = async sale => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/sales/${firebaseId(sale.id)}`, { ...cleanData(sale), restaurantId: RESTAURANT_ID, schemaVersion: POS_DATA_SCHEMA_VERSION, posVersion: VERSION, updatedAt: new Date().toISOString() });
+const saveCreditToFirebase = async credit => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/credits/${firebaseId(credit.id)}`, { ...cleanData(credit), restaurantId: RESTAURANT_ID, schemaVersion: POS_DATA_SCHEMA_VERSION, posVersion: VERSION, updatedAt: new Date().toISOString() });
+const saveKitchenOrderToFirebase = async order => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/kitchenOrders/${firebaseId(order.id)}`, { ...cleanData(order), restaurantId: RESTAURANT_ID, schemaVersion: POS_DATA_SCHEMA_VERSION, posVersion: VERSION, updatedAt: new Date().toISOString() });
+const saveMessagePointRequestToFirebase = async request => firestoreSetDoc(`restaurants/${RESTAURANT_ID}/messagePointRequests/${firebaseId(request.id)}`, { ...cleanData(request), restaurantId: RESTAURANT_ID, schemaVersion: POS_DATA_SCHEMA_VERSION, posVersion: VERSION, updatedAt: new Date().toISOString() });
 const batchUploadCollection = async (collectionName, items) => {
   for (const item of (items || []).filter(Boolean)) {
     const path = `restaurants/${RESTAURANT_ID}/${collectionName}/${firebaseId(item.id)}`;
-    await firestoreSetDoc(path, { ...cleanData(item), updatedAt: new Date().toISOString() });
+    await firestoreSetDoc(path, { ...cleanData(item), restaurantId: RESTAURANT_ID, schemaVersion: POS_DATA_SCHEMA_VERSION, posVersion: VERSION, updatedAt: new Date().toISOString() });
   }
 };
 const money = value => `${(Number(value) || 0).toLocaleString()}원`;
@@ -664,7 +707,8 @@ function App() {
     const loadFirebaseData = async () => {
       try {
         setSyncStatus("Firebase 데이터 불러오는 중");
-        const data = await firestoreGetDoc(`restaurants/${RESTAURANT_ID}/config/settings`);
+        const rawData = await firestoreGetDoc(`restaurants/${RESTAURANT_ID}/config/settings`);
+        const data = migrateSettingsData(rawData);
         if (data?.initialized) {
           if (cancelled) return;
           setRestaurantName(data.restaurantName ?? restaurantName);
@@ -692,6 +736,36 @@ function App() {
           setTableAutoReturnSeconds(data.tableAutoReturnSeconds ?? tableAutoReturnSeconds);
           setTableLayout(normalizeTableLayout(data.tableLayout ?? tableLayout, data.tableCount ?? tableCount));
           setSubscription(data.subscription ?? subscription);
+          if ((data.schemaVersion || 1) < POS_DATA_SCHEMA_VERSION) {
+            await saveSettingsToFirebase({
+              ...data,
+              restaurantName: data.restaurantName ?? restaurantName,
+              menus: data.menus ?? menus,
+              categories: data.categories ?? categories,
+              tableCount: data.tableCount ?? tableCount,
+              tableRows: data.tableRows ?? tableRows,
+              orders: data.orders ?? orders,
+              popularCount: data.popularCount ?? popularCount,
+              showPopular: data.showPopular ?? showPopular,
+              adminPw: data.adminPw ?? adminPw,
+              diningSetting: data.diningSetting ?? diningSetting,
+              takeoutSetting: data.takeoutSetting ?? takeoutSetting,
+              tableServiceMeta: data.tableServiceMeta ?? tableServiceMeta,
+              pinTables: data.pinTables ?? pinTables,
+              pinOrder: data.pinOrder ?? pinOrder,
+              scrollTopAfterPay: data.scrollTopAfterPay ?? scrollTopAfterPay,
+              showReceiptPrint: data.showReceiptPrint ?? showReceiptPrint,
+              kitchenSettings: data.kitchenSettings ?? kitchenSettings,
+              screenMode: data.screenMode ?? screenMode,
+              displayMode: data.displayMode ?? displayMode,
+              contactSettings: data.contactSettings ?? contactSettings,
+              messagePoints: data.messagePoints ?? messagePoints,
+              menuIngredients: data.menuIngredients ?? menuIngredients,
+              tableAutoReturnSeconds: data.tableAutoReturnSeconds ?? tableAutoReturnSeconds,
+              tableLayout: data.tableLayout ?? tableLayout,
+              subscription: data.subscription ?? subscription
+            });
+          }
         } else {
           await saveSettingsToFirebase({
             restaurantName, menus, categories, tableCount, tableRows, orders,
@@ -716,7 +790,7 @@ function App() {
 
         if (!cancelled) {
           setFirebaseReady(true);
-          setSyncStatus("Firebase 연결됨");
+          setSyncStatus(`Firebase 연결됨 · ${RESTAURANT_ID}`);
         }
       } catch (error) {
         console.error(error);
@@ -1908,7 +1982,10 @@ function App() {
             openBillingDetail: () => setBillingModal(true),
             openKitchenPair: () => setKitchenPairModal(true),
             openContactModal: () => setContactModal(true),
-            billingDetails
+            billingDetails,
+            restaurantId: RESTAURANT_ID,
+            schemaVersion: POS_DATA_SCHEMA_VERSION,
+            syncStatus
           }}
         />
       )}
@@ -2422,6 +2499,18 @@ function AdminModal(props) {
       <div className="modalBox admin">
         <button className="xBtn" onClick={() => props.setShowAdmin(false)}>×</button>
         <h2>관리자모드</h2>
+
+        <div className="adminCard dataGuardCard">
+          <h3>업데이트 데이터 보존 상태</h3>
+          <div className="dataGuardGrid">
+            <div><span>식당 ID</span><b>{props.restaurantId}</b></div>
+            <div><span>데이터 구조</span><b>Schema V{props.schemaVersion}</b></div>
+            <div><span>현재 POS</span><b>{VERSION}</b></div>
+            <div><span>저장상태</span><b>{props.syncStatus || "확인중"}</b></div>
+          </div>
+          <p className="muted">메뉴, 외상장부, 판매기록, 재료설정, 이용포인트는 식당 ID 기준으로 Firebase에 저장됩니다. 앞으로 POS 버전이 올라가도 같은 식당 ID를 사용하면 기존 데이터가 이어지도록 설계합니다.</p>
+          <p className="muted">V40에서 바로 V50으로 업데이트하는 경우도 대비할 수 있도록, 데이터 구조 버전(schemaVersion)을 저장하고 새 버전에서 이전 구조를 읽어오는 방향으로 관리합니다.</p>
+        </div>
 
         <div className="adminCard">
           <h3>상호 / 메뉴추가</h3>
