@@ -1,8 +1,8 @@
 {
-  "name": "식당 POS V38",
+  "name": "식당 POS V39",
   "short_name": "식당 POS",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#f3f4f6",
   "theme_color": "#2563eb",
   "description": "식당 주문, 외상장부, 판매통계 관리 POS"

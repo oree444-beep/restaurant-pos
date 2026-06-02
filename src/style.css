@@ -297,3 +297,16 @@
 .menuArea h2.menuCategoryTitle span{display:inline-flex;align-items:center;min-height:44px;padding:8px 18px;border-radius:16px;background:linear-gradient(135deg,#fff7ed,#fffbeb);border:2px solid #fed7aa;box-shadow:0 8px 18px rgba(249,115,22,.12);font-size:26px;font-weight:950;color:#1f2937;letter-spacing:-.3px}
 .menuArea h2.menuCategoryTitle::after{content:"";height:2px;flex:1;background:linear-gradient(90deg,#fed7aa,transparent);border-radius:999px}
 @media(max-width:640px){.menuArea h2.menuCategoryTitle span{font-size:22px;min-height:40px;padding:7px 14px}}
+
+
+/* V39 tablet POS table-mode optimization */
+.app:has(.homeFloor){padding-top:8px;}
+.tableHomePull{position:sticky;top:6px;z-index:30;display:inline-flex;align-items:center;justify-content:center;margin:0 0 8px;padding:9px 14px;border-radius:999px;background:#111827;color:#fff;font-size:14px;font-weight:1000;box-shadow:0 8px 20px rgba(15,23,42,.18)}
+.tableHomeTopOpen{border:3px solid #dbeafe;background:#f8fbff;margin-bottom:10px}
+.tableModeFloor.homeFloor{padding:8px;margin-bottom:8px;border-radius:20px;box-shadow:none;background:transparent}
+.tableModeFloor.homeFloor .floorBoard{min-height:calc(100vh - 142px);max-height:none;border-width:4px;background:linear-gradient(135deg,#f8fafc,#ffffff);touch-action:pan-y;overscroll-behavior:contain}
+.tableModeFloor.homeFloor .floorTable{box-shadow:0 10px 22px rgba(15,23,42,.16)}
+.tableModeFloor.editing .floorBoard{touch-action:none}
+.floorBoard{touch-action:pan-y}
+.tableModeFloor.editing .floorBoard{touch-action:none}
+@media(max-width:700px){.tableModeFloor.homeFloor{padding:6px}.tableModeFloor.homeFloor .floorBoard{min-height:calc(100vh - 136px);border-radius:18px}.tableHomePull{font-size:13px;padding:8px 12px}}

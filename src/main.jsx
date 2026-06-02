@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V38";
+const VERSION = "V39";
 const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
 const DESIGN_WIDTH = 1200;
 const DESIGN_HEIGHT = 800;
@@ -671,6 +671,7 @@ function App() {
   const [billingModal, setBillingModal] = useState(false);
   const [kitchenPairModal, setKitchenPairModal] = useState(false);
   const [tableEditOpen, setTableEditOpen] = useState(false);
+  const [tableHomeHeaderOpen, setTableHomeHeaderOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [screenWidth, setScreenWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1400));
   const [firebaseReady, setFirebaseReady] = useState(false);
@@ -1629,21 +1630,21 @@ function App() {
   const renderFloorPlan = (editable = false) => {
     const layout = normalizeTableLayout(tableLayout, tableCount);
     return (
-      <section className={`tableModeFloor card ${editable ? "editing" : ""}`}>
-        <div className="floorHead">
-          <div>
-            <h2>테이블 배치도</h2>
-            <p className="muted">실제 식당 위치처럼 테이블을 눌러 주문을 시작합니다.</p>
-          </div>
-          {editable && (
+      <section className={`tableModeFloor card ${editable ? "editing" : "homeFloor"}`}>
+        {editable && (
+          <div className="floorHead">
+            <div>
+              <h2>테이블 배치도</h2>
+              <p className="muted">실제 식당 위치처럼 테이블을 눌러 주문을 시작합니다.</p>
+            </div>
             <button
               className={layout.editUnlocked ? "orangeAction" : "dark"}
               onClick={() => setTableLayout(prev => ({ ...(prev || makeDefaultTableLayout(tableCount)), editUnlocked: !(prev?.editUnlocked) }))}
             >
               {layout.editUnlocked ? "🔓 수정중" : "🔒 잠금"}
             </button>
-          )}
-        </div>
+          </div>
+        )}
         <div className="floorBoard">
           {floorMarkers.map(marker => {
             const info = layout.markers?.[marker.id] || { visible: false, edge: "top", pos: 50 };
@@ -1682,17 +1683,26 @@ function App() {
 
   return (
     <div className={`app ${displayMode === "scale" ? "scaleMode" : ""}`} style={{ "--posScale": displayScale }} onClick={clearToast} onPointerDown={noteTableActivity} onKeyDown={noteTableActivity}>
-      <header className="top card compactTop">
-        <div className="topLeft">
-          <h1>{restaurantName} POS <span>{VERSION} · {compactSyncStatus}</span></h1>
-          <p>주문 · 외상장부 · 판매통계 · 관리자</p>
-          {subscriptionInfo.notice && <p className={`subscriptionNotice ${subscriptionInfo.className}`}>{subscriptionInfo.notice}</p>}
-        </div>
-        <div className="topRightInfo topRightCompact" onClick={e => e.stopPropagation()}>
-          <div className={`subscriptionBadge ${subscriptionInfo.className}`}>{subscriptionInfo.text}</div>
-          <button onClick={e => { e.stopPropagation(); openAdmin(); }} className="dark adminBtn">관리자모드</button>
-        </div>
-      </header>
+      {isTableModeHome && !tableHomeHeaderOpen && (
+        <button className="tableHomePull" onClick={e => { e.stopPropagation(); setTableHomeHeaderOpen(true); }}>
+          ☰ 관리자/상단 펼치기
+        </button>
+      )}
+
+      {(!isTableModeHome || tableHomeHeaderOpen) && (
+        <header className={`top card compactTop ${isTableModeHome ? "tableHomeTopOpen" : ""}`}>
+          <div className="topLeft">
+            <h1>{restaurantName} POS <span>{VERSION} · {compactSyncStatus}</span></h1>
+            <p>주문 · 외상장부 · 판매통계 · 관리자</p>
+            {subscriptionInfo.notice && <p className={`subscriptionNotice ${subscriptionInfo.className}`}>{subscriptionInfo.notice}</p>}
+          </div>
+          <div className="topRightInfo topRightCompact" onClick={e => e.stopPropagation()}>
+            <div className={`subscriptionBadge ${subscriptionInfo.className}`}>{subscriptionInfo.text}</div>
+            {isTableModeHome && <button onClick={() => setTableHomeHeaderOpen(false)} className="ghost adminBtn">상단 접기</button>}
+            <button onClick={e => { e.stopPropagation(); openAdmin(); }} className="dark adminBtn">관리자모드</button>
+          </div>
+        </header>
+      )}
 
       {isTableModeHome && <div className={isSubscriptionLocked ? "lockedContent" : ""}>{renderFloorPlan(false)}</div>}
 
@@ -2152,7 +2162,8 @@ function App() {
             <h2>바탕화면 바로가기 만들기</h2>
             <div className="guideBox">
               <h3>안드로이드 / 크롬</h3>
-              <p>오른쪽 위 ⋮ 버튼 → 홈 화면에 추가 → 추가</p>
+              <p>오른쪽 위 ⋮ 버튼 → 홈 화면에 추가 또는 앱 설치 → 추가</p>
+              <p>홈화면 아이콘으로 다시 열면 주소창이 줄거나 앱처럼 열립니다. 그래도 주소창이 보이면 다음 단계에서 주소창 없는 전용 앱으로 포장하세요.</p>
               <h3>아이패드 / 아이폰 사파리</h3>
               <p>공유 버튼 → 홈 화면에 추가 → 추가</p>
               <h3>PC 크롬</h3>
