@@ -310,3 +310,31 @@
 .floorBoard{touch-action:pan-y}
 .tableModeFloor.editing .floorBoard{touch-action:none}
 @media(max-width:700px){.tableModeFloor.homeFloor{padding:6px}.tableModeFloor.homeFloor .floorBoard{min-height:calc(100vh - 136px);border-radius:18px}.tableHomePull{font-size:13px;padding:8px 12px}}
+
+/* V41 tablet table-mode fit and anchored bottom panels */
+.anchorPanel{scroll-margin-top:10px}
+.tableModeFloor.homeFloor .floorBoard{
+  aspect-ratio:auto !important;
+  height:calc(100dvh - 136px) !important;
+  min-height:0 !important;
+  max-height:calc(100dvh - 136px) !important;
+}
+@supports (height: 100svh){
+  .tableModeFloor.homeFloor .floorBoard{
+    height:calc(100svh - 136px) !important;
+    max-height:calc(100svh - 136px) !important;
+  }
+}
+@media(max-width:700px){
+  .tableModeFloor.homeFloor .floorBoard{
+    height:calc(100dvh - 130px) !important;
+    min-height:0 !important;
+    max-height:calc(100dvh - 130px) !important;
+  }
+}
+@media(orientation:landscape){
+  .tableModeFloor.homeFloor .floorBoard{
+    height:calc(100dvh - 126px) !important;
+    max-height:calc(100dvh - 126px) !important;
+  }
+}

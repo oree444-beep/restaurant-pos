@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V40";
+const VERSION = "V41";
 const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
 const DESIGN_WIDTH = 1200;
 const DESIGN_HEIGHT = 800;
@@ -673,6 +673,10 @@ function App() {
   const [tableEditOpen, setTableEditOpen] = useState(false);
   const [tableHomeHeaderOpen, setTableHomeHeaderOpen] = useState(false);
   const floorBoardDragRef = useRef({ moved: false });
+  const tableHomeRef = useRef(null);
+  const creditPanelRef = useRef(null);
+  const statsPanelRef = useRef(null);
+  const panelReturnYRef = useRef(0);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [screenWidth, setScreenWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1400));
   const [firebaseReady, setFirebaseReady] = useState(false);
@@ -1659,6 +1663,48 @@ function App() {
     }
   };
 
+  const rememberPanelReturnPosition = () => {
+    panelReturnYRef.current = window.scrollY || document.documentElement.scrollTop || 0;
+  };
+
+  const returnToTableArea = () => {
+    requestAnimationFrame(() => {
+      if (isTableModeHome && tableHomeRef.current) {
+        tableHomeRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      window.scrollTo({ top: panelReturnYRef.current || 0, behavior: "smooth" });
+    });
+  };
+
+  const scrollToPanel = ref => {
+    window.setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  };
+
+  const toggleCreditPanel = () => {
+    if (openCredit) {
+      setOpenCredit(false);
+      returnToTableArea();
+      return;
+    }
+    rememberPanelReturnPosition();
+    setOpenStats(false);
+    setOpenCredit(true);
+    scrollToPanel(creditPanelRef);
+  };
+
+  const toggleStatsPanel = () => {
+    if (openStats) {
+      setOpenStats(false);
+      returnToTableArea();
+      return;
+    }
+    rememberPanelReturnPosition();
+    setOpenCredit(false);
+    setOpenStats(true);
+    scrollToPanel(statsPanelRef);
+  };
+
   const renderFloorPlan = (editable = false) => {
     const layout = normalizeTableLayout(tableLayout, tableCount);
     return (
@@ -1737,7 +1783,7 @@ function App() {
         </header>
       )}
 
-      {isTableModeHome && <div className={isSubscriptionLocked ? "lockedContent" : ""}>{renderFloorPlan(false)}</div>}
+      {isTableModeHome && <div ref={tableHomeRef} className={isSubscriptionLocked ? "lockedContent" : ""}>{renderFloorPlan(false)}</div>}
 
       {!isTableModeHome && <div className={`layout ${isSubscriptionLocked ? "lockedContent" : ""}`}>
         <div className="leftCol">
@@ -1873,12 +1919,12 @@ function App() {
       </div>}
 
       <div className="bottomBars">
-        <button className="orange" onClick={() => setOpenCredit(!openCredit)}>외상장부 {openCredit ? "▲" : "▼"}</button>
-        <button className="blue" onClick={() => setOpenStats(!openStats)}>판매통계 {openStats ? "▲" : "▼"}</button>
+        <button className="orange" onClick={toggleCreditPanel}>외상장부 {openCredit ? "▲" : "▼"}</button>
+        <button className="blue" onClick={toggleStatsPanel}>판매통계 {openStats ? "▲" : "▼"}</button>
       </div>
 
       {openCredit && (
-        <section className="card panel">
+        <section ref={creditPanelRef} className="card panel anchorPanel">
           <div className="sectionHead creditHead">
             <div>
               <div className="creditTitleLine">
@@ -1930,7 +1976,7 @@ function App() {
         </section>
       )}
 
-      {openStats && <section className="card panel"><Stats sales={sales} credits={credits} menus={menus} restaurantName={restaurantName} menuIngredients={menuIngredients} messagePoints={messagePoints} subscription={subscription} /></section>}
+      {openStats && <section ref={statsPanelRef} className="card panel anchorPanel"><Stats sales={sales} credits={credits} menus={menus} restaurantName={restaurantName} menuIngredients={menuIngredients} messagePoints={messagePoints} subscription={subscription} /></section>}
 
       {isSubscriptionLocked && (
         <div className="lockOverlay" onClick={e => e.stopPropagation()}>
@@ -2553,7 +2599,7 @@ function AdminModal(props) {
             <div><span>저장상태</span><b>{props.syncStatus || "확인중"}</b></div>
           </div>
           <p className="muted">메뉴, 외상장부, 판매기록, 재료설정, 이용포인트는 식당 ID 기준으로 Firebase에 저장됩니다. 앞으로 POS 버전이 올라가도 같은 식당 ID를 사용하면 기존 데이터가 이어지도록 설계합니다.</p>
-          <p className="muted">V40에서 바로 V50으로 업데이트하는 경우도 대비할 수 있도록, 데이터 구조 버전(schemaVersion)을 저장하고 새 버전에서 이전 구조를 읽어오는 방향으로 관리합니다.</p>
+          <p className="muted">V41에서 바로 V50으로 업데이트하는 경우도 대비할 수 있도록, 데이터 구조 버전(schemaVersion)을 저장하고 새 버전에서 이전 구조를 읽어오는 방향으로 관리합니다.</p>
         </div>
 
         <div className="adminCard">
