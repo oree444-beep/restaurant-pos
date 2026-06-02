@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V39";
+const VERSION = "V40";
 const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
 const DESIGN_WIDTH = 1200;
 const DESIGN_HEIGHT = 800;
@@ -672,6 +672,7 @@ function App() {
   const [kitchenPairModal, setKitchenPairModal] = useState(false);
   const [tableEditOpen, setTableEditOpen] = useState(false);
   const [tableHomeHeaderOpen, setTableHomeHeaderOpen] = useState(false);
+  const floorBoardDragRef = useRef({ moved: false });
   const [installPrompt, setInstallPrompt] = useState(null);
   const [screenWidth, setScreenWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1400));
   const [firebaseReady, setFirebaseReady] = useState(false);
@@ -1554,6 +1555,37 @@ function App() {
     window.addEventListener("pointerup", up);
   };
 
+
+  const handleFloorBoardPointerDown = event => {
+    if (tableLayout?.editUnlocked) return;
+    if (event.button !== undefined && event.button !== 0) return;
+    const startY = event.clientY;
+    const startX = event.clientX;
+    const startScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    const dragState = { moved: false };
+    floorBoardDragRef.current = dragState;
+
+    const move = pointerEvent => {
+      const dy = pointerEvent.clientY - startY;
+      const dx = pointerEvent.clientX - startX;
+      if (!dragState.moved && Math.hypot(dx, dy) > 6) dragState.moved = true;
+      if (!dragState.moved) return;
+      pointerEvent.preventDefault();
+      window.scrollTo({ top: Math.max(0, startScrollY - dy), behavior: "auto" });
+    };
+
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      setTimeout(() => {
+        if (floorBoardDragRef.current === dragState) floorBoardDragRef.current = { moved: false };
+      }, 0);
+    };
+
+    window.addEventListener("pointermove", move, { passive: false });
+    window.addEventListener("pointerup", up, { once: true });
+  };
+
   const assignMarkerEdge = edge => {
     setTableLayout(prev => {
       const base = normalizeTableLayout(prev, tableCount);
@@ -1645,7 +1677,7 @@ function App() {
             </button>
           </div>
         )}
-        <div className="floorBoard">
+        <div className="floorBoard" onPointerDown={!editable ? handleFloorBoardPointerDown : undefined}>
           {floorMarkers.map(marker => {
             const info = layout.markers?.[marker.id] || { visible: false, edge: "top", pos: 50 };
             if (!info.visible) return null;
@@ -1666,6 +1698,7 @@ function App() {
                 onPointerDown={editable ? e => handleTableOrMarkerDown("table", table, e) : undefined}
                 onClick={e => {
                   e.stopPropagation();
+                  if (!editable && floorBoardDragRef.current?.moved) return;
                   if (editable && layout.editUnlocked) return;
                   selectTable(table);
                   setTableModeOrdering(true);
