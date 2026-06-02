@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V41";
+const VERSION = "V42";
 const buildAppTitle = restaurantName => `${String(restaurantName || "식당").trim() || "식당"} POS ${VERSION}`;
 const DESIGN_WIDTH = 1200;
 const DESIGN_HEIGHT = 800;
@@ -1563,31 +1563,52 @@ function App() {
   const handleFloorBoardPointerDown = event => {
     if (tableLayout?.editUnlocked) return;
     if (event.button !== undefined && event.button !== 0) return;
+
+    const board = event.currentTarget;
+    const scrollEl = document.scrollingElement || document.documentElement;
     const startY = event.clientY;
     const startX = event.clientX;
-    const startScrollY = window.scrollY || document.documentElement.scrollTop || 0;
-    const dragState = { moved: false };
+    const startScrollY = scrollEl.scrollTop || window.scrollY || 0;
+    const dragState = { moved: false, pointerId: event.pointerId };
     floorBoardDragRef.current = dragState;
 
+    try {
+      board.setPointerCapture?.(event.pointerId);
+    } catch (_) {
+      // 일부 안드로이드 WebView/크롬에서는 포인터 캡처가 실패할 수 있으므로 전역 이벤트로 보완합니다.
+    }
+
     const move = pointerEvent => {
+      if (pointerEvent.pointerId !== undefined && dragState.pointerId !== undefined && pointerEvent.pointerId !== dragState.pointerId) return;
       const dy = pointerEvent.clientY - startY;
       const dx = pointerEvent.clientX - startX;
-      if (!dragState.moved && Math.hypot(dx, dy) > 6) dragState.moved = true;
+      if (!dragState.moved && Math.hypot(dx, dy) > 5) dragState.moved = true;
       if (!dragState.moved) return;
-      pointerEvent.preventDefault();
-      window.scrollTo({ top: Math.max(0, startScrollY - dy), behavior: "auto" });
+
+      pointerEvent.preventDefault?.();
+      pointerEvent.stopPropagation?.();
+      const nextTop = Math.max(0, startScrollY - dy);
+      scrollEl.scrollTop = nextTop;
+      if (document.documentElement !== scrollEl) document.documentElement.scrollTop = nextTop;
+      window.scrollTo(0, nextTop);
     };
 
-    const up = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
+    const finish = pointerEvent => {
+      if (pointerEvent?.pointerId !== undefined && dragState.pointerId !== undefined && pointerEvent.pointerId !== dragState.pointerId) return;
+      window.removeEventListener("pointermove", move, true);
+      window.removeEventListener("pointerup", finish, true);
+      window.removeEventListener("pointercancel", finish, true);
+      try {
+        board.releasePointerCapture?.(dragState.pointerId);
+      } catch (_) {}
       setTimeout(() => {
         if (floorBoardDragRef.current === dragState) floorBoardDragRef.current = { moved: false };
-      }, 0);
+      }, 120);
     };
 
-    window.addEventListener("pointermove", move, { passive: false });
-    window.addEventListener("pointerup", up, { once: true });
+    window.addEventListener("pointermove", move, { passive: false, capture: true });
+    window.addEventListener("pointerup", finish, { once: true, capture: true });
+    window.addEventListener("pointercancel", finish, { once: true, capture: true });
   };
 
   const assignMarkerEdge = edge => {
@@ -1723,7 +1744,7 @@ function App() {
             </button>
           </div>
         )}
-        <div className="floorBoard" onPointerDown={!editable ? handleFloorBoardPointerDown : undefined}>
+        <div className="floorBoard" onPointerDownCapture={!editable ? handleFloorBoardPointerDown : undefined}>
           {floorMarkers.map(marker => {
             const info = layout.markers?.[marker.id] || { visible: false, edge: "top", pos: 50 };
             if (!info.visible) return null;
@@ -2599,7 +2620,7 @@ function AdminModal(props) {
             <div><span>저장상태</span><b>{props.syncStatus || "확인중"}</b></div>
           </div>
           <p className="muted">메뉴, 외상장부, 판매기록, 재료설정, 이용포인트는 식당 ID 기준으로 Firebase에 저장됩니다. 앞으로 POS 버전이 올라가도 같은 식당 ID를 사용하면 기존 데이터가 이어지도록 설계합니다.</p>
-          <p className="muted">V41에서 바로 V50으로 업데이트하는 경우도 대비할 수 있도록, 데이터 구조 버전(schemaVersion)을 저장하고 새 버전에서 이전 구조를 읽어오는 방향으로 관리합니다.</p>
+          <p className="muted">V42에서 바로 V50으로 업데이트하는 경우도 대비할 수 있도록, 데이터 구조 버전(schemaVersion)을 저장하고 새 버전에서 이전 구조를 읽어오는 방향으로 관리합니다.</p>
         </div>
 
         <div className="adminCard">

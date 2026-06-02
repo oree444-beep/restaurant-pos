@@ -338,3 +338,20 @@
     max-height:calc(100dvh - 126px) !important;
   }
 }
+
+/* V42: 테이블 배치도 안쪽 터치/드래그 화면 이동 보강 */
+.tableModeFloor.homeFloor .floorBoard{
+  touch-action:none !important;
+  cursor:grab;
+}
+.tableModeFloor.homeFloor .floorBoard:active{
+  cursor:grabbing;
+}
+.tableModeFloor.homeFloor .floorTable{
+  touch-action:none;
+}
+.tableModeFloor.editing .floorTable,
+.tableModeFloor.editing .floorMarker,
+.tableModeFloor.editing .floorBoard{
+  touch-action:none !important;
+}
