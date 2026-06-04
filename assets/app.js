@@ -30,6 +30,49 @@ let state = {
   orders:get('orders',{}), sales:get('sales',seedSales()), credits:get('credits',[]), reports:get('reports',[]),
   manualEditId:null, showModal:null
 };
+function normalizeState(){
+  try{
+    if(!Array.isArray(state.menus) || !state.menus.length) state.menus = DEFAULT_MENUS;
+    if(!Array.isArray(state.cats) || !state.cats.length) state.cats = CATS;
+    if(!state.orders || typeof state.orders !== 'object' || Array.isArray(state.orders)) state.orders = {};
+    if(!Array.isArray(state.sales)) state.sales = seedSales();
+    state.sales = state.sales.map(s=>({
+      id:s.id||('s_'+Math.random().toString(36).slice(2)),
+      createdAt:s.createdAt||new Date().toISOString(),
+      paidAt:s.paidAt||s.createdAt||new Date().toISOString(),
+      table:s.table||1,
+      serviceType:s.serviceType||'식당식사',
+      payment:s.payment||'카드',
+      items:Array.isArray(s.items)?s.items:[],
+      total:Number(s.total)||0,
+      manual:!!s.manual,
+      memo:s.memo||'',
+      inputUser:s.inputUser||''
+    })).filter(s=>s.items.length);
+    if(!Array.isArray(state.credits)) state.credits = [];
+    if(!Array.isArray(state.reports)) state.reports = [];
+    state.tableCount = Number(state.tableCount)||12;
+    state.selectedTable = Number(state.selectedTable)||1;
+    if(!['주문','외상장부','판매통계','수기입력','관리자'].includes(state.tab)) state.tab='주문';
+    state.restaurantName = state.restaurantName || '생태한마리';
+    state.ownerPhone = state.ownerPhone || '';
+    state.adminPw = state.adminPw || '1234';
+    state.inboxPw = state.inboxPw || '1234';
+    state.inboxToken = state.inboxToken || `token_${shortId}_${VERSION}`;
+  }catch(e){
+    console.error('normalizeState failed', e);
+  }
+}
+function showFatalError(err){
+  const app=document.querySelector('#app');
+  if(app){
+    app.innerHTML=`<div class="wrap"><div class="card"><h2>POS 화면을 불러오지 못했습니다</h2><p class="muted">이전 버전의 저장값이 꼬였을 가능성이 있습니다.</p><pre style="white-space:pre-wrap;background:#fee2e2;padding:12px;border-radius:12px;color:#991b1b;">${String(err&&err.message||err)}</pre><button class="primary" id="resetLocal">저장값 초기화 후 다시 열기</button></div></div>`;
+    const btn=document.querySelector('#resetLocal');
+    if(btn) btn.onclick=()=>{Object.keys(localStorage).filter(k=>k.startsWith(`pos_${VERSION}_${REST_ID}_`)).forEach(k=>localStorage.removeItem(k)); location.reload();};
+  }
+}
+window.addEventListener('error', e=>showFatalError(e.error||e.message));
+function safeStart(){try{normalizeState(); render();}catch(e){console.error(e); showFatalError(e)}}
 function seedSales(){
  const now=new Date(); const sample=[]; const names=["생태탕","애호박찌개","소주","맥주","콜라"];
  for(let i=1;i<=28;i+=3){const d=new Date(now); d.setDate(d.getDate()-i); const items=[{id:'m1',name:'생태탕',price:12000,qty:2+(i%4),category:'식사류'},{id:'m3',name:'소주',price:5000,qty:1+(i%3),category:'주류'}]; if(i%2)items.push({id:'m2',name:'애호박찌개',price:10000,qty:1,category:'식사류'}); sample.push({id:`seed_${i}`,createdAt:d.toISOString(),paidAt:d.toISOString(),table:(i%6)+1,serviceType:i%2?'식당식사':'포장',payment:i%3?'카드':'현금',items,total:items.reduce((s,x)=>s+x.price*x.qty,0),manual:false,memo:'샘플 판매'});}
@@ -92,4 +135,4 @@ function inboxUrl(){return `${location.origin}${location.pathname.replace(/index
 function openInboxModal(){state.showModal='inbox';render()}
 function modal(type){const bg=el('div','modalBg'); const m=el('div','modal'); if(type==='inbox'){const inboxName=`${state.restaurantName} 우리매장 쪽지함 ${shortId}`; m.innerHTML=`<div class="modalHead"><h2>${inboxName}</h2><button class="close">닫기</button></div><p class="muted">사장님 핸드폰으로 이 주소를 열거나 QR로 연결해 판매통계/외상장부/공지/요금안내를 확인합니다.</p><div class="field"><label>쪽지함 주소</label><input readonly value="${inboxUrl()}"></div><div class="grid3" style="margin-top:12px"><button id="copyM">주소 복사</button><button id="openM" class="primary">새 창 열기</button><button id="closeM">닫기</button></div><div class="help">보안: 식당ID + 토큰 + 쪽지함 전용 비밀번호를 사용합니다. 6자리 번호는 표시용이며, 토큰 재발급 시 기존 링크는 무효화됩니다.</div>`;}
  bg.appendChild(m); document.body.appendChild(bg); const close=()=>{state.showModal=null; bg.remove()}; m.querySelector('.close')?.addEventListener('click',close); m.querySelector('#closeM')?.addEventListener('click',close); m.querySelector('#copyM')?.addEventListener('click',()=>navigator.clipboard?.writeText(inboxUrl()).then(()=>toast('주소를 복사했습니다'))); m.querySelector('#openM')?.addEventListener('click',()=>window.open(inboxUrl(),'_blank'));}
-render();
+safeStart();
