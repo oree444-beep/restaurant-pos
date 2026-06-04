@@ -1,138 +1,91 @@
-const VERSION = "V43";
-const REST_ID = new URLSearchParams(location.search).get("restaurantId") || "rest_000001";
-const shortId = (REST_ID.match(/(\d{6})$/)||[,'000001'])[1];
-const K = (name)=>`pos_${VERSION}_${REST_ID}_${name}`;
-const DEFAULT_MENUS = [
-  {id:"m1",name:"생태탕",price:12000,category:"식사류",emoji:"🍲",material:{"생태":1,"채소세트":1,"육수":1}},
-  {id:"m2",name:"애호박찌개",price:10000,category:"식사류",emoji:"🥘",material:{"애호박":0.5,"두부":0.3,"육수":1}},
-  {id:"m3",name:"소주",price:5000,category:"주류",emoji:"🍶",material:{"소주":1}},
-  {id:"m4",name:"맥주",price:5000,category:"주류",emoji:"🍺",material:{"맥주":1}},
-  {id:"m5",name:"콜라",price:2000,category:"음료",emoji:"🥤",material:{"콜라":1}}
+(function(){
+'use strict';
+const VERSION='V44';
+const qs=new URLSearchParams(location.search);
+const REST_ID=qs.get('restaurantId')||'rest_000001';
+const shortId=(REST_ID.match(/(\d{6})$/)||['','000001'])[1];
+const key=(name)=>`pos_${VERSION}_${REST_ID}_${name}`;
+const $=(s)=>document.querySelector(s);
+const make=(tag,cls,html)=>{const e=document.createElement(tag); if(cls)e.className=cls; if(html!==undefined)e.innerHTML=html; return e;};
+const read=(name,def)=>{try{const raw=localStorage.getItem(key(name));return raw?JSON.parse(raw):def;}catch(e){return def;}};
+const write=(name,val)=>{try{localStorage.setItem(key(name),JSON.stringify(val));}catch(e){}};
+const money=(n)=>`${(Number(n)||0).toLocaleString()}원`;
+const ymd=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const hm=(d=new Date())=>`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+const dateText=(iso)=>{const d=new Date(iso); if(isNaN(d))return '-'; return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
+const DEFAULT_MENUS=[
+ {id:'m1',name:'생태탕',price:12000,category:'식사류',emoji:'🍲',material:{'생태':1,'채소세트':1,'육수':1}},
+ {id:'m2',name:'애호박찌개',price:10000,category:'식사류',emoji:'🥘',material:{'애호박':0.5,'두부':0.3,'육수':1}},
+ {id:'m3',name:'소주',price:5000,category:'주류',emoji:'🍶',material:{'소주':1}},
+ {id:'m4',name:'맥주',price:5000,category:'주류',emoji:'🍺',material:{'맥주':1}},
+ {id:'m5',name:'콜라',price:2000,category:'음료',emoji:'🥤',material:{'콜라':1}}
 ];
-const CATS = ["식사류","주류","음료"];
-const $ = (s)=>document.querySelector(s);
-const el = (tag, cls, html)=>{const x=document.createElement(tag); if(cls)x.className=cls; if(html!==undefined)x.innerHTML=html; return x};
-const get = (key, def)=>{try{const v=localStorage.getItem(K(key));return v?JSON.parse(v):def}catch{return def}};
-const set = (key, val)=>localStorage.setItem(K(key), JSON.stringify(val));
-const money = (n)=>`${(Number(n)||0).toLocaleString()}원`;
-const ymd = (d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-const hm = (d=new Date())=>`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-const dtText = (iso)=>{const d=new Date(iso); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
-let state = {
-  restaurantName:get('restaurantName','생태한마리'),
-  ownerPhone:get('ownerPhone','0106954900'),
-  adminPw:get('adminPw','1234'),
-  inboxPw:get('inboxPw','1234'),
-  inboxToken:get('inboxToken',`token_${shortId}_${VERSION}`),
-  authed:get('authed',false),
-  tab:'주문', selectedTable:1, serviceType:'식당식사', pay:'카드',
-  menus:get('menus',DEFAULT_MENUS), cats:get('cats',CATS), tableCount:get('tableCount',12),
-  orders:get('orders',{}), sales:get('sales',seedSales()), credits:get('credits',[]), reports:get('reports',[]),
-  manualEditId:null, showModal:null
-};
-function normalizeState(){
-  try{
-    if(!Array.isArray(state.menus) || !state.menus.length) state.menus = DEFAULT_MENUS;
-    if(!Array.isArray(state.cats) || !state.cats.length) state.cats = CATS;
-    if(!state.orders || typeof state.orders !== 'object' || Array.isArray(state.orders)) state.orders = {};
-    if(!Array.isArray(state.sales)) state.sales = seedSales();
-    state.sales = state.sales.map(s=>({
-      id:s.id||('s_'+Math.random().toString(36).slice(2)),
-      createdAt:s.createdAt||new Date().toISOString(),
-      paidAt:s.paidAt||s.createdAt||new Date().toISOString(),
-      table:s.table||1,
-      serviceType:s.serviceType||'식당식사',
-      payment:s.payment||'카드',
-      items:Array.isArray(s.items)?s.items:[],
-      total:Number(s.total)||0,
-      manual:!!s.manual,
-      memo:s.memo||'',
-      inputUser:s.inputUser||''
-    })).filter(s=>s.items.length);
-    if(!Array.isArray(state.credits)) state.credits = [];
-    if(!Array.isArray(state.reports)) state.reports = [];
-    state.tableCount = Number(state.tableCount)||12;
-    state.selectedTable = Number(state.selectedTable)||1;
-    if(!['주문','외상장부','판매통계','수기입력','관리자'].includes(state.tab)) state.tab='주문';
-    state.restaurantName = state.restaurantName || '생태한마리';
-    state.ownerPhone = state.ownerPhone || '';
-    state.adminPw = state.adminPw || '1234';
-    state.inboxPw = state.inboxPw || '1234';
-    state.inboxToken = state.inboxToken || `token_${shortId}_${VERSION}`;
-  }catch(e){
-    console.error('normalizeState failed', e);
-  }
-}
-function showFatalError(err){
-  const app=document.querySelector('#app');
-  if(app){
-    app.innerHTML=`<div class="wrap"><div class="card"><h2>POS 화면을 불러오지 못했습니다</h2><p class="muted">이전 버전의 저장값이 꼬였을 가능성이 있습니다.</p><pre style="white-space:pre-wrap;background:#fee2e2;padding:12px;border-radius:12px;color:#991b1b;">${String(err&&err.message||err)}</pre><button class="primary" id="resetLocal">저장값 초기화 후 다시 열기</button></div></div>`;
-    const btn=document.querySelector('#resetLocal');
-    if(btn) btn.onclick=()=>{Object.keys(localStorage).filter(k=>k.startsWith(`pos_${VERSION}_${REST_ID}_`)).forEach(k=>localStorage.removeItem(k)); location.reload();};
-  }
-}
-window.addEventListener('error', e=>showFatalError(e.error||e.message));
-function safeStart(){try{normalizeState(); render();}catch(e){console.error(e); showFatalError(e)}}
+const CATS=['식사류','주류','음료'];
 function seedSales(){
- const now=new Date(); const sample=[]; const names=["생태탕","애호박찌개","소주","맥주","콜라"];
- for(let i=1;i<=28;i+=3){const d=new Date(now); d.setDate(d.getDate()-i); const items=[{id:'m1',name:'생태탕',price:12000,qty:2+(i%4),category:'식사류'},{id:'m3',name:'소주',price:5000,qty:1+(i%3),category:'주류'}]; if(i%2)items.push({id:'m2',name:'애호박찌개',price:10000,qty:1,category:'식사류'}); sample.push({id:`seed_${i}`,createdAt:d.toISOString(),paidAt:d.toISOString(),table:(i%6)+1,serviceType:i%2?'식당식사':'포장',payment:i%3?'카드':'현금',items,total:items.reduce((s,x)=>s+x.price*x.qty,0),manual:false,memo:'샘플 판매'});}
- return sample;
+ const out=[]; const now=new Date();
+ for(let i=1;i<=28;i+=3){
+  const d=new Date(now); d.setDate(d.getDate()-i);
+  const items=[{...DEFAULT_MENUS[0],qty:2+(i%4)},{...DEFAULT_MENUS[2],qty:1+(i%3)}];
+  if(i%2)items.push({...DEFAULT_MENUS[1],qty:1});
+  out.push({id:'seed_'+i,createdAt:d.toISOString(),paidAt:d.toISOString(),table:(i%8)+1,serviceType:i%2?'식당식사':'포장',payment:i%3?'카드':'현금',items,total:items.reduce((s,x)=>s+x.price*x.qty,0),manual:false,memo:'샘플 판매'});
+ }
+ return out;
 }
-function saveAll(){['restaurantName','ownerPhone','adminPw','inboxPw','inboxToken','authed','menus','cats','tableCount','orders','sales','credits','reports'].forEach(k=>set(k,state[k]));}
-function toast(msg){const t=el('div','toast',msg);document.body.appendChild(t);setTimeout(()=>t.remove(),2300)}
-function requireLogin(){
- if(state.authed) return false;
- const app=$('#app'); app.innerHTML=''; const box=el('div','login');
- box.innerHTML=`<div class="loginBox"><h1>식당 POS 접속 비밀번호</h1><p class="muted">인증된 기기는 다음부터 바로 접속됩니다.</p><input id="pw" type="password" placeholder="비밀번호 입력" autofocus><button class="primary" id="loginBtn">접속하기</button><p class="muted small">비밀번호는 관리자 화면에서 변경할 수 있습니다.</p></div>`;
- app.appendChild(box); $('#loginBtn').onclick=()=>{if($('#pw').value===state.adminPw){state.authed=true;saveAll();render()}else toast('비밀번호가 맞지 않습니다')};
- $('#pw').onkeydown=e=>{if(e.key==='Enter')$('#loginBtn').click()}; return true;
+let state={
+ restaurantName:read('restaurantName','생태한마리'), ownerPhone:read('ownerPhone','0106954900'),
+ adminPw:read('adminPw','1234'), authed:read('authed',false), inboxPw:read('inboxPw','1234'), inboxToken:read('inboxToken',`token_${shortId}_${VERSION}`),
+ tab:'주문', selectedTable:1, serviceType:'식당식사', payment:'카드', menus:read('menus',DEFAULT_MENUS), cats:read('cats',CATS), tableCount:read('tableCount',12),
+ orders:read('orders',{}), sales:read('sales',seedSales()), credits:read('credits',[]), reports:read('reports',[]), modal:null, manualEditId:null
+};
+function normalize(){
+ if(!Array.isArray(state.menus)||!state.menus.length)state.menus=DEFAULT_MENUS;
+ if(!Array.isArray(state.cats)||!state.cats.length)state.cats=CATS;
+ if(!state.orders||typeof state.orders!=='object'||Array.isArray(state.orders))state.orders={};
+ if(!Array.isArray(state.sales)||!state.sales.length)state.sales=seedSales();
+ if(!Array.isArray(state.credits))state.credits=[];
+ if(!Array.isArray(state.reports))state.reports=[];
+ state.tableCount=Number(state.tableCount)||12;
+ state.selectedTable=Number(state.selectedTable)||1;
+ state.restaurantName=state.restaurantName||'생태한마리';
+ state.adminPw=state.adminPw||'1234'; state.inboxPw=state.inboxPw||'1234'; state.inboxToken=state.inboxToken||`token_${shortId}_${VERSION}`;
+ state.sales=state.sales.map(s=>({id:s.id||'s_'+Date.now()+Math.random(),createdAt:s.createdAt||new Date().toISOString(),paidAt:s.paidAt||s.createdAt||new Date().toISOString(),table:s.table||1,serviceType:s.serviceType||'식당식사',payment:s.payment||'카드',items:Array.isArray(s.items)?s.items:[],total:Number(s.total)||0,manual:!!s.manual,memo:s.memo||'',inputUser:s.inputUser||'',editLog:Array.isArray(s.editLog)?s.editLog:[]})).filter(s=>s.items.length);
 }
-function render(){ if(requireLogin())return; const app=$('#app'); app.innerHTML='';
- const wrap=el('div','wrap'); app.appendChild(wrap);
- wrap.appendChild(header()); wrap.appendChild(tabs());
- if(state.tab==='주문') wrap.appendChild(orderView());
- if(state.tab==='외상장부') wrap.appendChild(creditView());
- if(state.tab==='판매통계') wrap.appendChild(statsView());
- if(state.tab==='수기입력') wrap.appendChild(manualView());
- if(state.tab==='관리자') wrap.appendChild(adminView());
- if(state.showModal) modal(state.showModal);
- saveAll();
+function persist(){['restaurantName','ownerPhone','adminPw','authed','inboxPw','inboxToken','menus','cats','tableCount','orders','sales','credits','reports'].forEach(k=>write(k,state[k]));}
+function toast(msg){const t=make('div','toast',msg);document.body.appendChild(t);setTimeout(()=>t.remove(),2200);}
+function fatal(err){const app=$('#app'); if(!app)return; app.innerHTML=`<div class="wrap"><div class="card"><h2>POS 화면을 불러오지 못했습니다</h2><p class="muted">저장값 또는 배포 파일 오류가 발생했습니다.</p><pre style="white-space:pre-wrap;background:#fee2e2;color:#991b1b;padding:12px;border-radius:12px">${String(err&&err.message||err)}</pre><button class="primary" id="resetBtn">V44 저장값 초기화 후 다시 열기</button></div></div>`; $('#resetBtn').onclick=()=>{Object.keys(localStorage).filter(k=>k.startsWith(`pos_${VERSION}_${REST_ID}_`)).forEach(k=>localStorage.removeItem(k));location.reload();};}
+window.addEventListener('error',e=>fatal(e.error||e.message));
+function needLogin(){
+ if(state.authed)return false;
+ const app=$('#app'); app.innerHTML='';
+ const box=make('div','login',`<div class="loginBox"><h1>식당 POS 접속 비밀번호</h1><p class="muted">비밀번호는 관리자 화면에서 확인·수정합니다.</p><input id="pw" type="password" placeholder="비밀번호 입력"><button class="primary wideBtn" id="login">접속하기</button></div>`);
+ app.appendChild(box);
+ $('#login').onclick=()=>{if($('#pw').value===state.adminPw){state.authed=true;persist();render();}else toast('비밀번호가 맞지 않습니다');};
+ $('#pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('#login').click();});
+ return true;
 }
-function header(){const h=el('header','top'); const inboxName=`${state.restaurantName} 우리매장 쪽지함 ${shortId}`; h.innerHTML=`<div><h1>${state.restaurantName} POS <span>${VERSION}</span></h1><p>주문 · 외상장부 · 판매통계 · 수기입력 · 우리매장 쪽지함</p></div>`;
- const btns=el('div','topBtns');
- btns.innerHTML=`<button class="dark" id="adminBtn">관리자모드</button><button class="green" id="refreshBtn">새로고침</button><button class="wide" id="inboxBtn">${inboxName}</button><button class="status">식당ID ${REST_ID} · 문자 API 보류 · 쪽지함 우선</button>`;
- h.appendChild(btns); btns.querySelector('#adminBtn').onclick=()=>{state.tab='관리자';render()}; btns.querySelector('#refreshBtn').onclick=()=>location.reload(); btns.querySelector('#inboxBtn').onclick=()=>openInboxModal(); return h;}
-function tabs(){const t=el('div','tabs'); ['주문','외상장부','판매통계','수기입력','관리자'].forEach(x=>{const b=el('button',state.tab===x?'active':'',x); b.onclick=()=>{state.tab=x;render()}; t.appendChild(b)});return t}
-function orderView(){const main=el('div','mainGrid'); const left=el('div','card'); left.innerHTML=`<h2>테이블 선택</h2>`; const tables=el('div','tables'); for(let i=1;i<=state.tableCount;i++){const has=(state.orders[i]||[]).length; const b=el('button',`tableBtn ${state.selectedTable===i?'sel':has?'has':''}`,`${i}번${has?'<br><span class="small">주문중</span>':''}`); b.onclick=()=>{state.selectedTable=i;render()}; tables.appendChild(b)} left.appendChild(tables);
- const service=el('div','tabs'); ['식당식사','포장'].forEach(x=>{const b=el('button',state.serviceType===x?'active':'',x); b.onclick=()=>{state.serviceType=x;render()}; service.appendChild(b)}); left.appendChild(service);
- state.cats.forEach(c=>{const title=el('div','menuGroupTitle',`<span>${c}</span>`); left.appendChild(title); const grid=el('div','menuGrid'); state.menus.filter(m=>m.category===c).forEach(m=>{const b=el('button','menuCard',`<div class="menuEmoji">${m.emoji||'🍽️'}</div><div class="menuName">${m.name}</div><div class="price">${money(m.price)}</div>`); b.onclick=()=>addOrder(m); grid.appendChild(b)}); left.appendChild(grid)});
- const right=orderPanel(); main.appendChild(left); main.appendChild(right); return main;}
-function addOrder(m){const key=state.selectedTable; const arr=state.orders[key]||[]; const found=arr.find(x=>x.id===m.id); if(found) found.qty++; else arr.push({...m,qty:1,serviceType:state.serviceType}); state.orders[key]=arr; saveAll(); render();}
-function changeQty(id,delta){const arr=(state.orders[state.selectedTable]||[]).map(x=>x.id===id?{...x,qty:x.qty+delta}:x).filter(x=>x.qty>0); state.orders[state.selectedTable]=arr; render();}
-function orderPanel(){const p=el('aside','card'); const arr=state.orders[state.selectedTable]||[]; const total=arr.reduce((s,x)=>s+x.price*x.qty,0); p.innerHTML=`<h2>주문내역 (${state.selectedTable}번)</h2>`; if(!arr.length)p.innerHTML+=`<p class="muted">메뉴를 선택해주세요.</p>`; arr.forEach(i=>{const row=el('div','orderItem',`<div><b>${i.name}</b><p class="muted">${money(i.price)} × ${i.qty}</p></div><div class="qtyCtl"><button>-</button><span>${i.qty}</span><button>+</button></div>`); const bs=row.querySelectorAll('button'); bs[0].onclick=()=>changeQty(i.id,-1); bs[1].onclick=()=>changeQty(i.id,1); p.appendChild(row)}); p.innerHTML+=`<div class="total">${money(total)}</div>`; const pays=el('div','payBtns'); ['카드','현금','카드+현금','상품권','기타','외상'].forEach(x=>{const b=el('button',state.pay===x?'active':'',x); b.onclick=()=>{state.pay=x;render()}; pays.appendChild(b)}); p.appendChild(pays); const credit=el('div','field'); credit.innerHTML=`<label>외상 고객/단체명</label><input id="creditName" placeholder="외상일 때 필수">`; p.appendChild(credit); const memo=el('div','field'); memo.innerHTML=`<label>결제 메모</label><input id="payMemo" placeholder="선택 입력">`; p.appendChild(memo); const done=el('button','primary','결제완료'); done.style.width='100%'; done.onclick=()=>completePayment(total); p.appendChild(done); return p;}
-function completePayment(total){const arr=state.orders[state.selectedTable]||[]; if(!arr.length)return toast('주문내역이 없습니다'); const cname=$('#creditName')?.value.trim()||''; if(state.pay==='외상'&&!cname)return toast('외상 고객/단체명을 입력해주세요'); const now=new Date().toISOString(); const sale={id:'s_'+Date.now(),createdAt:now,paidAt:now,table:state.selectedTable,serviceType:state.serviceType,payment:state.pay,items:arr,total,manual:false,memo:$('#payMemo')?.value||''}; state.sales.unshift(sale); if(state.pay==='외상'){state.credits.unshift({id:'c_'+Date.now(),saleId:sale.id,createdAt:now,name:cname,phone:'',total,remain:total,paid:false,items:arr,memo:sale.memo,logs:[]})} state.orders[state.selectedTable]=[]; saveAll(); toast('결제완료'); render();}
-function creditView(){const c=el('div','card'); c.innerHTML=`<h2>외상장부</h2><p class="muted">외상 고객에게 입금 요청을 보내는 문자는 발신번호 등록 전까지 보류하고, 우선 우리매장 쪽지함에 안내를 저장합니다.</p>`; if(!state.credits.length)c.innerHTML+=`<div class="help">외상 내역이 없습니다.</div>`; const table=el('table','table'); table.innerHTML=`<thead><tr><th>상태</th><th>고객/단체</th><th>금액</th><th>잔액</th><th>일시</th><th>처리</th></tr></thead><tbody></tbody>`; state.credits.forEach(cr=>{const tr=el('tr'); tr.innerHTML=`<td>${cr.paid?'<span class="badge green">완납</span>':'<span class="badge orange">미수</span>'}</td><td><b>${cr.name}</b><br><span class="muted small">${cr.phone||'연락처 미입력'}</span></td><td>${money(cr.total)}</td><td>${money(cr.remain)}</td><td>${dtText(cr.createdAt)}</td><td><button data-act="pay">일부/완납</button> <button data-act="send">쪽지함 저장</button></td>`; tr.querySelector('[data-act="pay"]').onclick=()=>payCredit(cr.id); tr.querySelector('[data-act="send"]').onclick=()=>sendCreditReport(cr); table.querySelector('tbody').appendChild(tr)}); c.appendChild(table); return c;}
-function payCredit(id){const cr=state.credits.find(x=>x.id===id); const v=prompt('입금액을 입력하세요. 전체 완납은 잔액 그대로 입력', cr.remain); const amt=Number(v)||0; if(!amt)return; cr.remain=Math.max(0,cr.remain-amt); cr.paid=cr.remain===0; cr.logs.push({at:new Date().toISOString(),amount:amt}); saveAll(); render();}
-function sendCreditReport(cr){const text=`[${state.restaurantName} 외상 안내]\n${cr.name} 외상 잔액: ${money(cr.remain)}\n문의는 매장으로 연락 부탁드립니다.`; state.reports.unshift({id:'r_'+Date.now(),type:'외상장부',title:`${cr.name} 외상 안내`,body:text,createdAt:new Date().toISOString(),read:false}); saveAll(); toast('우리매장 쪽지함에 외상 안내를 저장했습니다');}
-function statsView(){const v=el('div','grid'); const total=state.sales.reduce((s,x)=>s+x.total,0), count=state.sales.length; const byMenu={}; const byPay={}; const byDay={}; state.sales.forEach(s=>{byPay[s.payment]=(byPay[s.payment]||0)+s.total; byDay[new Date(s.paidAt||s.createdAt).getDay()]=(byDay[new Date(s.paidAt||s.createdAt).getDay()]||0)+s.total; s.items.forEach(i=>{byMenu[i.name]=byMenu[i.name]||{qty:0,total:0,material:i.material||{}}; byMenu[i.name].qty+=i.qty; byMenu[i.name].total+=i.qty*i.price})}); const topMenus=Object.entries(byMenu).sort((a,b)=>b[1].qty-a[1].qty); v.appendChild(el('div','card',`<h2>판매통계</h2><p class="muted">기본형/종합형/세부재료분석형/요일별 통계 예시를 함께 보여줍니다. 문자 API는 보류하고 우선 우리매장 쪽지함에 리포트를 저장합니다.</p><div class="statCards"><div class="statCard">총매출<br><b>${money(total)}</b></div><div class="statCard">주문건수<br><b>${count}건</b></div><div class="statCard">평균 객단가<br><b>${money(count?Math.round(total/count):0)}</b></div><div class="statCard">리포트 발송<br><b>쪽지함</b></div></div>`));
- const basic=`[기본형]\n최근 매출: ${money(total)}\n주문건수: ${count}건\n인기메뉴: ${topMenus[0]?.[0]||'기록 없음'}\n안 팔린 메뉴: ${state.menus.filter(m=>!byMenu[m.name]).map(m=>m.name).join(', ')||'없음'}`;
- const comp=`[종합형]\n결제방식별: ${Object.entries(byPay).map(([k,v])=>`${k} ${money(v)}`).join(' / ')||'기록 없음'}\n식당/포장 흐름, 시간대별 매출, 인기메뉴 TOP을 함께 확인합니다.`;
- const materialLines=topMenus.slice(0,4).map(([name,v])=>{const menu=state.menus.find(m=>m.name===name); const mat=menu?.material||{}; return `${name} ${v.qty}개 기준 → ${Object.entries(mat).map(([mk,mv])=>`${mk} ${Math.ceil(mv*v.qty)}`).join(', ')||'재료 미설정'}`});
- const material=`[세부재료분석형]\n메뉴별 판매량 기준 오늘/내일 준비 재료를 추천합니다.\n${materialLines.join('\n')||'메뉴별 필요 재료를 관리자모드에서 입력해야 계산됩니다.'}`;
- const days=['일','월','화','수','목','금','토']; const dayText=Object.entries(byDay).map(([k,v])=>`${days[k]}요일 ${money(v)}`).join(' / ');
- const weekday=`[요일별 통계]\n요일별 매출 비교: ${dayText||'기록 없음'}\n요일별 인기메뉴와 재료 준비량 비교가 가능합니다.`;
- const cards=el('div','grid2'); [[basic,'blue'],[comp,'green'],[material,'orange'],[weekday,'blue']].forEach(([txt,cls])=>cards.appendChild(el('div',`reportCard ${cls}`,txt))); v.appendChild(cards);
- const actions=el('div','card'); actions.innerHTML=`<h3>리포트 보내기</h3><p class="muted">사장님 핸드폰에서는 우리매장 쪽지함 QR/링크로 확인합니다.</p><button class="primary" id="sendStats">판매통계 리포트 쪽지함 저장</button> <button id="openInbox">우리매장 쪽지함 열기</button>`; v.appendChild(actions); setTimeout(()=>{$('#sendStats').onclick=()=>{state.reports.unshift({id:'r_'+Date.now(),type:'판매통계',title:'판매통계 리포트',body:[basic,comp,material,weekday].join('\n\n'),createdAt:new Date().toISOString(),read:false});saveAll();toast('우리매장 쪽지함에 판매통계 리포트를 저장했습니다')}; $('#openInbox').onclick=()=>openInboxModal();},0); return v;}
-function manualView(){const box=el('div','card'); box.innerHTML=`<h2>수기 내역 입력/수정</h2><p class="muted">POS 사용법을 모르는 직원이 종이에 적어둔 내역을 저녁이나 다음날 관리자가 입력할 수 있습니다. 실제 주문일/결제일/결제시간은 따로 지정됩니다.</p>`; const form=el('div','grid3'); form.innerHTML=`<div class="field"><label>주문일</label><input id="m_orderDate" type="date" value="${ymd()}"></div><div class="field"><label>결제일</label><input id="m_paidDate" type="date" value="${ymd()}"></div><div class="field"><label>결제시간</label><input id="m_paidTime" type="time" value="${hm()}"></div><div class="field"><label>구분</label><select id="m_service"><option>식당식사</option><option>포장</option></select></div><div class="field"><label>테이블</label><input id="m_table" type="number" value="1"></div><div class="field"><label>결제수단</label><select id="m_pay"><option>카드</option><option>현금</option><option>카드+현금</option><option>상품권</option><option>기타</option><option>외상</option></select></div><div class="field"><label>메뉴명</label><input id="m_name" placeholder="예: 생태탕"></div><div class="field"><label>수량</label><input id="m_qty" type="number" value="1"></div><div class="field"><label>단가</label><input id="m_price" type="number" value="12000"></div><div class="field"><label>외상 고객/단체명</label><input id="m_credit" placeholder="외상일 때 입력"></div><div class="field"><label>입력자/수정자</label><input id="m_user" value="관리자"></div><div class="field"><label>수정 사유/메모</label><input id="m_memo" placeholder="수기 입력 사유"></div>`; box.appendChild(form); const btn=el('button','primary','수기 내역 저장'); btn.style.marginTop='12px'; btn.onclick=saveManual; box.appendChild(btn);
- const list=el('div','card'); list.style.marginTop='16px'; list.innerHTML='<h3>수기 입력 내역</h3>'; const table=el('table','table'); table.innerHTML='<thead><tr><th>배지</th><th>결제일시</th><th>메뉴</th><th>금액</th><th>결제</th><th>메모</th><th>관리</th></tr></thead><tbody></tbody>'; state.sales.filter(s=>s.manual).forEach(s=>{const item=s.items[0]; const tr=el('tr',null,`<td><span class="manualMarker">수기입력</span></td><td>${dtText(s.paidAt)}</td><td>${item.name} ${item.qty}개</td><td>${money(s.total)}</td><td>${s.payment}</td><td>${s.memo||''}</td><td><button data-id="${s.id}">수정</button></td>`); tr.querySelector('button').onclick=()=>loadManual(s.id); table.querySelector('tbody').appendChild(tr)}); list.appendChild(table); box.appendChild(list); return box;}
-function saveManual(){const paidAt=`${$('#m_paidDate').value}T${$('#m_paidTime').value}:00`; const item={id:'manual_'+Date.now(),name:$('#m_name').value||'수기메뉴',qty:Number($('#m_qty').value)||1,price:Number($('#m_price').value)||0,category:'수기입력'}; const sale={id:state.manualEditId||'manual_sale_'+Date.now(),createdAt:`${$('#m_orderDate').value}T${$('#m_paidTime').value}:00`,paidAt,table:Number($('#m_table').value)||1,serviceType:$('#m_service').value,payment:$('#m_pay').value,items:[item],total:item.qty*item.price,manual:true,memo:$('#m_memo').value,inputUser:$('#m_user').value,updatedAt:new Date().toISOString()}; if(state.manualEditId){state.sales=state.sales.map(s=>s.id===state.manualEditId?{...sale,editLog:[...(s.editLog||[]),{at:new Date().toISOString(),memo:sale.memo,user:sale.inputUser}]}:s); state.manualEditId=null}else state.sales.unshift(sale); if(sale.payment==='외상') state.credits.unshift({id:'c_'+Date.now(),saleId:sale.id,createdAt:sale.paidAt,name:$('#m_credit').value||'수기외상',phone:'',total:sale.total,remain:sale.total,paid:false,items:[item],memo:sale.memo,logs:[]}); saveAll(); toast('수기 내역이 저장되었습니다'); render();}
-function loadManual(id){const s=state.sales.find(x=>x.id===id); if(!s)return; state.manualEditId=id; render(); setTimeout(()=>{const d=new Date(s.paidAt); $('#m_paidDate').value=ymd(d); $('#m_paidTime').value=hm(d); $('#m_service').value=s.serviceType; $('#m_table').value=s.table; $('#m_pay').value=s.payment; $('#m_name').value=s.items[0].name; $('#m_qty').value=s.items[0].qty; $('#m_price').value=s.items[0].price; $('#m_user').value=s.inputUser||'관리자'; $('#m_memo').value=s.memo||''},0)}
-function adminView(){const a=el('div','grid2'); const left=el('div','card'); left.innerHTML=`<h2>관리자 설정</h2><div class="field"><label>식당명</label><input id="a_name" value="${state.restaurantName}"></div><div class="field"><label>사장님 연락처</label><input id="a_phone" value="${state.ownerPhone}"></div><div class="field"><label>POS 접속 비밀번호</label><input id="a_pw" value="${state.adminPw}"></div><div class="field"><label>테이블 수</label><input id="a_table" type="number" value="${state.tableCount}"></div><button class="primary" id="saveAdmin">관리자 설정 저장</button><button class="red" id="resetDevice">등록 기기 초기화</button><p class="muted small">비밀번호 변경만 하면 기존 인증 기기는 유지됩니다. 등록 기기 초기화 시 다음 접속 때 다시 비밀번호를 입력해야 합니다.</p>`; a.appendChild(left);
- const right=el('div','card'); const inboxName=`${state.restaurantName} 우리매장 쪽지함 ${shortId}`; right.innerHTML=`<h2>${inboxName}</h2><p class="muted">사장님 핸드폰에서 판매통계·외상장부·공지·요금안내를 확인하는 웹 쪽지함입니다.</p><div class="field"><label>쪽지함 비밀번호</label><input id="a_inboxPw" value="${state.inboxPw}"></div><div class="field"><label>쪽지함 토큰</label><input id="a_token" value="${state.inboxToken}"></div><div class="summaryBox"><b>쪽지함 주소</b><br><span class="small">${inboxUrl()}</span></div><div class="tabs"><button id="copyInbox">주소 복사</button><button id="openInbox2">새 창 열기</button><button id="regenToken">토큰 재발급</button></div><div class="help">QR 연결은 다음 단계에서 실제 QR 이미지로 보강합니다. 현재는 주소 복사/새 창 열기 방식으로 먼저 확인합니다.</div>`; a.appendChild(right);
- setTimeout(()=>{$('#saveAdmin').onclick=()=>{state.restaurantName=$('#a_name').value;state.ownerPhone=$('#a_phone').value;state.adminPw=$('#a_pw').value;state.tableCount=Number($('#a_table').value)||12;state.inboxPw=$('#a_inboxPw')?.value||state.inboxPw;state.inboxToken=$('#a_token')?.value||state.inboxToken;saveAll();toast('저장되었습니다');render()}; $('#resetDevice').onclick=()=>{state.authed=false;saveAll();location.reload()}; $('#copyInbox').onclick=()=>navigator.clipboard?.writeText(inboxUrl()).then(()=>toast('쪽지함 주소를 복사했습니다')); $('#openInbox2').onclick=()=>window.open(inboxUrl(),'_blank'); $('#regenToken').onclick=()=>{state.inboxToken=`token_${shortId}_${Date.now().toString(36)}`;saveAll();render()};},0);
- return a;}
-function inboxUrl(){return `${location.origin}${location.pathname.replace(/index\.html$/,'')}owner-inbox.html?restaurantId=${REST_ID}&token=${encodeURIComponent(state.inboxToken)}`}
-function openInboxModal(){state.showModal='inbox';render()}
-function modal(type){const bg=el('div','modalBg'); const m=el('div','modal'); if(type==='inbox'){const inboxName=`${state.restaurantName} 우리매장 쪽지함 ${shortId}`; m.innerHTML=`<div class="modalHead"><h2>${inboxName}</h2><button class="close">닫기</button></div><p class="muted">사장님 핸드폰으로 이 주소를 열거나 QR로 연결해 판매통계/외상장부/공지/요금안내를 확인합니다.</p><div class="field"><label>쪽지함 주소</label><input readonly value="${inboxUrl()}"></div><div class="grid3" style="margin-top:12px"><button id="copyM">주소 복사</button><button id="openM" class="primary">새 창 열기</button><button id="closeM">닫기</button></div><div class="help">보안: 식당ID + 토큰 + 쪽지함 전용 비밀번호를 사용합니다. 6자리 번호는 표시용이며, 토큰 재발급 시 기존 링크는 무효화됩니다.</div>`;}
- bg.appendChild(m); document.body.appendChild(bg); const close=()=>{state.showModal=null; bg.remove()}; m.querySelector('.close')?.addEventListener('click',close); m.querySelector('#closeM')?.addEventListener('click',close); m.querySelector('#copyM')?.addEventListener('click',()=>navigator.clipboard?.writeText(inboxUrl()).then(()=>toast('주소를 복사했습니다'))); m.querySelector('#openM')?.addEventListener('click',()=>window.open(inboxUrl(),'_blank'));}
-safeStart();
+function render(){try{normalize(); if(needLogin())return; const app=$('#app'); app.innerHTML=''; const wrap=make('div','wrap'); app.appendChild(wrap); wrap.appendChild(header()); wrap.appendChild(nav()); if(state.tab==='주문')wrap.appendChild(orderView()); if(state.tab==='외상장부')wrap.appendChild(creditView()); if(state.tab==='판매통계')wrap.appendChild(statsView()); if(state.tab==='수기입력')wrap.appendChild(manualView()); if(state.tab==='관리자')wrap.appendChild(adminView()); if(state.modal)showModal(state.modal); persist();}catch(e){console.error(e);fatal(e);}}
+function header(){const h=make('header','top'); h.innerHTML=`<div><h1>${state.restaurantName} POS <span>${VERSION}</span></h1><p>식당ID ${REST_ID} · 주문 · 외상장부 · 판매통계 · 수기입력 · 우리매장 쪽지함</p></div>`; const b=make('div','topBtns'); b.innerHTML=`<button class="dark" id="adminTop">관리자모드</button><button class="green" id="refreshTop">새로고침</button><button class="wide" id="inboxTop">${state.restaurantName} 우리매장 쪽지함 ${shortId}</button><button class="status">문자 API 보류 · 쪽지함 우선</button>`; h.appendChild(b); b.querySelector('#adminTop').onclick=()=>{state.tab='관리자';render();}; b.querySelector('#refreshTop').onclick=()=>location.reload(); b.querySelector('#inboxTop').onclick=()=>{state.modal='inbox';render();}; return h;}
+function nav(){const n=make('div','tabs'); ['주문','외상장부','판매통계','수기입력','관리자'].forEach(x=>{const btn=make('button',state.tab===x?'active':'',x);btn.onclick=()=>{state.tab=x;render();};n.appendChild(btn);});return n;}
+function orderView(){const grid=make('div','mainGrid'); const left=make('div','card'); left.innerHTML='<h2>주문</h2><p class="muted">테이블을 선택하고 메뉴를 누르면 주문내역에 추가됩니다.</p>'; const tables=make('div','tables'); for(let i=1;i<=state.tableCount;i++){const arr=state.orders[i]||[]; const btn=make('button',`tableBtn ${state.selectedTable===i?'sel':arr.length?'has':''}`,`${i}번${arr.length?'<br><span class="small">주문중</span>':''}`); btn.onclick=()=>{state.selectedTable=i;render();}; tables.appendChild(btn);} left.appendChild(tables); const service=make('div','tabs'); ['식당식사','포장'].forEach(x=>{const btn=make('button',state.serviceType===x?'active':'',x); btn.onclick=()=>{state.serviceType=x;render();}; service.appendChild(btn);}); left.appendChild(service);
+ state.cats.forEach(cat=>{left.appendChild(make('div','menuGroupTitle',cat)); const mg=make('div','menuGrid'); state.menus.filter(m=>m.category===cat).forEach(m=>{const btn=make('button','menuCard',`<div class="menuEmoji">${m.emoji||'🍽️'}</div><div class="menuName">${m.name}</div><div class="price">${money(m.price)}</div>`); btn.onclick=()=>addOrder(m); mg.appendChild(btn);}); left.appendChild(mg);}); grid.appendChild(left); grid.appendChild(orderPanel()); return grid;}
+function addOrder(menu){const t=state.selectedTable; const arr=state.orders[t]||[]; const found=arr.find(x=>x.id===menu.id); if(found)found.qty++; else arr.push({...menu,qty:1,serviceType:state.serviceType}); state.orders[t]=arr; render();}
+function orderPanel(){const p=make('aside','card'); const arr=state.orders[state.selectedTable]||[]; const total=arr.reduce((s,x)=>s+x.price*x.qty,0); p.innerHTML=`<h2>${state.selectedTable}번 주문내역</h2>`; if(!arr.length)p.innerHTML+='<p class="muted">아직 주문이 없습니다.</p>'; arr.forEach(item=>{const row=make('div','orderItem',`<div><b>${item.name}</b><p class="muted">${money(item.price)} × ${item.qty}</p></div><div class="qtyCtl"><button data-d="-1">-</button><span>${item.qty}</span><button data-d="1">+</button></div>`); row.querySelectorAll('button').forEach(btn=>btn.onclick=()=>changeQty(item.id,Number(btn.dataset.d))); p.appendChild(row);}); p.appendChild(make('div','total',money(total))); const pays=make('div','payBtns'); ['카드','현금','카드+현금','상품권','기타','외상'].forEach(x=>{const btn=make('button',state.payment===x?'sel':'',x); btn.onclick=()=>{state.payment=x;render();}; pays.appendChild(btn);}); p.appendChild(pays); const done=make('button','primary wideBtn','결제완료'); done.style.marginTop='12px'; done.onclick=checkout; p.appendChild(done); return p;}
+function changeQty(id,d){const arr=(state.orders[state.selectedTable]||[]).map(x=>x.id===id?{...x,qty:x.qty+d}:x).filter(x=>x.qty>0); state.orders[state.selectedTable]=arr; render();}
+function checkout(){const arr=state.orders[state.selectedTable]||[]; if(!arr.length){toast('주문내역이 없습니다');return;} const total=arr.reduce((s,x)=>s+x.price*x.qty,0); const sale={id:'sale_'+Date.now(),createdAt:new Date().toISOString(),paidAt:new Date().toISOString(),table:state.selectedTable,serviceType:state.serviceType,payment:state.payment,items:arr,total,manual:false,memo:''}; state.sales.unshift(sale); if(state.payment==='외상'){const name=prompt('외상 고객/단체명을 입력해주세요','외상고객')||'외상고객'; state.credits.unshift({id:'credit_'+Date.now(),saleId:sale.id,createdAt:sale.paidAt,name,phone:'',total,remain:total,paid:false,items:arr,memo:'',logs:[]});} state.orders[state.selectedTable]=[]; toast('결제 완료'); render();}
+function creditView(){const c=make('div','card'); c.innerHTML='<h2>외상장부</h2><p class="muted">외상 결제와 수기입력 외상 내역을 관리합니다.</p>'; const table=make('table','table'); table.innerHTML='<thead><tr><th>고객/단체</th><th>발생일</th><th>금액</th><th>잔액</th><th>상태</th><th>관리</th></tr></thead><tbody></tbody>'; const tb=table.querySelector('tbody'); state.credits.forEach(cr=>{const tr=make('tr',null,`<td>${cr.name}</td><td>${dateText(cr.createdAt)}</td><td>${money(cr.total)}</td><td>${money(cr.remain)}</td><td>${cr.paid?'완납':'미수'}</td><td><button data-id="${cr.id}">입금처리</button></td>`); tr.querySelector('button').onclick=()=>{cr.remain=0;cr.paid=true;cr.logs=cr.logs||[];cr.logs.push({at:new Date().toISOString(),amount:cr.total,memo:'입금처리'});render();}; tb.appendChild(tr);}); c.appendChild(table); return c;}
+function statsView(){const v=make('div'); const sales=state.sales; const total=sales.reduce((s,x)=>s+x.total,0); const count=sales.length; const byPay={}; const byMenu={}; const byDay={}; sales.forEach(s=>{byPay[s.payment]=(byPay[s.payment]||0)+s.total; const day=new Date(s.paidAt||s.createdAt).getDay(); byDay[day]=(byDay[day]||0)+s.total; s.items.forEach(i=>{byMenu[i.name]=byMenu[i.name]||{qty:0,total:0}; byMenu[i.name].qty+=i.qty; byMenu[i.name].total+=i.price*i.qty;});}); const top=Object.entries(byMenu).sort((a,b)=>b[1].qty-a[1].qty); const head=make('div','card',`<h2>판매통계</h2><p class="muted">판매통계는 우리매장 쪽지함으로 저장해서 사장님 핸드폰에서 확인하는 구조를 우선 사용합니다.</p><div class="statCards"><div class="statCard">총매출<br><b>${money(total)}</b></div><div class="statCard">주문건수<br><b>${count}건</b></div><div class="statCard">인기메뉴<br><b>${top[0]?.[0]||'-'}</b></div><div class="statCard">수기입력<br><b>${sales.filter(s=>s.manual).length}건</b></div></div>`); v.appendChild(head);
+ const basic=`[기본형]\n최근 판매금액: ${money(total)}\n주문건수: ${count}건\n인기메뉴: ${top.slice(0,3).map(x=>x[0]).join(', ')||'기록 없음'}\n판매 없는 메뉴: ${state.menus.filter(m=>!byMenu[m.name]).map(m=>m.name).join(', ')||'없음'}`;
+ const comp=`[종합형]\n결제방식별: ${Object.entries(byPay).map(([k,val])=>`${k} ${money(val)}`).join(' / ')||'기록 없음'}\n식당/포장, 시간대별, 메뉴별 흐름을 종합해서 보여줍니다.`;
+ const material=`[세부재료분석형]\n${top.slice(0,4).map(([name,v])=>{const menu=state.menus.find(m=>m.name===name); const mat=menu?.material||{}; return `${name} ${v.qty}개 판매 기준 → ${Object.entries(mat).map(([mk,mv])=>`${mk} ${Math.ceil(mv*v.qty)}`).join(', ')||'재료 미설정'}`;}).join('\n')||'관리자모드에서 메뉴별 필요 재료를 입력해야 계산됩니다.'}\n오늘/내일 장보기와 재료 준비에 활용합니다.`;
+ const days=['일','월','화','수','목','금','토']; const weekday=`[요일별 통계]\n${Object.entries(byDay).map(([k,val])=>`${days[k]}요일 ${money(val)}`).join(' / ')||'기록 없음'}\n요일별 인기메뉴와 재료 준비량 비교가 가능합니다.`;
+ const reports=make('div','reportGrid'); [[basic,''],[comp,'green'],[material,'orange'],[weekday,'']].forEach(([txt,cls])=>reports.appendChild(make('div',`reportCard ${cls}`,txt))); v.appendChild(reports);
+ const act=make('div','card'); act.innerHTML='<h3>리포트 보내기</h3><p class="muted">문자 API는 식당별 발신번호 인증 이후 연결하고, 현재는 우리매장 쪽지함을 우선 사용합니다.</p><button class="primary" id="saveReport">판매통계 리포트 쪽지함 저장</button> <button id="openInbox">우리매장 쪽지함 열기</button>'; v.appendChild(act); setTimeout(()=>{$('#saveReport').onclick=()=>{state.reports.unshift({id:'report_'+Date.now(),type:'판매통계',title:'판매통계 리포트',body:[basic,comp,material,weekday].join('\n\n'),createdAt:new Date().toISOString(),read:false});persist();toast('우리매장 쪽지함에 저장했습니다');}; $('#openInbox').onclick=()=>{state.modal='inbox';render();};},0); return v;}
+function manualView(){const box=make('div','card'); box.innerHTML='<h2>수기 내역 입력/수정</h2><p class="muted">종이에 적어둔 주문/결제 내역을 나중에 입력합니다. 실제 결제일과 입력일을 구분해 저장합니다.</p>'; const f=make('div','grid3'); f.innerHTML=`<div class="field"><label>주문일</label><input id="moDate" type="date" value="${ymd()}"></div><div class="field"><label>결제일</label><input id="mpDate" type="date" value="${ymd()}"></div><div class="field"><label>결제시간</label><input id="mpTime" type="time" value="${hm()}"></div><div class="field"><label>구분</label><select id="mService"><option>식당식사</option><option>포장</option></select></div><div class="field"><label>테이블</label><input id="mTable" type="number" value="1"></div><div class="field"><label>결제수단</label><select id="mPay"><option>카드</option><option>현금</option><option>카드+현금</option><option>상품권</option><option>기타</option><option>외상</option></select></div><div class="field"><label>메뉴명</label><input id="mName" value="생태탕"></div><div class="field"><label>수량</label><input id="mQty" type="number" value="1"></div><div class="field"><label>단가</label><input id="mPrice" type="number" value="12000"></div><div class="field"><label>외상 고객/단체명</label><input id="mCredit" placeholder="외상일 때 입력"></div><div class="field"><label>입력자/수정자</label><input id="mUser" value="관리자"></div><div class="field"><label>수정 사유/메모</label><input id="mMemo" placeholder="수기 입력 사유"></div>`; box.appendChild(f); const save=make('button','primary','수기 내역 저장'); save.onclick=saveManual; box.appendChild(save);
+ const list=make('div','card'); list.style.marginTop='16px'; list.innerHTML='<h3>수기 입력 내역</h3>'; const table=make('table','table'); table.innerHTML='<thead><tr><th>구분</th><th>결제일시</th><th>메뉴</th><th>금액</th><th>결제</th><th>메모</th></tr></thead><tbody></tbody>'; const tb=table.querySelector('tbody'); state.sales.filter(s=>s.manual).forEach(s=>{const item=s.items[0]||{}; tb.appendChild(make('tr',null,`<td><span class="manualMarker">수기입력</span></td><td>${dateText(s.paidAt)}</td><td>${item.name||'-'} ${item.qty||0}개</td><td>${money(s.total)}</td><td>${s.payment}</td><td>${s.memo||''}</td>`));}); list.appendChild(table); box.appendChild(list); return box;}
+function saveManual(){const paidAt=`${$('#mpDate').value}T${$('#mpTime').value||'00:00'}:00`; const createdAt=`${$('#moDate').value}T${$('#mpTime').value||'00:00'}:00`; const item={id:'manual_'+Date.now(),name:$('#mName').value||'수기메뉴',qty:Number($('#mQty').value)||1,price:Number($('#mPrice').value)||0,category:'수기입력'}; const sale={id:'manual_sale_'+Date.now(),createdAt,paidAt,table:Number($('#mTable').value)||1,serviceType:$('#mService').value,payment:$('#mPay').value,items:[item],total:item.qty*item.price,manual:true,memo:$('#mMemo').value,inputUser:$('#mUser').value,editLog:[{at:new Date().toISOString(),memo:'최초 수기 입력'}]}; state.sales.unshift(sale); if(sale.payment==='외상'){state.credits.unshift({id:'credit_'+Date.now(),saleId:sale.id,createdAt:sale.paidAt,name:$('#mCredit').value||'수기외상',phone:'',total:sale.total,remain:sale.total,paid:false,items:[item],memo:sale.memo,logs:[]});} toast('수기 내역이 저장되었습니다'); render();}
+function adminView(){const grid=make('div','grid2'); const left=make('div','card'); left.innerHTML=`<h2>관리자 설정</h2><div class="field"><label>식당명</label><input id="aName" value="${state.restaurantName}"></div><div class="field"><label>사장님 연락처</label><input id="aPhone" value="${state.ownerPhone}"></div><div class="field"><label>POS 접속 비밀번호</label><input id="aPw" value="${state.adminPw}"></div><div class="field"><label>테이블 수</label><input id="aTable" type="number" value="${state.tableCount}"></div><button class="primary" id="saveAdmin">관리자 설정 저장</button> <button class="red" id="resetAuth">등록 기기 초기화</button><div class="help">비밀번호 변경만 하면 기존 인증 기기는 유지됩니다. 등록 기기 초기화를 누르면 다음 접속부터 비밀번호를 다시 입력합니다.</div>`; grid.appendChild(left); const right=make('div','card'); right.innerHTML=`<h2>${state.restaurantName} 우리매장 쪽지함 ${shortId}</h2><p class="muted">사장님 핸드폰에서 판매통계, 외상장부, 요금안내, 공지를 확인하는 웹 쪽지함입니다.</p><div class="field"><label>쪽지함 전용 비밀번호</label><input id="iPw" value="${state.inboxPw}"></div><div class="field"><label>쪽지함 토큰</label><input id="iToken" value="${state.inboxToken}"></div><div class="help">${inboxUrl()}</div><button id="copyInbox">주소 복사</button> <button class="primary" id="openInboxAdmin">새 창 열기</button> <button id="regenToken">토큰 재발급</button><div class="help">문자 API는 식당별 발신번호 인증 구조가 준비된 뒤 연결합니다. 현재는 우리매장 쪽지함 우선입니다.</div>`; grid.appendChild(right); setTimeout(()=>{$('#saveAdmin').onclick=()=>{state.restaurantName=$('#aName').value||'생태한마리';state.ownerPhone=$('#aPhone').value;state.adminPw=$('#aPw').value||'1234';state.tableCount=Number($('#aTable').value)||12;state.inboxPw=$('#iPw').value||'1234';state.inboxToken=$('#iToken').value||state.inboxToken;persist();toast('관리자 설정 저장 완료');render();}; $('#resetAuth').onclick=()=>{state.authed=false;persist();location.reload();}; $('#copyInbox').onclick=()=>copy(inboxUrl()); $('#openInboxAdmin').onclick=()=>window.open(inboxUrl(),'_blank'); $('#regenToken').onclick=()=>{state.inboxToken=`token_${shortId}_${Date.now().toString(36)}`;persist();render();};},0); return grid;}
+function copy(text){if(navigator.clipboard)navigator.clipboard.writeText(text).then(()=>toast('복사했습니다')); else prompt('복사하세요',text);}
+function inboxUrl(){return `${location.origin}${location.pathname.replace(/index\.html$/,'')}owner-inbox.html?restaurantId=${encodeURIComponent(REST_ID)}&token=${encodeURIComponent(state.inboxToken)}`;}
+function showModal(type){const bg=make('div','modalBg'); const m=make('div','modal'); if(type==='inbox'){m.innerHTML=`<div class="modalHead"><h2>${state.restaurantName} 우리매장 쪽지함 ${shortId}</h2><button class="close">닫기</button></div><p class="muted">사장님 핸드폰으로 아래 주소를 열거나 QR로 연결해 쪽지함을 확인합니다.</p><div class="field"><label>쪽지함 주소</label><input readonly value="${inboxUrl()}"></div><div class="grid3"><button id="copyM">주소 복사</button><button class="primary" id="openM">새 창 열기</button><button id="closeM">닫기</button></div><div class="help">보안: 식당ID + 토큰 + 쪽지함 전용 비밀번호를 사용합니다. 6자리 숫자는 표시용입니다.</div>`;} bg.appendChild(m); document.body.appendChild(bg); const close=()=>{state.modal=null;bg.remove();}; m.querySelector('.close')?.addEventListener('click',close); m.querySelector('#closeM')?.addEventListener('click',close); m.querySelector('#copyM')?.addEventListener('click',()=>copy(inboxUrl())); m.querySelector('#openM')?.addEventListener('click',()=>window.open(inboxUrl(),'_blank'));}
+normalize(); render();
+})();

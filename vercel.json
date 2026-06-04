@@ -1,7 +1,6 @@
 {
   "version": 2,
-  "routes": [
-    { "src": "/owner-inbox", "dest": "/owner-inbox.html" },
-    { "src": "/(.*)", "dest": "/$1" }
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" }
   ]
 }
