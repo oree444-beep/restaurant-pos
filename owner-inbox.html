@@ -3,11 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>우리매장 쪽지함 V44</title>
-  <link rel="stylesheet" href="assets/style.css" />
+  <title>우리매장 쪽지함 V45</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#eef3f8;color:#0f172a;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.wrap{max-width:900px;margin:0 auto;padding:22px}.top{background:linear-gradient(135deg,#14213d,#1d4ed8);color:white;border-radius:0 0 28px 28px;padding:24px}.top h1{margin:0 0 8px;font-size:30px}.top p{margin:0;color:#dbeafe}.card{background:#fff;border:1px solid #dbe3ef;border-radius:22px;padding:20px;box-shadow:0 10px 25px rgba(15,23,42,.05);margin:18px 0}.tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button,button{border:0;border-radius:14px;padding:12px 16px;background:#e2e8f0;font-weight:800;cursor:pointer}.tabs button.active,.primary{background:#2563eb;color:white}.muted{color:#64748b}.msg{border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin:12px 0;background:#f8fafc;white-space:pre-line}.badge{display:inline-block;border-radius:999px;padding:4px 10px;background:#dbeafe;color:#1e40af;font-weight:900;font-size:13px}input{width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:13px;font-size:16px}.login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a}.loginBox{background:#fff;border-radius:26px;padding:34px;width:min(520px,90vw);text-align:center}.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#111827;color:white;padding:14px 20px;border-radius:999px}
+  </style>
 </head>
-<body>
-  <div id="ownerInbox"></div>
-  <script src="assets/owner-inbox.js"></script>
-</body>
-</html>
+<body><div id="app"></div>
+<script>
+(function(){
+const VERSION='V45';
+const qs=new URLSearchParams(location.search); const REST_ID=qs.get('restaurantId')||'rest_000001'; const token=qs.get('token')||'';
+const shortId=(REST_ID.match(/(\d{6})$/)||['','000001'])[1];
+const key=(name)=>`pos_${VERSION}_${REST_ID}_${name}`;
+const read=(name,def)=>{try{const raw=localStorage.getItem(key(name)); return raw?JSON.parse(raw):def;}catch(e){return def;}};
+const write=(name,val)=>{try{localStorage.setItem(key(name),JSON.stringify(val));}catch(e){}};
+const $=s=>document.querySelector(s); const make=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!==undefined)e.innerHTML=h;return e;};
+const name=read('restaurantName','생태한마리'); const savedToken=read('inboxToken',token||`token_${shortId}_${VERSION}`); const pw=read('inboxPw','1234');
+let authed=read('inboxAuthed',false); let tab='판매통계';
+function toast(msg){const t=make('div','toast',msg);document.body.appendChild(t);setTimeout(()=>t.remove(),2000)}
+function login(){const app=$('#app');app.innerHTML=`<div class="login"><div class="loginBox"><h1>${name} 우리매장 쪽지함 ${shortId}</h1><p class="muted">쪽지함 전용 비밀번호를 입력하세요.</p><input id="pw" type="password" placeholder="비밀번호 입력"><button class="primary" id="go" style="margin-top:12px;width:100%">확인</button></div></div>`; $('#go').onclick=()=>{if($('#pw').value===pw){authed=true;write('inboxAuthed',true);render()}else toast('비밀번호가 맞지 않습니다')}; $('#pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go').click()});}
+function sampleReports(){return [{type:'판매통계',title:'최근 30일 판매통계',body:'[기본형]\n총매출 518,000원\n주문건수 42건\n인기메뉴 생태탕, 애호박찌개\n\n[세부재료분석형]\n오늘 준비 추천: 생태 15마리, 애호박 5개, 소주 1박스\n\n[요일별 통계]\n금요일/토요일 주문이 많은 편입니다.',date:new Date().toISOString()},{type:'외상장부',title:'외상장부 요약',body:'미수금 총액 72,000원\n최근 일부결제 1건\n외상고객에게 입금 요청 문자를 보내는 기능은 발신번호 인증 후 연결 예정입니다.',date:new Date().toISOString()},{type:'요금/공지',title:'우리매장 쪽지함 안내',body:'문자 비용 없이 사장님 핸드폰에서 판매통계, 외상장부, 요금안내를 확인할 수 있습니다.\n홈화면에 바로가기를 추가하면 더 편하게 사용할 수 있습니다.',date:new Date().toISOString()}]}
+function render(){if(token && savedToken && token!==savedToken){document.body.innerHTML='<div class="wrap"><div class="card"><h2>유효하지 않은 쪽지함 링크입니다</h2><p class="muted">토큰이 변경되었거나 QR이 재발급되었습니다.</p></div></div>';return} if(!authed)return login(); const app=$('#app'); const reports=read('reports',[]); const list=(reports.length?reports:sampleReports()).filter(x=>tab==='전체'||(x.type||'').includes(tab)||tab.includes(x.type)); app.innerHTML=''; const wrap=make('div','wrap'); app.appendChild(wrap); wrap.appendChild(make('header','top',`<h1>${name} 우리매장 쪽지함 ${shortId}</h1><p>판매통계 · 외상장부 · 요금안내 · 관리자 공지를 핸드폰에서 확인합니다.</p>`)); const tabs=make('div','tabs'); ['전체','판매통계','외상장부','요금/공지'].forEach(t=>{const b=make('button',tab===t?'active':'',t); b.onclick=()=>{tab=t;render()}; tabs.appendChild(b)}); wrap.appendChild(make('div','card','<h2>새 쪽지함</h2><p class="muted">최신 쪽지와 리포트를 확인하세요.</p>')); wrap.lastChild.appendChild(tabs); const box=make('div','card'); box.innerHTML=`<h2>${tab} <span class="badge">${list.length}건</span></h2>`; list.forEach(r=>box.appendChild(make('div','msg',`<b>[${r.type}] ${r.title}</b>\n<span class="muted">${new Date(r.date||r.createdAt||Date.now()).toLocaleString()}</span>\n\n${r.body||''}`))); wrap.appendChild(box);}
+render();
+})();
+</script></body></html>
