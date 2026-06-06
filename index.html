@@ -1,3 +1,58 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V47</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-CpIXan2G.js"></script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V48</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-CpIXan2G.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
-</head><body><div id="root"></div></body></html>
+</head><body><div id="root"></div>
+<script>
+(function(){
+  const VERSION='V48';
+  const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
+  function toast(msg){
+    let t=document.querySelector('#v48-toast');
+    if(!t){ t=document.createElement('div'); t.id='v48-toast'; t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99999;background:#111827;color:white;padding:12px 16px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);font-weight:800;max-width:90%;'; document.body.appendChild(t); }
+    t.textContent=msg; t.style.display='block'; clearTimeout(t._timer); t._timer=setTimeout(()=>t.style.display='none',2800);
+  }
+  function walkText(root=document.body){
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT); let n;
+    while(n=walker.nextNode()){
+      if(n.nodeValue && n.nodeValue.includes('\\n')) n.nodeValue=n.nodeValue.replace(/\\n/g,'\n');
+      if(n.nodeValue && n.nodeValue.includes('POS V47')) n.nodeValue=n.nodeValue.replace(/POS V47/g,'POS V48');
+      if(n.nodeValue && n.nodeValue.includes('관리자에게 카톡 남기기')) n.nodeValue=n.nodeValue.replace(/관리자에게 카톡 남기기/g,'관리자에게 쪽지 남기기');
+    }
+  }
+  function findButton(txt){ return [...document.querySelectorAll('button')].find(b => (b.textContent||'').trim().includes(txt)); }
+  function ensureDataGuardToggle(){
+    document.querySelectorAll('.dataGuardCard').forEach(card=>{
+      if(card.dataset.v48) return; card.dataset.v48='1';
+      const btn=document.createElement('button'); btn.type='button'; btn.className='ghost v48-data-toggle'; btn.textContent='데이터 보존 상태 보기';
+      const details=[...card.children].filter(el=>!el.matches('h3'));
+      details.forEach(el=>el.style.display='none');
+      btn.onclick=()=>{ const open=btn.dataset.open==='1'; btn.dataset.open=open?'0':'1'; btn.textContent=open?'데이터 보존 상태 보기':'데이터 보존 상태 숨기기'; details.forEach(el=>el.style.display=open?'none':''); };
+      const h=card.querySelector('h3'); if(h) h.insertAdjacentElement('afterend',btn);
+    });
+  }
+  function ensureIngredientShortcut(){
+    const statBtn=[...document.querySelectorAll('button')].find(b=>(b.textContent||'').includes('세부재료분석형'));
+    if(statBtn && !document.querySelector('.v48-ingredient-shortcut')){
+      const b=document.createElement('button'); b.type='button'; b.className='green v48-ingredient-shortcut'; b.textContent='메뉴별 재료 설정';
+      b.title='관리자모드에서 메뉴별 재료 설정 영역으로 이동합니다.';
+      b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const admin=findButton('관리자모드'); if(admin) admin.click(); setTimeout(()=>{ const all=[...document.querySelectorAll('h3,h4,b,button,label')]; const target=all.find(el=>(el.textContent||'').includes('메뉴별 재료') || (el.textContent||'').includes('재료 설정')); if(target) target.scrollIntoView({behavior:'smooth',block:'center'}); toast('관리자모드에서 메뉴별 재료 설정을 확인해주세요.'); },400); };
+      statBtn.insertAdjacentElement('afterend', b);
+    }
+  }
+  function decorateReportCards(){
+    document.querySelectorAll('.card,.modalBox,section,div').forEach(el=>{
+      const txt=el.textContent||'';
+      if(txt.includes('최근 30일 매출') || txt.includes('오늘 준비 추천') || txt.includes('통계 예시')) el.classList.add('v48-report-pretty');
+    });
+  }
+  document.addEventListener('click', function(e){
+    const btn=e.target.closest && e.target.closest('button'); if(!btn) return;
+    const txt=(btn.textContent||'').trim();
+    if(txt.includes('문자전송') && !txt.includes('엑셀')){ e.preventDefault(); e.stopImmediatePropagation(); toast('문자전송 기능은 준비중입니다. 식당별 발신번호 등록 후 사용할 수 있습니다.'); }
+  }, true);
+  ready(()=>{
+    document.title='식당 POS V48';
+    setInterval(()=>{ walkText(); ensureDataGuardToggle(); ensureIngredientShortcut(); decorateReportCards(); }, 800);
+  });
+})();
+</script>
+</body></html>
