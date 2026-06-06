@@ -7,3 +7,8 @@
 .v48-report-pretty{white-space:pre-line;}
 .statsResult,.statsPreview,.reportPreview,.sampleReport,.phonePreview{white-space:pre-line;}
 button:has(+ .v48-ingredient-shortcut){margin-right:4px;}
+
+/* V52 menu board spacer feature */
+.menuCard.menuSpacer{background:transparent!important;border:2px dashed transparent!important;box-shadow:none!important;cursor:default;pointer-events:none;min-height:150px;visibility:hidden}
+.adminMenu .spacerBadge{display:inline-flex;align-items:center;justify-content:center;background:#f1f5f9;color:#64748b;border:1px dashed #cbd5e1;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900}
+.ghostBtn{background:#eef2ff!important;color:#1d4ed8!important;border-radius:12px!important;padding:12px!important;font-weight:900!important}
