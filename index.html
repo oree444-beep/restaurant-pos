@@ -1,9 +1,9 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V55</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V55-pos.js"></script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V56</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V56-pos.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
 </head><body><div id="root"></div>
 <script>
 (function(){
-  const VERSION='V55';
+  const VERSION='V56';
   const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
   const LAST_MANUAL_KEY='pos_v53_last_manual_form';
   function toast(msg, undo){
@@ -184,7 +184,7 @@
     }
   }, true);
   ready(()=>{
-    document.title='식당 POS V55';
+    document.title='식당 POS V56';
     const style=document.createElement('style'); style.textContent=`
       .v53-top-utility-zone{display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;margin-top:8px!important;}
       .v53-top-utility-zone .v53-compact-top-btn{width:auto!important;min-width:0!important;padding:12px 18px!important;border-radius:14px!important;white-space:nowrap!important;box-shadow:none!important;}
@@ -211,6 +211,110 @@
 
     `; document.head.appendChild(style);
     setInterval(()=>{ walkText(); moveOwnerInboxButton(); moveManualButton(); ensureDataGuardToggle(); ensureIngredientShortcut(); decorateReportCards(); enhanceManualModal(); ensurePaymentDefaultPanel(); applyPaymentDefault(false); }, 600);
+  });
+})();
+</script>
+
+<script>
+(function(){
+  const KITCHEN_TEST_KEY_PREFIX='pos_v56_kitchen_orders_';
+  function qs(name){ return new URLSearchParams(location.search).get(name); }
+  function currentRestaurantId(){
+    return qs('restaurantId') || localStorage.getItem('restaurantId') || document.body?.dataset?.restaurantId || 'rest_000001';
+  }
+  function kitchenKey(){ return KITCHEN_TEST_KEY_PREFIX + currentRestaurantId(); }
+  function getRestaurantName(){
+    const title=(document.querySelector('h1')?.textContent||'').replace(/POS|V\d+|자동저장 완료/g,'').trim();
+    return title || '생태한마리';
+  }
+  function toast(msg){
+    let t=document.querySelector('#v56-kitchen-toast');
+    if(!t){
+      t=document.createElement('div');
+      t.id='v56-kitchen-toast';
+      t.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:100000;background:#0f172a;color:white;padding:12px 16px;border-radius:14px;font-weight:900;box-shadow:0 10px 30px rgba(0,0,0,.24);max-width:92%;';
+      document.body.appendChild(t);
+    }
+    t.textContent=msg;
+    t.style.display='block';
+    clearTimeout(t._timer);
+    t._timer=setTimeout(()=>{t.style.display='none'},3600);
+  }
+  function readOrders(){
+    try{return JSON.parse(localStorage.getItem(kitchenKey())||'[]')}catch(e){return []}
+  }
+  function saveOrders(list){ localStorage.setItem(kitchenKey(), JSON.stringify(list)); localStorage.setItem('pos_v56_kitchen_last_update', String(Date.now())); }
+  function addTestOrder(){
+    const list=readOrders();
+    const order={
+      id:'test_'+Date.now(),
+      type:'테스트 주문',
+      table:'1번',
+      items:[{name:'생태탕',qty:1},{name:'공기밥',qty:1}],
+      memo:'V56 주방기기 연결 테스트 전송',
+      createdAt:new Date().toISOString(),
+      restaurantId:currentRestaurantId(),
+      restaurantName:getRestaurantName(),
+      status:'대기'
+    };
+    list.unshift(order);
+    saveOrders(list.slice(0,30));
+    toast('주방 테스트 주문을 전송했습니다. 주방 화면을 열어 확인하세요.');
+  }
+  function openKitchenDisplay(){
+    const url=`./kitchen-display.html?restaurantId=${encodeURIComponent(currentRestaurantId())}&name=${encodeURIComponent(getRestaurantName())}`;
+    window.open(url,'_blank');
+  }
+  function copyKitchenUrl(){
+    const url=new URL(`./kitchen-display.html?restaurantId=${encodeURIComponent(currentRestaurantId())}&name=${encodeURIComponent(getRestaurantName())}`, location.href).href;
+    navigator.clipboard?.writeText(url).then(()=>toast('주방 화면 주소를 복사했습니다.'),()=>prompt('주방 화면 주소를 복사하세요.',url));
+  }
+  function ensureKitchenButtons(){
+    const boxes=[...document.querySelectorAll('.kitchenAdminActions')];
+    boxes.forEach(box=>{
+      if(box.dataset.v56Kitchen==='1') return;
+      box.dataset.v56Kitchen='1';
+      const test=document.createElement('button');
+      test.type='button';
+      test.className='green v56-kitchen-test-btn';
+      test.textContent='주방 테스트 전송';
+      test.onclick=(e)=>{e.preventDefault(); e.stopPropagation(); addTestOrder();};
+      const open=document.createElement('button');
+      open.type='button';
+      open.textContent='주방 화면 열기';
+      open.onclick=(e)=>{e.preventDefault(); e.stopPropagation(); openKitchenDisplay();};
+      const copy=document.createElement('button');
+      copy.type='button';
+      copy.textContent='주방 주소 복사';
+      copy.onclick=(e)=>{e.preventDefault(); e.stopPropagation(); copyKitchenUrl();};
+      box.appendChild(test);
+      box.appendChild(open);
+      box.appendChild(copy);
+      const note=document.createElement('p');
+      note.className='muted v56-kitchen-help';
+      note.textContent='V56 임시 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
+      box.insertAdjacentElement('afterend', note);
+    });
+  }
+  function patchKitchenButtons(){
+    [...document.querySelectorAll('button')].forEach(btn=>{
+      const txt=(btn.textContent||'').trim();
+      if(txt==='주방화면 열기' && !btn.dataset.v56OpenPatched){
+        btn.dataset.v56OpenPatched='1';
+        btn.addEventListener('click', function(e){ e.preventDefault(); e.stopImmediatePropagation(); openKitchenDisplay(); }, true);
+      }
+    });
+  }
+  function addStyle(){
+    if(document.querySelector('#v56-kitchen-style')) return;
+    const style=document.createElement('style');
+    style.id='v56-kitchen-style';
+    style.textContent='.v56-kitchen-test-btn{background:#16a34a!important;color:#fff!important;font-weight:900!important}.v56-kitchen-help{margin-top:8px!important;color:#64748b!important;line-height:1.5!important}.kitchenAdminActions{flex-wrap:wrap!important;gap:8px!important}';
+    document.head.appendChild(style);
+  }
+  document.addEventListener('DOMContentLoaded',()=>{
+    addStyle();
+    setInterval(()=>{ensureKitchenButtons(); patchKitchenButtons();},600);
   });
 })();
 </script>

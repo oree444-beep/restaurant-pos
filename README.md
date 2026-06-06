@@ -1,12 +1,21 @@
-# 식당 POS V55
+# 식당 POS V56 / 주방 테스트 전송 확인 버전
 
-V42 UI 기준을 유지하면서 영수증 출력 흐름과 주방기기 옵션 연동 표시를 보강한 버전입니다.
+V56은 V55 영수증 인쇄 분리 기준을 유지하면서 관리자모드에 주방 테스트 전송과 주방 화면 확인 기능을 보강한 정적 배포 버전입니다.
 
-## V55 핵심
-- 영수증 화면에서 자동 인쇄 호출을 중지하고, 사용자가 `인쇄하기`를 눌렀을 때만 태블릿/브라우저 인쇄창이 열리게 조정
-- 영수증 화면에 `POS로 돌아가기` 버튼과 태블릿 PDF 저장 안내 유지
-- 종합관리에서 주방연결기기/주방 주문현황판 옵션을 `사용중`으로 바꾼 경우 POS 관리자모드의 주방기기 버튼 활성 조건을 보강
-- `옵션 상태 다시 불러오기` 버튼 추가
+## 포함 파일
+- index.html
+- kitchen-display.html
+- owner-inbox.html
+- assets/
+- manifest.webmanifest
+- sw.js
+- vercel.json
+
+## 주요 반영
+- 주방기기 연결 테스트 전송 버튼 추가
+- 주방 화면 열기/주소 복사 보강
+- 영수증 보기와 인쇄하기 분리 유지
+- POS로 돌아가기 버튼 유지
 
 ## 배포
-정적 배포 기준입니다. GitHub 루트에 파일을 업로드하고 Vercel은 Framework Preset Other, Output Directory `.`로 설정합니다.
+Vercel 정적 배포: Framework Other / Build Command 빈칸 / Output Directory .
