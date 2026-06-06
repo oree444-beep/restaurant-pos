@@ -1,14 +1,14 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V52</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V52-spacer-menu.js"></script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V53</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V52-spacer-menu.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
 </head><body><div id="root"></div>
 <script>
 (function(){
-  const VERSION='V50';
+  const VERSION='V53';
   const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
-  const LAST_MANUAL_KEY='pos_v50_last_manual_form';
+  const LAST_MANUAL_KEY='pos_v53_last_manual_form';
   function toast(msg, undo){
-    let t=document.querySelector('#v50-toast');
-    if(!t){ t=document.createElement('div'); t.id='v50-toast'; t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99999;background:#111827;color:white;padding:12px 16px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);font-weight:800;max-width:90%;display:none;'; document.body.appendChild(t); }
+    let t=document.querySelector('#v53-toast');
+    if(!t){ t=document.createElement('div'); t.id='v53-toast'; t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99999;background:#111827;color:white;padding:12px 16px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);font-weight:800;max-width:90%;display:none;'; document.body.appendChild(t); }
     t.innerHTML='';
     const span=document.createElement('span'); span.textContent=msg; t.appendChild(span);
     if(typeof undo==='function'){
@@ -44,39 +44,39 @@
   }
   function ensureTopUtilityZone(){
     const admin=findButton('관리자모드');
-    if(!admin || document.querySelector('.v50-top-utility-zone')) return;
-    const zone=document.createElement('div'); zone.className='v50-top-utility-zone';
+    if(!admin || document.querySelector('.v53-top-utility-zone')) return;
+    const zone=document.createElement('div'); zone.className='v53-top-utility-zone';
     admin.parentElement.insertBefore(zone, admin);
     zone.appendChild(admin);
   }
   function moveOwnerInboxButton(){
     ensureTopUtilityZone();
-    const zone=document.querySelector('.v50-top-utility-zone'); if(!zone) return;
+    const zone=document.querySelector('.v53-top-utility-zone'); if(!zone) return;
     const owner=[...document.querySelectorAll('button')].find(b=>(b.textContent||'').trim()==='우리매장 쪽지함' || (b.textContent||'').includes('우리매장 쪽지함'));
     if(owner && owner.parentElement!==zone){
-      owner.classList.add('v50-compact-top-btn','v50-owner-btn');
+      owner.classList.add('v53-compact-top-btn','v53-owner-btn');
       zone.insertBefore(owner, zone.firstChild);
     }
   }
   function moveManualButton(){
     const manual=[...document.querySelectorAll('button')].find(b=>(b.textContent||'').includes('수기 내역 입력/수정') || (b.textContent||'').trim()==='수기입력');
     if(!manual) return;
-    manual.textContent='수기 내역 입력/수정'; manual.classList.add('v50-compact-top-btn','v50-manual-btn');
-    let target=document.querySelector('.v50-top-utility-zone');
+    manual.textContent='수기 내역 입력/수정'; manual.classList.add('v53-compact-top-btn','v53-manual-btn');
+    let target=document.querySelector('.v53-top-utility-zone');
     if(!target){
       const orderTitle=[...document.querySelectorAll('h2,h3')].find(h=>(h.textContent||'').includes('주문내역'));
-      if(orderTitle){ target=document.createElement('div'); target.className='v50-order-utility-zone'; orderTitle.parentElement.appendChild(target); }
+      if(orderTitle){ target=document.createElement('div'); target.className='v53-order-utility-zone'; orderTitle.parentElement.appendChild(target); }
     }
     if(target && manual.parentElement!==target){ target.insertBefore(manual, target.firstChild); }
   }
   function ensureDataGuardToggle(){
     document.querySelectorAll('.dataGuardCard').forEach(card=>{
-      if(card.dataset.v50) return; card.dataset.v50='1'; card.classList.add('v50-dataGuardCard');
+      if(card.dataset.v50) return; card.dataset.v50='1'; card.classList.add('v53-dataGuardCard');
       const details=[...card.children].filter(el=>!el.matches('h3'));
       details.forEach(el=>el.style.display='none');
       const h=card.querySelector('h3'); if(h){
-        h.classList.add('v50-dataGuardHead');
-        const btn=document.createElement('button'); btn.type='button'; btn.className='v50-data-toggle'; btn.textContent='보기';
+        h.classList.add('v53-dataGuardHead');
+        const btn=document.createElement('button'); btn.type='button'; btn.className='v53-data-toggle'; btn.textContent='보기';
         btn.onclick=()=>{ const open=btn.dataset.open==='1'; btn.dataset.open=open?'0':'1'; btn.textContent=open?'보기':'숨기기'; details.forEach(el=>el.style.display=open?'none':''); };
         h.appendChild(btn);
       }
@@ -84,8 +84,8 @@
   }
   function ensureIngredientShortcut(){
     const statBtn=[...document.querySelectorAll('button')].find(b=>(b.textContent||'').includes('세부재료분석형'));
-    if(statBtn && !document.querySelector('.v50-ingredient-shortcut')){
-      const b=document.createElement('button'); b.type='button'; b.className='green v50-ingredient-shortcut'; b.textContent='메뉴별 재료 설정';
+    if(statBtn && !document.querySelector('.v53-ingredient-shortcut')){
+      const b=document.createElement('button'); b.type='button'; b.className='green v53-ingredient-shortcut'; b.textContent='메뉴별 재료 설정';
       b.title='관리자모드에서 메뉴별 재료 설정 영역으로 이동합니다.';
       b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const admin=findButton('관리자모드'); if(admin) admin.click(); setTimeout(()=>{ const all=[...document.querySelectorAll('h3,h4,b,button,label')]; const target=all.find(el=>(el.textContent||'').includes('메뉴별 재료') || (el.textContent||'').includes('재료 설정')); if(target) target.scrollIntoView({behavior:'smooth',block:'center'}); toast('관리자모드에서 메뉴별 재료 설정을 확인해주세요.'); },400); };
       statBtn.insertAdjacentElement('afterend', b);
@@ -94,7 +94,7 @@
   function decorateReportCards(){
     document.querySelectorAll('.card,.modalBox,section,div').forEach(el=>{
       const txt=el.textContent||'';
-      if(txt.includes('최근 30일 매출') || txt.includes('오늘 준비 추천') || txt.includes('통계 예시')) el.classList.add('v50-report-pretty');
+      if(txt.includes('최근 30일 매출') || txt.includes('오늘 준비 추천') || txt.includes('통계 예시')) el.classList.add('v53-report-pretty');
     });
   }
   function inputByLabel(labelText){
@@ -122,7 +122,7 @@
     box.dataset.v50Manual='1';
     const menuInput=inputByLabel('메뉴명');
     if(menuInput){
-      const wrap=document.createElement('div'); wrap.className='v50-menu-picker';
+      const wrap=document.createElement('div'); wrap.className='v53-menu-picker';
       const select=document.createElement('select'); select.innerHTML='<option value="">등록 메뉴에서 선택</option>';
       getMenuOptions().forEach(m=>{ const opt=document.createElement('option'); opt.value=m.name; opt.textContent=m.price?`${m.name} · ${m.price.toLocaleString()}원`:m.name; opt.dataset.price=m.price||''; select.appendChild(opt); });
       select.onchange=()=>{ if(!select.value) return; setNativeValue(menuInput, select.value); const price=inputByLabel('단가'); const opt=select.selectedOptions[0]; if(price && opt?.dataset.price) setNativeValue(price,opt.dataset.price); };
@@ -131,19 +131,49 @@
       menuInput.closest('label').appendChild(wrap);
     }
     const actions=box.querySelector('.modalActions');
-    if(actions && !actions.querySelector('.v50-reset-manual')){
-      const reset=document.createElement('button'); reset.type='button'; reset.className='v50-reset-manual'; reset.textContent='새 입력으로 초기화';
+    if(actions && !actions.querySelector('.v53-reset-manual')){
+      const reset=document.createElement('button'); reset.type='button'; reset.className='v53-reset-manual'; reset.textContent='새 입력으로 초기화';
       reset.onclick=()=>{
         ['메뉴명','수량','단가','외상 고객/단체','연락처','메모'].forEach(k=>{ const el=inputByLabel(k); if(el) setNativeValue(el, k==='수량'?'1':''); });
         saveManualForm(); toast('새 메뉴 입력칸을 초기화했습니다. 날짜/시간/결제수단은 유지됩니다.');
       };
       actions.appendChild(reset);
     }
+    const paySel=inputByLabel('결제수단'); if(paySel && !paySel.value) setNativeValue(paySel,getDesiredPayment());
     restoreManualForm(true);
   }
+
+  const PAY_MODE_KEY='pos_v53_payment_default_mode';
+  const PAY_VALUE_KEY='pos_v53_payment_default_value';
+  const PAY_LAST_KEY='pos_v53_payment_last_value';
+  const PAY_METHODS=['현금','카드','카드+현금','상품권','기타','외상'];
+  function getPayButtons(){ return [...document.querySelectorAll('.payGrid button')].filter(b=>PAY_METHODS.includes((b.textContent||'').trim())); }
+  function getPaySetting(){ return {mode:localStorage.getItem(PAY_MODE_KEY)||'manager', value:localStorage.getItem(PAY_VALUE_KEY)||'카드', last:localStorage.getItem(PAY_LAST_KEY)||''}; }
+  function getDesiredPayment(){ const s=getPaySetting(); return s.mode==='last' && s.last ? s.last : s.value; }
+  function applyPaymentDefault(force=false){
+    const buttons=getPayButtons(); if(!buttons.length) return;
+    const active=buttons.find(b=>b.classList.contains('active'));
+    if(active && !force) return;
+    const desired=getDesiredPayment(); const target=buttons.find(b=>(b.textContent||'').trim()===desired) || buttons[0];
+    if(target && (!active || active!==target || force)){ target.click(); }
+  }
+  function ensurePaymentDefaultPanel(){
+    const adminBox=[...document.querySelectorAll('.modalBox.admin,.modalBox')].find(m=>(m.textContent||'').includes('관리자모드')) || [...document.querySelectorAll('.modalBox.admin,.modalBox')].find(m=>(m.textContent||'').includes('화면모드'));
+    if(!adminBox || adminBox.querySelector('.v53-payment-default-card')) return;
+    const card=document.createElement('div'); card.className='v53-payment-default-card adminCard';
+    const setting=getPaySetting();
+    card.innerHTML=`<h3>결제수단 기본값 설정</h3><div class="v53-payment-default-grid"><label>기본 방식<select class="v53-pay-mode"><option value="manager">관리자가 선택한 기본값 사용</option><option value="last">마지막 사용 결제수단 자동 기억</option></select></label><label>관리자 기본 결제수단<select class="v53-pay-value">${PAY_METHODS.map(m=>`<option value="${m}">${m}</option>`).join('')}</select></label></div><div class="v53-payment-default-help">새 주문/새 테이블 결제 시 기본으로 선택될 결제수단입니다. 수기 내역 입력/수정의 결제수단 기본값에도 같은 기준을 사용합니다.</div>`;
+    const mode=card.querySelector('.v53-pay-mode'); const val=card.querySelector('.v53-pay-value'); mode.value=setting.mode; val.value=setting.value;
+    mode.onchange=()=>{ localStorage.setItem(PAY_MODE_KEY,mode.value); toast('결제수단 기본 방식이 저장되었습니다.'); applyPaymentDefault(true); };
+    val.onchange=()=>{ localStorage.setItem(PAY_VALUE_KEY,val.value); toast('관리자 기본 결제수단이 저장되었습니다.'); applyPaymentDefault(true); };
+    const firstAdminCard=adminBox.querySelector('.adminCard');
+    if(firstAdminCard) firstAdminCard.insertAdjacentElement('afterend',card); else adminBox.appendChild(card);
+  }
+
   document.addEventListener('click', function(e){
     const btn=e.target.closest && e.target.closest('button'); if(!btn) return;
     const txt=(btn.textContent||'').trim();
+    if(PAY_METHODS.includes(txt)){ localStorage.setItem(PAY_LAST_KEY, txt); }
     if(txt.includes('문자전송') && !txt.includes('엑셀')){ e.preventDefault(); e.stopImmediatePropagation(); toast('문자전송 기능은 준비중입니다. 식당별 발신번호 등록 후 사용할 수 있습니다.'); }
     if(txt.includes('판매/외상장부에 반영')){
       saveManualForm();
@@ -154,20 +184,33 @@
     }
   }, true);
   ready(()=>{
-    document.title='식당 POS V50';
+    document.title='식당 POS V53';
     const style=document.createElement('style'); style.textContent=`
-      .v50-top-utility-zone{display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;margin-top:8px!important;}
-      .v50-top-utility-zone .v50-compact-top-btn{width:auto!important;min-width:0!important;padding:12px 18px!important;border-radius:14px!important;white-space:nowrap!important;box-shadow:none!important;}
-      .v50-owner-btn{background:#eef6ff!important;color:#0f3f91!important;border:1px solid #d7e8ff!important;font-weight:900!important;}
-      .v50-manual-btn{background:#f3f4f6!important;color:#111827!important;border:1px solid #d1d5db!important;font-weight:900!important;}
-      .v50-order-utility-zone{margin-top:10px;display:flex;justify-content:flex-end;}
-      .v50-dataGuardCard{padding:14px 16px!important;}
-      .v50-dataGuardHead{display:flex!important;align-items:center!important;justify-content:space-between!important;margin:0!important;gap:12px!important;}
-      .v50-data-toggle{border:0!important;border-radius:12px!important;padding:8px 14px!important;background:#eaf2ff!important;color:#1d4ed8!important;font-weight:900!important;}
-      .v50-menu-picker{margin-top:8px;display:flex;flex-direction:column;gap:6px}.v50-menu-picker select{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-weight:800;background:white}.v50-menu-picker small{color:#64748b}.v50-reset-manual{background:#eef2f7!important;color:#111827!important}
-      .v50-report-pretty{white-space:pre-line;}
+      .v53-top-utility-zone{display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;margin-top:8px!important;}
+      .v53-top-utility-zone .v53-compact-top-btn{width:auto!important;min-width:0!important;padding:12px 18px!important;border-radius:14px!important;white-space:nowrap!important;box-shadow:none!important;}
+      .v53-owner-btn{background:#eef6ff!important;color:#0f3f91!important;border:1px solid #d7e8ff!important;font-weight:900!important;}
+      .v53-manual-btn{background:#f3f4f6!important;color:#111827!important;border:1px solid #d1d5db!important;font-weight:900!important;}
+      .v53-order-utility-zone{margin-top:10px;display:flex;justify-content:flex-end;}
+      .v53-dataGuardCard{padding:14px 16px!important;}
+      .v53-dataGuardHead{display:flex!important;align-items:center!important;justify-content:space-between!important;margin:0!important;gap:12px!important;}
+      .v53-data-toggle{border:0!important;border-radius:12px!important;padding:8px 14px!important;background:#eaf2ff!important;color:#1d4ed8!important;font-weight:900!important;}
+      .v53-menu-picker{margin-top:8px;display:flex;flex-direction:column;gap:6px}.v53-menu-picker select{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-weight:800;background:white}.v53-menu-picker small{color:#64748b}.v53-reset-manual{background:#eef2f7!important;color:#111827!important}
+      .v53-report-pretty{white-space:pre-line;}
+
+      @media (min-width:1001px){
+        .layout{grid-template-columns:minmax(0,1fr) 410px!important;align-items:start!important;}
+        .order{position:sticky!important;top:12px!important;max-height:calc(100vh - 24px)!important;overflow:auto!important;align-self:start!important;}
+        .order.card{padding-bottom:12px!important;}
+        .order .total{position:sticky;bottom:96px;z-index:3;box-shadow:0 -6px 16px rgba(15,23,42,.06);}
+        .order .payGrid{position:sticky;bottom:176px;z-index:3;background:#fff;padding-top:8px;padding-bottom:6px;border-radius:14px;}
+        .order .pay{position:sticky;bottom:44px;z-index:4;box-shadow:0 -6px 16px rgba(15,23,42,.06);}
+        .order .ghost{position:sticky;bottom:0;z-index:4;}
+      }
+      .v53-payment-default-card{border:1px solid #dbe4f0;border-radius:16px;padding:14px;margin:14px 0;background:#f8fafc;}
+      .v53-payment-default-card h3{margin:0 0 10px!important}.v53-payment-default-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.v53-payment-default-card label{font-weight:800}.v53-payment-default-card select{width:100%;margin-top:6px;padding:12px;border:2px solid #e2e8f0;border-radius:12px;background:white;font-weight:800}.v53-payment-default-help{font-size:13px;color:#64748b;margin-top:8px;line-height:1.5}
+
     `; document.head.appendChild(style);
-    setInterval(()=>{ walkText(); moveOwnerInboxButton(); moveManualButton(); ensureDataGuardToggle(); ensureIngredientShortcut(); decorateReportCards(); enhanceManualModal(); }, 600);
+    setInterval(()=>{ walkText(); moveOwnerInboxButton(); moveManualButton(); ensureDataGuardToggle(); ensureIngredientShortcut(); decorateReportCards(); enhanceManualModal(); ensurePaymentDefaultPanel(); applyPaymentDefault(false); }, 600);
   });
 })();
 </script>
