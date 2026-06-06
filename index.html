@@ -1,38 +1,91 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V49</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-CpIXan2G.js"></script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V50</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-CpIXan2G.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
 </head><body><div id="root"></div>
 <script>
 (function(){
-  const VERSION='V49';
+  const VERSION='V50';
   const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
-  function toast(msg){
-    let t=document.querySelector('#v48-toast');
-    if(!t){ t=document.createElement('div'); t.id='v48-toast'; t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99999;background:#111827;color:white;padding:12px 16px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);font-weight:800;max-width:90%;'; document.body.appendChild(t); }
-    t.textContent=msg; t.style.display='block'; clearTimeout(t._timer); t._timer=setTimeout(()=>t.style.display='none',2800);
+  const LAST_MANUAL_KEY='pos_v50_last_manual_form';
+  function toast(msg, undo){
+    let t=document.querySelector('#v50-toast');
+    if(!t){ t=document.createElement('div'); t.id='v50-toast'; t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99999;background:#111827;color:white;padding:12px 16px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);font-weight:800;max-width:90%;display:none;'; document.body.appendChild(t); }
+    t.innerHTML='';
+    const span=document.createElement('span'); span.textContent=msg; t.appendChild(span);
+    if(typeof undo==='function'){
+      const b=document.createElement('button'); b.textContent='실행취소'; b.style.cssText='margin-left:12px;border:0;border-radius:10px;padding:7px 10px;font-weight:900;background:white;color:#111827;'; b.onclick=undo; t.appendChild(b);
+    }
+    t.style.display='block'; clearTimeout(t._timer); t._timer=setTimeout(()=>t.style.display='none',3800);
   }
   function walkText(root=document.body){
     const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT); let n;
     while(n=walker.nextNode()){
       if(n.nodeValue && n.nodeValue.includes('\\n')) n.nodeValue=n.nodeValue.replace(/\\n/g,'\n');
-      if(n.nodeValue && n.nodeValue.includes('POS V49')) n.nodeValue=n.nodeValue.replace(/POS V49/g,'POS V49');
+      if(n.nodeValue && /V4[789]/.test(n.nodeValue)) n.nodeValue=n.nodeValue.replace(/V4[789]/g,VERSION);
       if(n.nodeValue && n.nodeValue.includes('관리자에게 카톡 남기기')) n.nodeValue=n.nodeValue.replace(/관리자에게 카톡 남기기/g,'관리자에게 쪽지 남기기');
     }
   }
   function findButton(txt){ return [...document.querySelectorAll('button')].find(b => (b.textContent||'').trim().includes(txt)); }
+  function setNativeValue(el, value){
+    if(!el) return;
+    const proto=Object.getPrototypeOf(el); const desc=Object.getOwnPropertyDescriptor(proto,'value');
+    if(desc && desc.set) desc.set.call(el, value); else el.value=value;
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  function getMenuOptions(){
+    const items=[];
+    document.querySelectorAll('.menuCard').forEach(card=>{
+      const name=(card.querySelector('b')?.textContent||'').trim();
+      const priceText=(card.querySelector('p')?.textContent||'').replace(/[^0-9]/g,'');
+      const price=priceText?Number(priceText):'';
+      if(name && !items.some(x=>x.name===name)) items.push({name,price});
+    });
+    return items;
+  }
+  function ensureTopUtilityZone(){
+    const admin=findButton('관리자모드');
+    if(!admin || document.querySelector('.v50-top-utility-zone')) return;
+    const zone=document.createElement('div'); zone.className='v50-top-utility-zone';
+    admin.parentElement.insertBefore(zone, admin);
+    zone.appendChild(admin);
+  }
+  function moveOwnerInboxButton(){
+    ensureTopUtilityZone();
+    const zone=document.querySelector('.v50-top-utility-zone'); if(!zone) return;
+    const owner=[...document.querySelectorAll('button')].find(b=>(b.textContent||'').trim()==='우리매장 쪽지함' || (b.textContent||'').includes('우리매장 쪽지함'));
+    if(owner && owner.parentElement!==zone){
+      owner.classList.add('v50-compact-top-btn','v50-owner-btn');
+      zone.insertBefore(owner, zone.firstChild);
+    }
+  }
+  function moveManualButton(){
+    const manual=[...document.querySelectorAll('button')].find(b=>(b.textContent||'').includes('수기 내역 입력/수정') || (b.textContent||'').trim()==='수기입력');
+    if(!manual) return;
+    manual.textContent='수기 내역 입력/수정'; manual.classList.add('v50-compact-top-btn','v50-manual-btn');
+    let target=document.querySelector('.v50-top-utility-zone');
+    if(!target){
+      const orderTitle=[...document.querySelectorAll('h2,h3')].find(h=>(h.textContent||'').includes('주문내역'));
+      if(orderTitle){ target=document.createElement('div'); target.className='v50-order-utility-zone'; orderTitle.parentElement.appendChild(target); }
+    }
+    if(target && manual.parentElement!==target){ target.insertBefore(manual, target.firstChild); }
+  }
   function ensureDataGuardToggle(){
     document.querySelectorAll('.dataGuardCard').forEach(card=>{
-      if(card.dataset.v48) return; card.dataset.v48='1';
-      const btn=document.createElement('button'); btn.type='button'; btn.className='ghost v48-data-toggle'; btn.textContent='데이터 보존 상태 보기';
+      if(card.dataset.v50) return; card.dataset.v50='1'; card.classList.add('v50-dataGuardCard');
       const details=[...card.children].filter(el=>!el.matches('h3'));
       details.forEach(el=>el.style.display='none');
-      btn.onclick=()=>{ const open=btn.dataset.open==='1'; btn.dataset.open=open?'0':'1'; btn.textContent=open?'데이터 보존 상태 보기':'데이터 보존 상태 숨기기'; details.forEach(el=>el.style.display=open?'none':''); };
-      const h=card.querySelector('h3'); if(h) h.insertAdjacentElement('afterend',btn);
+      const h=card.querySelector('h3'); if(h){
+        h.classList.add('v50-dataGuardHead');
+        const btn=document.createElement('button'); btn.type='button'; btn.className='v50-data-toggle'; btn.textContent='보기';
+        btn.onclick=()=>{ const open=btn.dataset.open==='1'; btn.dataset.open=open?'0':'1'; btn.textContent=open?'보기':'숨기기'; details.forEach(el=>el.style.display=open?'none':''); };
+        h.appendChild(btn);
+      }
     });
   }
   function ensureIngredientShortcut(){
     const statBtn=[...document.querySelectorAll('button')].find(b=>(b.textContent||'').includes('세부재료분석형'));
-    if(statBtn && !document.querySelector('.v48-ingredient-shortcut')){
-      const b=document.createElement('button'); b.type='button'; b.className='green v48-ingredient-shortcut'; b.textContent='메뉴별 재료 설정';
+    if(statBtn && !document.querySelector('.v50-ingredient-shortcut')){
+      const b=document.createElement('button'); b.type='button'; b.className='green v50-ingredient-shortcut'; b.textContent='메뉴별 재료 설정';
       b.title='관리자모드에서 메뉴별 재료 설정 영역으로 이동합니다.';
       b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); const admin=findButton('관리자모드'); if(admin) admin.click(); setTimeout(()=>{ const all=[...document.querySelectorAll('h3,h4,b,button,label')]; const target=all.find(el=>(el.textContent||'').includes('메뉴별 재료') || (el.textContent||'').includes('재료 설정')); if(target) target.scrollIntoView({behavior:'smooth',block:'center'}); toast('관리자모드에서 메뉴별 재료 설정을 확인해주세요.'); },400); };
       statBtn.insertAdjacentElement('afterend', b);
@@ -41,17 +94,80 @@
   function decorateReportCards(){
     document.querySelectorAll('.card,.modalBox,section,div').forEach(el=>{
       const txt=el.textContent||'';
-      if(txt.includes('최근 30일 매출') || txt.includes('오늘 준비 추천') || txt.includes('통계 예시')) el.classList.add('v48-report-pretty');
+      if(txt.includes('최근 30일 매출') || txt.includes('오늘 준비 추천') || txt.includes('통계 예시')) el.classList.add('v50-report-pretty');
     });
+  }
+  function inputByLabel(labelText){
+    const labels=[...document.querySelectorAll('label')];
+    const lab=labels.find(l=>(l.textContent||'').includes(labelText));
+    if(!lab) return null;
+    return lab.querySelector('input,select,textarea');
+  }
+  function saveManualForm(){
+    if(!document.querySelector('.modalBox h2')?.textContent?.includes('수기')) return;
+    const data={};
+    ['주문일','주문시간','테이블/구분','결제일','결제시간','식사구분','메뉴명','수량','단가','결제수단','외상 고객/단체','연락처','메모'].forEach(k=>{ const el=inputByLabel(k); if(el) data[k]=el.value; });
+    try{ localStorage.setItem(LAST_MANUAL_KEY, JSON.stringify(data)); }catch(e){}
+  }
+  function restoreManualForm(keepMenu=true){
+    let data={}; try{ data=JSON.parse(localStorage.getItem(LAST_MANUAL_KEY)||'{}'); }catch(e){}
+    Object.entries(data).forEach(([k,v])=>{
+      if(!keepMenu && ['메뉴명','수량','단가'].includes(k)) return;
+      const el=inputByLabel(k); if(el) setNativeValue(el,v);
+    });
+  }
+  function enhanceManualModal(){
+    const box=[...document.querySelectorAll('.modalBox')].find(m=>(m.querySelector('h2')?.textContent||'').includes('수기 내역'));
+    if(!box || box.dataset.v50Manual) return;
+    box.dataset.v50Manual='1';
+    const menuInput=inputByLabel('메뉴명');
+    if(menuInput){
+      const wrap=document.createElement('div'); wrap.className='v50-menu-picker';
+      const select=document.createElement('select'); select.innerHTML='<option value="">등록 메뉴에서 선택</option>';
+      getMenuOptions().forEach(m=>{ const opt=document.createElement('option'); opt.value=m.name; opt.textContent=m.price?`${m.name} · ${m.price.toLocaleString()}원`:m.name; opt.dataset.price=m.price||''; select.appendChild(opt); });
+      select.onchange=()=>{ if(!select.value) return; setNativeValue(menuInput, select.value); const price=inputByLabel('단가'); const opt=select.selectedOptions[0]; if(price && opt?.dataset.price) setNativeValue(price,opt.dataset.price); };
+      const small=document.createElement('small'); small.textContent='메뉴를 선택하면 메뉴명과 단가가 자동 입력됩니다. 직접 수정도 가능합니다.';
+      wrap.appendChild(select); wrap.appendChild(small);
+      menuInput.closest('label').appendChild(wrap);
+    }
+    const actions=box.querySelector('.modalActions');
+    if(actions && !actions.querySelector('.v50-reset-manual')){
+      const reset=document.createElement('button'); reset.type='button'; reset.className='v50-reset-manual'; reset.textContent='새 입력으로 초기화';
+      reset.onclick=()=>{
+        ['메뉴명','수량','단가','외상 고객/단체','연락처','메모'].forEach(k=>{ const el=inputByLabel(k); if(el) setNativeValue(el, k==='수량'?'1':''); });
+        saveManualForm(); toast('새 메뉴 입력칸을 초기화했습니다. 날짜/시간/결제수단은 유지됩니다.');
+      };
+      actions.appendChild(reset);
+    }
+    restoreManualForm(true);
   }
   document.addEventListener('click', function(e){
     const btn=e.target.closest && e.target.closest('button'); if(!btn) return;
     const txt=(btn.textContent||'').trim();
     if(txt.includes('문자전송') && !txt.includes('엑셀')){ e.preventDefault(); e.stopImmediatePropagation(); toast('문자전송 기능은 준비중입니다. 식당별 발신번호 등록 후 사용할 수 있습니다.'); }
+    if(txt.includes('판매/외상장부에 반영')){
+      saveManualForm();
+      setTimeout(()=>{
+        const manual=[...document.querySelectorAll('button')].find(b=>(b.textContent||'').includes('수기 내역 입력/수정'));
+        if(manual){ manual.click(); setTimeout(()=>{ restoreManualForm(true); const mi=inputByLabel('메뉴명'); if(mi){ mi.focus(); mi.select?.(); } toast('반영되었습니다. 다음 메뉴를 이어 입력할 수 있습니다.'); },350); }
+      },550);
+    }
   }, true);
   ready(()=>{
-    document.title='식당 POS V49';
-    setInterval(()=>{ walkText(); ensureDataGuardToggle(); ensureIngredientShortcut(); decorateReportCards(); }, 800);
+    document.title='식당 POS V50';
+    const style=document.createElement('style'); style.textContent=`
+      .v50-top-utility-zone{display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;margin-top:8px!important;}
+      .v50-top-utility-zone .v50-compact-top-btn{width:auto!important;min-width:0!important;padding:12px 18px!important;border-radius:14px!important;white-space:nowrap!important;box-shadow:none!important;}
+      .v50-owner-btn{background:#eef6ff!important;color:#0f3f91!important;border:1px solid #d7e8ff!important;font-weight:900!important;}
+      .v50-manual-btn{background:#f3f4f6!important;color:#111827!important;border:1px solid #d1d5db!important;font-weight:900!important;}
+      .v50-order-utility-zone{margin-top:10px;display:flex;justify-content:flex-end;}
+      .v50-dataGuardCard{padding:14px 16px!important;}
+      .v50-dataGuardHead{display:flex!important;align-items:center!important;justify-content:space-between!important;margin:0!important;gap:12px!important;}
+      .v50-data-toggle{border:0!important;border-radius:12px!important;padding:8px 14px!important;background:#eaf2ff!important;color:#1d4ed8!important;font-weight:900!important;}
+      .v50-menu-picker{margin-top:8px;display:flex;flex-direction:column;gap:6px}.v50-menu-picker select{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-weight:800;background:white}.v50-menu-picker small{color:#64748b}.v50-reset-manual{background:#eef2f7!important;color:#111827!important}
+      .v50-report-pretty{white-space:pre-line;}
+    `; document.head.appendChild(style);
+    setInterval(()=>{ walkText(); moveOwnerInboxButton(); moveManualButton(); ensureDataGuardToggle(); ensureIngredientShortcut(); decorateReportCards(); enhanceManualModal(); }, 600);
   });
 })();
 </script>
