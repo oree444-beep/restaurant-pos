@@ -1,9 +1,9 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V48</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-CpIXan2G.js"></script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V49</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-CpIXan2G.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
 </head><body><div id="root"></div>
 <script>
 (function(){
-  const VERSION='V48';
+  const VERSION='V49';
   const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
   function toast(msg){
     let t=document.querySelector('#v48-toast');
@@ -14,7 +14,7 @@
     const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT); let n;
     while(n=walker.nextNode()){
       if(n.nodeValue && n.nodeValue.includes('\\n')) n.nodeValue=n.nodeValue.replace(/\\n/g,'\n');
-      if(n.nodeValue && n.nodeValue.includes('POS V47')) n.nodeValue=n.nodeValue.replace(/POS V47/g,'POS V48');
+      if(n.nodeValue && n.nodeValue.includes('POS V49')) n.nodeValue=n.nodeValue.replace(/POS V49/g,'POS V49');
       if(n.nodeValue && n.nodeValue.includes('관리자에게 카톡 남기기')) n.nodeValue=n.nodeValue.replace(/관리자에게 카톡 남기기/g,'관리자에게 쪽지 남기기');
     }
   }
@@ -50,7 +50,7 @@
     if(txt.includes('문자전송') && !txt.includes('엑셀')){ e.preventDefault(); e.stopImmediatePropagation(); toast('문자전송 기능은 준비중입니다. 식당별 발신번호 등록 후 사용할 수 있습니다.'); }
   }, true);
   ready(()=>{
-    document.title='식당 POS V48';
+    document.title='식당 POS V49';
     setInterval(()=>{ walkText(); ensureDataGuardToggle(); ensureIngredientShortcut(); decorateReportCards(); }, 800);
   });
 })();
