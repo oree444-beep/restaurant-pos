@@ -1,9 +1,9 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V56</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V56-pos.js"></script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V57</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V57-pos.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
 </head><body><div id="root"></div>
 <script>
 (function(){
-  const VERSION='V56';
+  const VERSION='V57';
   const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
   const LAST_MANUAL_KEY='pos_v53_last_manual_form';
   function toast(msg, undo){
@@ -184,7 +184,7 @@
     }
   }, true);
   ready(()=>{
-    document.title='식당 POS V56';
+    document.title='식당 POS V57';
     const style=document.createElement('style'); style.textContent=`
       .v53-top-utility-zone{display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;margin-top:8px!important;}
       .v53-top-utility-zone .v53-compact-top-btn{width:auto!important;min-width:0!important;padding:12px 18px!important;border-radius:14px!important;white-space:nowrap!important;box-shadow:none!important;}
@@ -217,7 +217,7 @@
 
 <script>
 (function(){
-  const KITCHEN_TEST_KEY_PREFIX='pos_v56_kitchen_orders_';
+  const KITCHEN_TEST_KEY_PREFIX='pos_v57_kitchen_orders_';
   function qs(name){ return new URLSearchParams(location.search).get(name); }
   function currentRestaurantId(){
     return qs('restaurantId') || localStorage.getItem('restaurantId') || document.body?.dataset?.restaurantId || 'rest_000001';
@@ -228,10 +228,10 @@
     return title || '생태한마리';
   }
   function toast(msg){
-    let t=document.querySelector('#v56-kitchen-toast');
+    let t=document.querySelector('#v57-kitchen-toast');
     if(!t){
       t=document.createElement('div');
-      t.id='v56-kitchen-toast';
+      t.id='v57-kitchen-toast';
       t.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:100000;background:#0f172a;color:white;padding:12px 16px;border-radius:14px;font-weight:900;box-shadow:0 10px 30px rgba(0,0,0,.24);max-width:92%;';
       document.body.appendChild(t);
     }
@@ -243,7 +243,7 @@
   function readOrders(){
     try{return JSON.parse(localStorage.getItem(kitchenKey())||'[]')}catch(e){return []}
   }
-  function saveOrders(list){ localStorage.setItem(kitchenKey(), JSON.stringify(list)); localStorage.setItem('pos_v56_kitchen_last_update', String(Date.now())); }
+  function saveOrders(list){ localStorage.setItem(kitchenKey(), JSON.stringify(list)); localStorage.setItem('pos_v57_kitchen_last_update', String(Date.now())); }
   function addTestOrder(){
     const list=readOrders();
     const order={
@@ -251,7 +251,7 @@
       type:'테스트 주문',
       table:'1번',
       items:[{name:'생태탕',qty:1},{name:'공기밥',qty:1}],
-      memo:'V56 주방기기 연결 테스트 전송',
+      memo:'V57 주방기기 연결 테스트 전송',
       createdAt:new Date().toISOString(),
       restaurantId:currentRestaurantId(),
       restaurantName:getRestaurantName(),
@@ -272,11 +272,11 @@
   function ensureKitchenButtons(){
     const boxes=[...document.querySelectorAll('.kitchenAdminActions')];
     boxes.forEach(box=>{
-      if(box.dataset.v56Kitchen==='1') return;
-      box.dataset.v56Kitchen='1';
+      if(box.dataset.v57Kitchen==='1') return;
+      box.dataset.v57Kitchen='1';
       const test=document.createElement('button');
       test.type='button';
-      test.className='green v56-kitchen-test-btn';
+      test.className='green v57-kitchen-test-btn';
       test.textContent='주방 테스트 전송';
       test.onclick=(e)=>{e.preventDefault(); e.stopPropagation(); addTestOrder();};
       const open=document.createElement('button');
@@ -291,31 +291,91 @@
       box.appendChild(open);
       box.appendChild(copy);
       const note=document.createElement('p');
-      note.className='muted v56-kitchen-help';
-      note.textContent='V56 임시 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
+      note.className='muted v57-kitchen-help';
+      note.textContent='V57 임시 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
       box.insertAdjacentElement('afterend', note);
     });
   }
   function patchKitchenButtons(){
     [...document.querySelectorAll('button')].forEach(btn=>{
       const txt=(btn.textContent||'').trim();
-      if(txt==='주방화면 열기' && !btn.dataset.v56OpenPatched){
-        btn.dataset.v56OpenPatched='1';
+      if(txt==='주방화면 열기' && !btn.dataset.v57OpenPatched){
+        btn.dataset.v57OpenPatched='1';
         btn.addEventListener('click', function(e){ e.preventDefault(); e.stopImmediatePropagation(); openKitchenDisplay(); }, true);
       }
     });
   }
   function addStyle(){
-    if(document.querySelector('#v56-kitchen-style')) return;
+    if(document.querySelector('#v57-kitchen-style')) return;
     const style=document.createElement('style');
-    style.id='v56-kitchen-style';
-    style.textContent='.v56-kitchen-test-btn{background:#16a34a!important;color:#fff!important;font-weight:900!important}.v56-kitchen-help{margin-top:8px!important;color:#64748b!important;line-height:1.5!important}.kitchenAdminActions{flex-wrap:wrap!important;gap:8px!important}';
+    style.id='v57-kitchen-style';
+    style.textContent='.v57-kitchen-test-btn{background:#16a34a!important;color:#fff!important;font-weight:900!important}.v57-kitchen-help{margin-top:8px!important;color:#64748b!important;line-height:1.5!important}.kitchenAdminActions{flex-wrap:wrap!important;gap:8px!important}';
     document.head.appendChild(style);
   }
   document.addEventListener('DOMContentLoaded',()=>{
     addStyle();
     setInterval(()=>{ensureKitchenButtons(); patchKitchenButtons();},600);
   });
+})();
+</script>
+
+<script>
+(function(){
+  const rid = new URLSearchParams(location.search).get('restaurantId') || localStorage.getItem('restaurantId') || 'mom-restaurant';
+  const prefix = rid + ':';
+  const k = (name)=> prefix + name;
+  const getJSON=(key,def)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??def}catch(e){return def}};
+  const setJSON=(key,val)=>localStorage.setItem(key,JSON.stringify(val));
+  const money=(n)=> (Number(n)||0).toLocaleString('ko-KR')+'원';
+  function currentTotal(){
+    const el=[...document.querySelectorAll('.total b,.total span')].find(e=>/원/.test(e.textContent||''));
+    const num=(el?.textContent||'0').replace(/[^0-9]/g,''); return Number(num||0);
+  }
+  function openDutch(){
+    const total=currentTotal();
+    const modal=document.createElement('div'); modal.className='v57-dutch-modal';
+    modal.innerHTML=`<div class="v57-dutch-box"><button class="v57-x">×</button><h2>더치페이 계산기</h2><p class="muted">현재 주문 총액: <b>${money(total)}</b></p><label>결제인원 <input id="v57People" type="number" inputmode="numeric" min="1" value="2"> 명</label><div id="v57Inputs"></div><div class="v57Result"></div></div>`;
+    document.body.appendChild(modal);
+    const inputs=modal.querySelector('#v57Inputs'), result=modal.querySelector('.v57Result'), people=modal.querySelector('#v57People');
+    function render(){
+      const count=Math.max(1, Number(people.value)||1); const prev=[...inputs.querySelectorAll('input')].map(i=>i.value);
+      inputs.innerHTML=''; for(let i=0;i<count;i++){ const v=prev[i]||''; inputs.insertAdjacentHTML('beforeend',`<label>${i+1}번 결제 <input type="number" inputmode="numeric" value="${v}" placeholder="금액 입력"></label>`); }
+      [...inputs.querySelectorAll('input')].forEach(i=>i.addEventListener('input',calc)); calc();
+    }
+    function calc(){
+      const vals=[...inputs.querySelectorAll('input')].map(i=>Number(i.value)||0); const fixed=vals.filter(v=>v>0).reduce((a,b)=>a+b,0); const remain=Math.max(0,total-fixed); const empty=vals.filter(v=>!v).length; let rows='';
+      if(empty>0){ const base=Math.floor(remain/empty), extra=remain-base*empty; let idx=0; vals.forEach((v,i)=>{ if(!v){ idx++; rows+=`<p>${i+1}번 추천: <b>${money(base+(idx===empty?extra:0))}</b></p>`; }}); }
+      result.innerHTML=`<hr><p>남은금액: <b>${money(remain)}</b></p><p>남은 인원: <b>${empty}명</b></p>${rows}`;
+    }
+    people.addEventListener('input',render); modal.querySelector('.v57-x').onclick=()=>modal.remove(); modal.onclick=e=>{if(e.target===modal)modal.remove()}; render();
+  }
+  let selecting=false, selected=[];
+  function getOrders(){return getJSON(k('orders'),{})}
+  function setOrders(o){setJSON(k('orders'),o)}
+  function groups(){return getJSON(k('tableMergeGroups'),[])}
+  function setGroups(g){setJSON(k('tableMergeGroups'),g)}
+  function tableNo(btn){return Number((btn.textContent||'').match(/\d+/)?.[0]||0)}
+  function groupFor(n){return groups().find(g=>g.tables.includes(Number(n)))}
+  function completeMerge(){ if(selected.length<2){alert('합칠 테이블을 2개 이상 선택해주세요.'); return;} const base=selected[0], orders=getOrders(), originals={}; selected.forEach(t=>originals[t]=orders[t]||[]); orders[base]=selected.flatMap(t=>orders[t]||[]); selected.slice(1).forEach(t=>orders[t]=[]); const gs=groups().filter(g=>!g.tables.some(t=>selected.includes(t))); gs.push({base,tables:[...selected],originals,createdAt:Date.now()}); setGroups(gs); setOrders(orders); location.reload(); }
+  function splitCurrent(){ const active=tableNo(document.querySelector('.tableBtn.sel,.floorTable.sel'))||1; const g=groupFor(active); if(!g){alert('현재 테이블은 통합된 테이블이 아닙니다.'); return;} const orders=getOrders(); Object.entries(g.originals||{}).forEach(([t,items])=>orders[t]=items||[]); setOrders(orders); setGroups(groups().filter(x=>x!==g)); location.reload(); }
+  function startSelect(){ selecting=!selecting; selected=[]; document.body.classList.toggle('v57-merge-selecting', selecting); alert(selecting?'합칠 테이블을 선택한 뒤 다시 테이블합치기를 눌러 완료하세요.':'선택을 취소했습니다.'); }
+  document.addEventListener('click', function(e){
+    const btn=e.target.closest('.tableBtn,.floorTable'); if(!btn) return; const n=tableNo(btn); if(!n) return;
+    if(selecting){ e.preventDefault(); e.stopPropagation(); selected.includes(n)?selected=selected.filter(x=>x!==n):selected.push(n); btn.classList.toggle('v57-selected-merge'); return; }
+    const g=groupFor(n); if(g && n!==g.base){ e.preventDefault(); e.stopPropagation(); const base=[...document.querySelectorAll('.tableBtn,.floorTable')].find(b=>tableNo(b)===g.base); base?.click(); }
+  }, true);
+  function addButtons(){
+    const h=document.querySelector('.order h2'); if(h && !document.querySelector('.v57-order-tools')){
+      const box=document.createElement('div'); box.className='v57-order-tools';
+      box.innerHTML='<button class="v57-merge">테이블합치기</button><button class="v57-split">테이블나누기</button><button class="v57-dutch">더치페이</button>';
+      h.insertAdjacentElement('afterend',box);
+      box.querySelector('.v57-merge').onclick=(e)=>{e.stopPropagation(); selecting?completeMerge():startSelect();};
+      box.querySelector('.v57-split').onclick=(e)=>{e.stopPropagation(); splitCurrent();};
+      box.querySelector('.v57-dutch').onclick=(e)=>{e.stopPropagation(); openDutch();};
+    }
+    document.querySelectorAll('.tableBtn,.floorTable').forEach(btn=>{ const n=tableNo(btn), g=groupFor(n); if(g){ btn.classList.add('v57-merged-table'); btn.setAttribute('data-merge-label', g.tables.join('·')+' 통합중'); }});
+  }
+  new MutationObserver(addButtons).observe(document.body,{childList:true,subtree:true}); addButtons();
 })();
 </script>
 </body></html>
