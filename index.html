@@ -1,9 +1,9 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V57</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V57-pos.js"></script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V58</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V58-pos.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
 </head><body><div id="root"></div>
 <script>
 (function(){
-  const VERSION='V57';
+  const VERSION='V58';
   const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
   const LAST_MANUAL_KEY='pos_v53_last_manual_form';
   function toast(msg, undo){
@@ -184,7 +184,7 @@
     }
   }, true);
   ready(()=>{
-    document.title='식당 POS V57';
+    document.title='식당 POS V58';
     const style=document.createElement('style'); style.textContent=`
       .v53-top-utility-zone{display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;margin-top:8px!important;}
       .v53-top-utility-zone .v53-compact-top-btn{width:auto!important;min-width:0!important;padding:12px 18px!important;border-radius:14px!important;white-space:nowrap!important;box-shadow:none!important;}
@@ -217,7 +217,7 @@
 
 <script>
 (function(){
-  const KITCHEN_TEST_KEY_PREFIX='pos_v57_kitchen_orders_';
+  const KITCHEN_TEST_KEY_PREFIX='pos_v58_kitchen_orders_';
   function qs(name){ return new URLSearchParams(location.search).get(name); }
   function currentRestaurantId(){
     return qs('restaurantId') || localStorage.getItem('restaurantId') || document.body?.dataset?.restaurantId || 'rest_000001';
@@ -228,10 +228,10 @@
     return title || '생태한마리';
   }
   function toast(msg){
-    let t=document.querySelector('#v57-kitchen-toast');
+    let t=document.querySelector('#v58-kitchen-toast');
     if(!t){
       t=document.createElement('div');
-      t.id='v57-kitchen-toast';
+      t.id='v58-kitchen-toast';
       t.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:100000;background:#0f172a;color:white;padding:12px 16px;border-radius:14px;font-weight:900;box-shadow:0 10px 30px rgba(0,0,0,.24);max-width:92%;';
       document.body.appendChild(t);
     }
@@ -243,7 +243,7 @@
   function readOrders(){
     try{return JSON.parse(localStorage.getItem(kitchenKey())||'[]')}catch(e){return []}
   }
-  function saveOrders(list){ localStorage.setItem(kitchenKey(), JSON.stringify(list)); localStorage.setItem('pos_v57_kitchen_last_update', String(Date.now())); }
+  function saveOrders(list){ localStorage.setItem(kitchenKey(), JSON.stringify(list)); localStorage.setItem('pos_v58_kitchen_last_update', String(Date.now())); }
   function addTestOrder(){
     const list=readOrders();
     const order={
@@ -251,7 +251,7 @@
       type:'테스트 주문',
       table:'1번',
       items:[{name:'생태탕',qty:1},{name:'공기밥',qty:1}],
-      memo:'V57 주방기기 연결 테스트 전송',
+      memo:'V58 주방기기 연결 테스트 전송',
       createdAt:new Date().toISOString(),
       restaurantId:currentRestaurantId(),
       restaurantName:getRestaurantName(),
@@ -272,11 +272,11 @@
   function ensureKitchenButtons(){
     const boxes=[...document.querySelectorAll('.kitchenAdminActions')];
     boxes.forEach(box=>{
-      if(box.dataset.v57Kitchen==='1') return;
-      box.dataset.v57Kitchen='1';
+      if(box.dataset.v58Kitchen==='1') return;
+      box.dataset.v58Kitchen='1';
       const test=document.createElement('button');
       test.type='button';
-      test.className='green v57-kitchen-test-btn';
+      test.className='green v58-kitchen-test-btn';
       test.textContent='주방 테스트 전송';
       test.onclick=(e)=>{e.preventDefault(); e.stopPropagation(); addTestOrder();};
       const open=document.createElement('button');
@@ -291,25 +291,25 @@
       box.appendChild(open);
       box.appendChild(copy);
       const note=document.createElement('p');
-      note.className='muted v57-kitchen-help';
-      note.textContent='V57 임시 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
+      note.className='muted v58-kitchen-help';
+      note.textContent='V58 임시 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
       box.insertAdjacentElement('afterend', note);
     });
   }
   function patchKitchenButtons(){
     [...document.querySelectorAll('button')].forEach(btn=>{
       const txt=(btn.textContent||'').trim();
-      if(txt==='주방화면 열기' && !btn.dataset.v57OpenPatched){
-        btn.dataset.v57OpenPatched='1';
+      if(txt==='주방화면 열기' && !btn.dataset.v58OpenPatched){
+        btn.dataset.v58OpenPatched='1';
         btn.addEventListener('click', function(e){ e.preventDefault(); e.stopImmediatePropagation(); openKitchenDisplay(); }, true);
       }
     });
   }
   function addStyle(){
-    if(document.querySelector('#v57-kitchen-style')) return;
+    if(document.querySelector('#v58-kitchen-style')) return;
     const style=document.createElement('style');
-    style.id='v57-kitchen-style';
-    style.textContent='.v57-kitchen-test-btn{background:#16a34a!important;color:#fff!important;font-weight:900!important}.v57-kitchen-help{margin-top:8px!important;color:#64748b!important;line-height:1.5!important}.kitchenAdminActions{flex-wrap:wrap!important;gap:8px!important}';
+    style.id='v58-kitchen-style';
+    style.textContent='.v58-kitchen-test-btn{background:#16a34a!important;color:#fff!important;font-weight:900!important}.v58-kitchen-help{margin-top:8px!important;color:#64748b!important;line-height:1.5!important}.kitchenAdminActions{flex-wrap:wrap!important;gap:8px!important}';
     document.head.appendChild(style);
   }
   document.addEventListener('DOMContentLoaded',()=>{
@@ -333,10 +333,10 @@
   }
   function openDutch(){
     const total=currentTotal();
-    const modal=document.createElement('div'); modal.className='v57-dutch-modal';
-    modal.innerHTML=`<div class="v57-dutch-box"><button class="v57-x">×</button><h2>더치페이 계산기</h2><p class="muted">현재 주문 총액: <b>${money(total)}</b></p><label>결제인원 <input id="v57People" type="number" inputmode="numeric" min="1" value="2"> 명</label><div id="v57Inputs"></div><div class="v57Result"></div></div>`;
+    const modal=document.createElement('div'); modal.className='v58-dutch-modal';
+    modal.innerHTML=`<div class="v58-dutch-box"><button class="v58-x">×</button><h2>더치페이 계산기</h2><p class="muted">현재 주문 총액: <b>${money(total)}</b></p><label>결제인원 <input id="v58People" type="number" inputmode="numeric" min="1" value="2"> 명</label><div id="v58Inputs"></div><div class="v58Result"></div></div>`;
     document.body.appendChild(modal);
-    const inputs=modal.querySelector('#v57Inputs'), result=modal.querySelector('.v57Result'), people=modal.querySelector('#v57People');
+    const inputs=modal.querySelector('#v58Inputs'), result=modal.querySelector('.v58Result'), people=modal.querySelector('#v58People');
     function render(){
       const count=Math.max(1, Number(people.value)||1); const prev=[...inputs.querySelectorAll('input')].map(i=>i.value);
       inputs.innerHTML=''; for(let i=0;i<count;i++){ const v=prev[i]||''; inputs.insertAdjacentHTML('beforeend',`<label>${i+1}번 결제 <input type="number" inputmode="numeric" value="${v}" placeholder="금액 입력"></label>`); }
@@ -347,7 +347,7 @@
       if(empty>0){ const base=Math.floor(remain/empty), extra=remain-base*empty; let idx=0; vals.forEach((v,i)=>{ if(!v){ idx++; rows+=`<p>${i+1}번 추천: <b>${money(base+(idx===empty?extra:0))}</b></p>`; }}); }
       result.innerHTML=`<hr><p>남은금액: <b>${money(remain)}</b></p><p>남은 인원: <b>${empty}명</b></p>${rows}`;
     }
-    people.addEventListener('input',render); modal.querySelector('.v57-x').onclick=()=>modal.remove(); modal.onclick=e=>{if(e.target===modal)modal.remove()}; render();
+    people.addEventListener('input',render); modal.querySelector('.v58-x').onclick=()=>modal.remove(); modal.onclick=e=>{if(e.target===modal)modal.remove()}; render();
   }
   let selecting=false, selected=[];
   function getOrders(){return getJSON(k('orders'),{})}
@@ -358,24 +358,180 @@
   function groupFor(n){return groups().find(g=>g.tables.includes(Number(n)))}
   function completeMerge(){ if(selected.length<2){alert('합칠 테이블을 2개 이상 선택해주세요.'); return;} const base=selected[0], orders=getOrders(), originals={}; selected.forEach(t=>originals[t]=orders[t]||[]); orders[base]=selected.flatMap(t=>orders[t]||[]); selected.slice(1).forEach(t=>orders[t]=[]); const gs=groups().filter(g=>!g.tables.some(t=>selected.includes(t))); gs.push({base,tables:[...selected],originals,createdAt:Date.now()}); setGroups(gs); setOrders(orders); location.reload(); }
   function splitCurrent(){ const active=tableNo(document.querySelector('.tableBtn.sel,.floorTable.sel'))||1; const g=groupFor(active); if(!g){alert('현재 테이블은 통합된 테이블이 아닙니다.'); return;} const orders=getOrders(); Object.entries(g.originals||{}).forEach(([t,items])=>orders[t]=items||[]); setOrders(orders); setGroups(groups().filter(x=>x!==g)); location.reload(); }
-  function startSelect(){ selecting=!selecting; selected=[]; document.body.classList.toggle('v57-merge-selecting', selecting); alert(selecting?'합칠 테이블을 선택한 뒤 다시 테이블합치기를 눌러 완료하세요.':'선택을 취소했습니다.'); }
+  function startSelect(){ selecting=!selecting; selected=[]; document.body.classList.toggle('v58-merge-selecting', selecting); alert(selecting?'합칠 테이블을 선택한 뒤 다시 테이블합치기를 눌러 완료하세요.':'선택을 취소했습니다.'); }
   document.addEventListener('click', function(e){
     const btn=e.target.closest('.tableBtn,.floorTable'); if(!btn) return; const n=tableNo(btn); if(!n) return;
-    if(selecting){ e.preventDefault(); e.stopPropagation(); selected.includes(n)?selected=selected.filter(x=>x!==n):selected.push(n); btn.classList.toggle('v57-selected-merge'); return; }
+    if(selecting){ e.preventDefault(); e.stopPropagation(); selected.includes(n)?selected=selected.filter(x=>x!==n):selected.push(n); btn.classList.toggle('v58-selected-merge'); return; }
     const g=groupFor(n); if(g && n!==g.base){ e.preventDefault(); e.stopPropagation(); const base=[...document.querySelectorAll('.tableBtn,.floorTable')].find(b=>tableNo(b)===g.base); base?.click(); }
   }, true);
   function addButtons(){
-    const h=document.querySelector('.order h2'); if(h && !document.querySelector('.v57-order-tools')){
-      const box=document.createElement('div'); box.className='v57-order-tools';
-      box.innerHTML='<button class="v57-merge">테이블합치기</button><button class="v57-split">테이블나누기</button><button class="v57-dutch">더치페이</button>';
+    const h=document.querySelector('.order h2'); if(h && !document.querySelector('.v58-order-tools')){
+      const box=document.createElement('div'); box.className='v58-order-tools';
+      box.innerHTML='<button class="v58-merge">테이블합치기</button><button class="v58-split">테이블나누기</button><button class="v58-dutch">더치페이</button>';
       h.insertAdjacentElement('afterend',box);
-      box.querySelector('.v57-merge').onclick=(e)=>{e.stopPropagation(); selecting?completeMerge():startSelect();};
-      box.querySelector('.v57-split').onclick=(e)=>{e.stopPropagation(); splitCurrent();};
-      box.querySelector('.v57-dutch').onclick=(e)=>{e.stopPropagation(); openDutch();};
+      box.querySelector('.v58-merge').onclick=(e)=>{e.stopPropagation(); selecting?completeMerge():startSelect();};
+      box.querySelector('.v58-split').onclick=(e)=>{e.stopPropagation(); splitCurrent();};
+      box.querySelector('.v58-dutch').onclick=(e)=>{e.stopPropagation(); openDutch();};
     }
-    document.querySelectorAll('.tableBtn,.floorTable').forEach(btn=>{ const n=tableNo(btn), g=groupFor(n); if(g){ btn.classList.add('v57-merged-table'); btn.setAttribute('data-merge-label', g.tables.join('·')+' 통합중'); }});
+    document.querySelectorAll('.tableBtn,.floorTable').forEach(btn=>{ const n=tableNo(btn), g=groupFor(n); if(g){ btn.classList.add('v58-merged-table'); btn.setAttribute('data-merge-label', g.tables.join('·')+' 통합중'); }});
   }
   new MutationObserver(addButtons).observe(document.body,{childList:true,subtree:true}); addButtons();
 })();
 </script>
+
+<script>
+(function(){
+  /* POS V58 table-merge override: merge tables for payment only, keep each table order independent. */
+  const GROUP_KEY='tableMergeGroups';
+  const ORDERS_KEY='orders';
+  const SALES_KEY='salesHistory';
+  const CREDIT_KEY='creditLedger';
+  const FONT_KEY='tableNumberFontSize';
+  const money=n=>(Number(n)||0).toLocaleString('ko-KR')+'원';
+  const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||'null')??d}catch(e){return d}};
+  const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const sortNums=a=>[...new Set((a||[]).map(Number).filter(Boolean))].sort((x,y)=>x-y);
+  const tableNoFromText=txt=>Number(String(txt||'').match(/(\d+)\s*번/)?.[1]||String(txt||'').match(/\d+/)?.[0]||0);
+  const tableNo=el=>tableNoFromText(el?.textContent||'');
+  const activeTable=()=>{
+    const title=document.querySelector('.order h2')?.textContent||'';
+    const n=tableNoFromText(title); if(n) return n;
+    const selected=document.querySelector('.tableBtn.sel,.tableBtn.active,.floorTable.sel,.floorTable.active,[aria-pressed="true"]');
+    return tableNo(selected)||1;
+  };
+  const groups=()=>read(GROUP_KEY,[]).map(g=>({...g,tables:sortNums(g.tables)})).filter(g=>g.tables.length>1);
+  const setGroups=g=>write(GROUP_KEY,g);
+  const groupFor=n=>groups().find(g=>g.tables.includes(Number(n)));
+  const orders=()=>read(ORDERS_KEY,{});
+  const setOrders=o=>write(ORDERS_KEY,o);
+  const getItems=(table)=>{
+    const o=orders();
+    return Array.isArray(o[table])?o[table]:Array.isArray(o[String(table)])?o[String(table)]:[];
+  };
+  const totalOf=items=>(items||[]).reduce((sum,it)=>sum+(Number(it.price)||0)*(Number(it.qty)||0),0);
+  let selecting=false, selected=[];
+  function markTables(){
+    const gs=groups();
+    document.querySelectorAll('.tableBtn,.floorTable').forEach(btn=>{
+      const n=tableNo(btn); const g=gs.find(x=>x.tables.includes(n));
+      btn.classList.toggle('v58-merged-table',!!g);
+      if(g) btn.setAttribute('data-merge-label',g.tables.join('·')+' 통합중');
+      else btn.removeAttribute('data-merge-label');
+      btn.classList.toggle('v58-selected-merge', selecting && selected.includes(n));
+    });
+  }
+  function startOrFinishMerge(){
+    if(!selecting){
+      selecting=true; selected=[]; document.body.classList.add('v58-merge-selecting');
+      alert('합칠 테이블을 선택한 뒤 다시 테이블합치기를 눌러 완료하세요.\n※ 주문은 각 테이블에 그대로 두고 계산할 때만 통합됩니다.');
+      markTables(); updateSummary(); return;
+    }
+    if(selected.length<2){ alert('합칠 테이블을 2개 이상 선택해주세요.'); return; }
+    const tables=sortNums(selected);
+    const current=groups().filter(g=>!g.tables.some(t=>tables.includes(t)));
+    current.push({id:'grp_'+Date.now(),tables,createdAt:Date.now(),mode:'payment-only'});
+    setGroups(current);
+    selecting=false; selected=[]; document.body.classList.remove('v58-merge-selecting');
+    markTables(); updateSummary();
+    alert(tables.join('·')+'번 테이블을 통합결제로 묶었습니다.\n각 테이블 주문은 따로 유지되고, 결제할 때만 함께 계산됩니다.');
+  }
+  function splitCurrent(){
+    const n=activeTable(); const g=groupFor(n);
+    if(!g){ alert('현재 테이블은 통합된 테이블이 아닙니다.'); return; }
+    setGroups(groups().filter(x=>x.id!==g.id));
+    markTables(); updateSummary();
+    alert(g.tables.join('·')+' 통합을 해제했습니다. 각 테이블 주문내역은 그대로 유지됩니다.');
+  }
+  function combinedItems(g){
+    return g.tables.flatMap(t=>getItems(t).map(it=>({...it,_table:t})));
+  }
+  function paymentLabel(){
+    const panel=document.querySelector('.order')||document;
+    const active=[...panel.querySelectorAll('button')].find(b=>b.classList.contains('active') && /현금|카드|상품권|기타|외상/.test(b.textContent||''));
+    return (active?.textContent||'카드').trim();
+  }
+  function completeGroupPayment(printAfter){
+    const g=groupFor(activeTable()); if(!g) return false;
+    const all=combinedItems(g); const total=totalOf(all);
+    if(!all.length){ alert('통합된 테이블에 주문내역이 없습니다.'); return true; }
+    if(!confirm(`통합결제 ${g.tables.join('·')}번\n총 ${money(total)}을(를) 결제완료 처리할까요?\n결제 후 통합된 모든 테이블 주문내역이 비워집니다.`)) return true;
+    const payment=paymentLabel();
+    const sale={id:'sale_group_'+Date.now(),createdAt:new Date().toISOString(),table:g.tables.join('·')+'번 통합',tableGroup:g.tables,items:all.map(({_table,...it})=>it),groupedItems:all,total,payment,serviceType:'식당식사',memo:'통합결제 '+g.tables.join('·')};
+    const sales=read(SALES_KEY,[]); sales.unshift(sale); write(SALES_KEY,sales);
+    if(payment.includes('외상')){
+      const credits=read(CREDIT_KEY,[]); credits.unshift({id:'credit_group_'+Date.now(),createdAt:sale.createdAt,table:sale.table,items:sale.items,total,remain:total,paid:false,group:'통합결제 '+g.tables.join('·'),memo:'통합결제 외상'}); write(CREDIT_KEY,credits);
+    }
+    const o=orders(); g.tables.forEach(t=>{o[t]=[]; o[String(t)]=[]}); setOrders(o);
+    setGroups(groups().filter(x=>x.id!==g.id));
+    alert('통합결제가 완료되었습니다.');
+    location.reload();
+    return true;
+  }
+  function updateSummary(){
+    markTables();
+    document.querySelectorAll('.v58-merge-summary').forEach(e=>e.remove());
+    const h=document.querySelector('.order h2'); if(!h) return;
+    const g=groupFor(activeTable()); if(!g) return;
+    const all=combinedItems(g), total=totalOf(all);
+    const box=document.createElement('div'); box.className='v58-merge-summary';
+    const rows=g.tables.map(t=>{
+      const its=getItems(t); const line=its.length?its.map(i=>`${i.name||'메뉴'} ${i.qty||1}개`).join(', '):'주문 없음';
+      return `<div><b>${t}번</b><span>${line}</span><strong>${money(totalOf(its))}</strong></div>`;
+    }).join('');
+    box.innerHTML=`<div class="v58-merge-title">통합결제: ${g.tables.join('·')} <b>${money(total)}</b></div><div class="v58-merge-list">${rows}</div>`;
+    const tools=document.querySelector('.v58-order-tools')||h;
+    tools.insertAdjacentElement('afterend',box);
+  }
+  function ensureToolLabels(){
+    const tools=document.querySelector('.v58-order-tools'); if(!tools) return;
+    const g=groupFor(activeTable());
+    const split=tools.querySelector('.v58-split'); if(split) split.textContent=g?'테이블나누기':'테이블나누기';
+  }
+  function applyFont(){
+    const size=localStorage.getItem(FONT_KEY)||'24';
+    document.documentElement.style.setProperty('--v58-table-font-size',size+'px');
+  }
+  function injectFontSetting(){
+    const titles=[...document.querySelectorAll('h3,h4,b')];
+    const sys=titles.find(x=>(x.textContent||'').includes('시스템 설정'));
+    const container=sys?.closest('.adminCard,section,div');
+    if(!container || container.querySelector('.v58-table-font-setting')) return;
+    const wrap=document.createElement('div'); wrap.className='v58-table-font-setting';
+    wrap.innerHTML=`<label>테이블 번호 글자크기 <select><option value="20">기본</option><option value="24">크게</option><option value="30">매우 크게</option><option value="36">특대</option></select></label><p class="muted">테이블 버튼 크기는 유지하고 번호만 크게 보여줍니다.</p>`;
+    const select=wrap.querySelector('select'); select.value=localStorage.getItem(FONT_KEY)||'24';
+    select.onchange=()=>{localStorage.setItem(FONT_KEY,select.value); applyFont();};
+    container.appendChild(wrap);
+  }
+  function addStyle(){
+    if(document.querySelector('#v58-override-style')) return;
+    const st=document.createElement('style'); st.id='v58-override-style';
+    st.textContent=`
+      .tableBtn,.floorTable{font-size:var(--v58-table-font-size,24px)!important;}
+      .tableBtn::after,.floorTable::after{font-size:11px!important;}
+      .v58-merge-summary{margin:8px 0 12px;padding:10px;border:2px solid #bfdbfe;border-radius:14px;background:#eff6ff;color:#0f172a;}
+      .v58-merge-title{display:flex;justify-content:space-between;gap:12px;font-weight:900;color:#1d4ed8;margin-bottom:8px;}
+      .v58-merge-list{display:grid;gap:6px;max-height:150px;overflow:auto;}
+      .v58-merge-list div{display:grid;grid-template-columns:50px 1fr auto;gap:8px;align-items:center;padding:6px 8px;background:#fff;border-radius:10px;border:1px solid #dbeafe;}
+      .v58-merge-list span{font-size:13px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .v58-table-font-setting{margin-top:14px;padding:14px;border:1px solid #dbeafe;border-radius:14px;background:#f8fafc;}
+      .v58-table-font-setting label{font-weight:800;display:flex;align-items:center;gap:12px;}
+      .v58-table-font-setting select{padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-weight:800;}
+    `;
+    document.head.appendChild(st);
+  }
+  document.addEventListener('click',function(e){
+    const merge=e.target.closest('.v58-merge');
+    if(merge){ e.preventDefault(); e.stopImmediatePropagation(); startOrFinishMerge(); return; }
+    const split=e.target.closest('.v58-split');
+    if(split){ e.preventDefault(); e.stopImmediatePropagation(); splitCurrent(); return; }
+    const pay=e.target.closest('button.pay');
+    if(pay && groupFor(activeTable())){ e.preventDefault(); e.stopImmediatePropagation(); completeGroupPayment((pay.textContent||'').includes('영수증')); return; }
+    const table=e.target.closest('.tableBtn,.floorTable');
+    if(table && selecting){ const n=tableNo(table); if(n){ e.preventDefault(); e.stopImmediatePropagation(); selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]); markTables(); } }
+  },true);
+  const tick=()=>{addStyle();applyFont();markTables();updateSummary();ensureToolLabels();injectFontSetting();};
+  document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,900);});
+})();
+</script>
+
 </body></html>
