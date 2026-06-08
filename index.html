@@ -1,9 +1,9 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V58</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V58-pos.js"></script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V59</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V59-pos.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
 </head><body><div id="root"></div>
 <script>
 (function(){
-  const VERSION='V58';
+  const VERSION='V59';
   const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
   const LAST_MANUAL_KEY='pos_v53_last_manual_form';
   function toast(msg, undo){
@@ -367,7 +367,7 @@
   function addButtons(){
     const h=document.querySelector('.order h2'); if(h && !document.querySelector('.v58-order-tools')){
       const box=document.createElement('div'); box.className='v58-order-tools';
-      box.innerHTML='<button class="v58-merge">테이블합치기</button><button class="v58-split">테이블나누기</button><button class="v58-dutch">더치페이</button>';
+      box.innerHTML='<button class="v58-merge">테이블 합치기</button><button class="v58-split">테이블 나누기</button><button class="v58-dutch">더치페이 계산</button>';
       h.insertAdjacentElement('afterend',box);
       box.querySelector('.v58-merge').onclick=(e)=>{e.stopPropagation(); selecting?completeMerge():startSelect();};
       box.querySelector('.v58-split').onclick=(e)=>{e.stopPropagation(); splitCurrent();};
@@ -381,7 +381,7 @@
 
 <script>
 (function(){
-  /* POS V58 table-merge override: merge tables for payment only, keep each table order independent. */
+  /* POS V59 table-merge override: visible controls + robust table selection. */
   const GROUP_KEY='tableMergeGroups';
   const ORDERS_KEY='orders';
   const SALES_KEY='salesHistory';
@@ -391,8 +391,9 @@
   const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||'null')??d}catch(e){return d}};
   const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
   const sortNums=a=>[...new Set((a||[]).map(Number).filter(Boolean))].sort((x,y)=>x-y);
-  const tableNoFromText=txt=>Number(String(txt||'').match(/(\d+)\s*번/)?.[1]||String(txt||'').match(/\d+/)?.[0]||0);
+  const tableNoFromText=txt=>Number(String(txt||'').match(/(\d+)\s*번/)?.[1]||0);
   const tableNo=el=>tableNoFromText(el?.textContent||'');
+  const allTableButtons=()=>[...document.querySelectorAll('.tableBtn,.floorTable,button')].filter(el=>tableNo(el)>0);
   const activeTable=()=>{
     const title=document.querySelector('.order h2')?.textContent||'';
     const n=tableNoFromText(title); if(n) return n;
@@ -412,7 +413,7 @@
   let selecting=false, selected=[];
   function markTables(){
     const gs=groups();
-    document.querySelectorAll('.tableBtn,.floorTable').forEach(btn=>{
+    allTableButtons().forEach(btn=>{
       const n=tableNo(btn); const g=gs.find(x=>x.tables.includes(n));
       btn.classList.toggle('v58-merged-table',!!g);
       if(g) btn.setAttribute('data-merge-label',g.tables.join('·')+' 통합중');
@@ -422,8 +423,8 @@
   }
   function startOrFinishMerge(){
     if(!selecting){
-      selecting=true; selected=[]; document.body.classList.add('v58-merge-selecting');
-      alert('합칠 테이블을 선택한 뒤 다시 테이블합치기를 눌러 완료하세요.\n※ 주문은 각 테이블에 그대로 두고 계산할 때만 통합됩니다.');
+      selecting=true; selected=sortNums([activeTable()]); document.body.classList.add('v58-merge-selecting');
+      alert('테이블 선택중입니다. 합칠 테이블을 눌러 선택/해제한 뒤 다시 버튼을 누르면 완료됩니다.\n※ 주문은 각 테이블에 그대로 두고 계산할 때만 통합됩니다.');
       markTables(); updateSummary(); return;
     }
     if(selected.length<2){ alert('합칠 테이블을 2개 이상 선택해주세요.'); return; }
@@ -485,7 +486,17 @@
   function ensureToolLabels(){
     const tools=document.querySelector('.v58-order-tools'); if(!tools) return;
     const g=groupFor(activeTable());
-    const split=tools.querySelector('.v58-split'); if(split) split.textContent=g?'테이블나누기':'테이블나누기';
+    const merge=tools.querySelector('.v58-merge');
+    if(merge){
+      merge.textContent=selecting ? `테이블 선택중 · 완료 (${selected.length?selected.join('·'):'선택 없음'})` : '테이블 합치기';
+      merge.classList.toggle('selecting', selecting);
+    }
+    const split=tools.querySelector('.v58-split');
+    if(split){
+      split.textContent=g?'테이블 나누기':'테이블 나누기';
+      split.classList.toggle('activeSplit', !!g);
+    }
+    const dutch=tools.querySelector('.v58-dutch'); if(dutch) dutch.textContent='더치페이 계산';
   }
   function applyFont(){
     const size=localStorage.getItem(FONT_KEY)||'24';
@@ -507,6 +518,13 @@
     const st=document.createElement('style'); st.id='v58-override-style';
     st.textContent=`
       .tableBtn,.floorTable{font-size:var(--v58-table-font-size,24px)!important;}
+      .v58-order-tools{display:grid!important;grid-template-columns:1fr 1fr 1fr!important;gap:8px!important;margin:10px 0 12px!important;}
+      .v58-order-tools button{min-height:44px!important;border-radius:12px!important;border:2px solid #bfdbfe!important;background:#eff6ff!important;color:#1d4ed8!important;font-size:15px!important;font-weight:900!important;box-shadow:0 4px 10px rgba(37,99,235,.08)!important;}
+      .v58-order-tools .v58-merge.selecting{background:#f97316!important;border-color:#ea580c!important;color:white!important;animation:v59Pulse 1s infinite alternate!important;}
+      .v58-order-tools .activeSplit{background:#fef3c7!important;border-color:#f59e0b!important;color:#92400e!important;}
+      @keyframes v59Pulse{from{transform:scale(1)}to{transform:scale(1.025)}}
+      body.v58-merge-selecting .tableBtn,body.v58-merge-selecting .floorTable{outline:3px dashed #f97316!important;outline-offset:2px!important;cursor:pointer!important;}
+      .v58-selected-merge{background:#fde68a!important;border-color:#f97316!important;color:#111827!important;}
       .tableBtn::after,.floorTable::after{font-size:11px!important;}
       .v58-merge-summary{margin:8px 0 12px;padding:10px;border:2px solid #bfdbfe;border-radius:14px;background:#eff6ff;color:#0f172a;}
       .v58-merge-title{display:flex;justify-content:space-between;gap:12px;font-weight:900;color:#1d4ed8;margin-bottom:8px;}
@@ -526,8 +544,8 @@
     if(split){ e.preventDefault(); e.stopImmediatePropagation(); splitCurrent(); return; }
     const pay=e.target.closest('button.pay');
     if(pay && groupFor(activeTable())){ e.preventDefault(); e.stopImmediatePropagation(); completeGroupPayment((pay.textContent||'').includes('영수증')); return; }
-    const table=e.target.closest('.tableBtn,.floorTable');
-    if(table && selecting){ const n=tableNo(table); if(n){ e.preventDefault(); e.stopImmediatePropagation(); selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]); markTables(); } }
+    const table=e.target.closest('.tableBtn,.floorTable,button');
+    if(table && selecting){ const n=tableNo(table); if(n){ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]); markTables(); updateSummary(); ensureToolLabels(); } }
   },true);
   const tick=()=>{addStyle();applyFont();markTables();updateSummary();ensureToolLabels();injectFontSetting();};
   document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,900);});
