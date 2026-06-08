@@ -1,9 +1,9 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V66</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V66-pos.js"></script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V67</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V67-pos.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
 </head><body><div id="root"></div>
 <script>
 (function(){
-  const VERSION='V66';
+  const VERSION='V67';
   const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
   const LAST_MANUAL_KEY='pos_v53_last_manual_form';
   function toast(msg, undo){
@@ -184,7 +184,7 @@
     }
   }, true);
   ready(()=>{
-    document.title='식당 POS V66';
+    document.title='식당 POS V67';
     const style=document.createElement('style'); style.textContent=`
       .v53-top-utility-zone{display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;margin-top:8px!important;}
       .v53-top-utility-zone .v53-compact-top-btn{width:auto!important;min-width:0!important;padding:12px 18px!important;border-radius:14px!important;white-space:nowrap!important;box-shadow:none!important;}
@@ -251,7 +251,7 @@
       type:'테스트 주문',
       table:'1번',
       items:[{name:'생태탕',qty:1},{name:'공기밥',qty:1}],
-      memo:'V64 주방기기 연결 테스트 전송',
+      memo:'V67 주방기기 연결 테스트 전송',
       createdAt:new Date().toISOString(),
       restaurantId:currentRestaurantId(),
       restaurantName:getRestaurantName(),
@@ -292,7 +292,7 @@
       box.appendChild(copy);
       const note=document.createElement('p');
       note.className='muted v58-kitchen-help';
-      note.textContent='V64 임시 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
+      note.textContent='V67 임시 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
       box.insertAdjacentElement('afterend', note);
     });
   }
@@ -506,8 +506,8 @@
     const table=e.target.closest('.tableBtn,.floorTable,button');
     if(table && selecting){ const n=tableNo(table); if(n){ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]); markTables(); updateSummary(); ensureToolLabels(); } }
   },true);
-  const tick=()=>{document.title='식당 POS V66';addStyle();applyFont();markTables();updateSummary();ensureToolLabels();injectFontSetting();};
-  document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,1200);});
+  const tick=()=>{document.title='식당 POS V67';addStyle();applyFont();markTables();updateSummary();ensureToolLabels();injectFontSetting();};
+  document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,700);});
 })();
 </script>
 
@@ -611,14 +611,14 @@
     const table=e.target.closest('.tableBtn,.floorTable,button'); if(table&&selecting){const n=tableNo(table); if(n){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]);markTables();refreshTools();}}
     const pay=e.target.closest('button.pay'); if(pay&&groupFor(activeTable())){e.preventDefault();e.stopImmediatePropagation();completeGroupPayment();}
   },true);
-  const tick=()=>{document.title='식당 POS V66';addStyle();markTables();refreshTools();updateSummary();improveSalesDetail();};
-  document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,1200);});
+  const tick=()=>{document.title='식당 POS V67';addStyle();markTables();refreshTools();updateSummary();improveSalesDetail();};
+  document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,650);});
 })();
 </script>
 
 <script>
 (function(){
-  const VERSION='V66';
+  const VERSION='V67';
   function ready(fn){document.readyState==='loading'?document.addEventListener('DOMContentLoaded',fn):fn();}
   function toast(msg){let t=document.querySelector('#v62-toast'); if(!t){t=document.createElement('div');t.id='v62-toast';t.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:100001;background:#111827;color:#fff;padding:12px 16px;border-radius:14px;font-weight:900;box-shadow:0 16px 40px rgba(0,0,0,.25);max-width:92%;';document.body.appendChild(t);} t.textContent=msg; clearTimeout(t._tm); t._tm=setTimeout(()=>t.remove(),2600);}
   function rid(){return new URLSearchParams(location.search).get('restaurantId')||localStorage.getItem('restaurantId')||'rest_000001';}
@@ -634,7 +634,7 @@
   function showSimpleManual(box){let panel=box.querySelector('.v62-simple-panel'); if(panel){panel.remove(); return;} panel=document.createElement('div'); panel.className='v62-simple-panel'; const today=new Date().toISOString().slice(0,10); const time=new Date().toTimeString().slice(0,5); panel.innerHTML=`<div class="v62-simple-head"><b>간편 입력</b><span>외상 입력은 상세 수기입력에서만 가능합니다.</span><button type="button" class="v62-add-row">행 추가</button></div><div class="v62-simple-table"><div class="v62-row v62-head-row"><span>주문일</span><span>주문시간</span><span>결제시간</span><span>테이블</span><span>식사구분</span><span>메뉴선택</span><span>수량</span><span>결제수단</span><span>복사</span></div></div><div class="v62-simple-actions"><button type="button" class="green v62-fill-detail">선택행을 상세입력에 넣기</button><button type="button" class="v62-close-simple">수기 내역 입력으로 돌아가기</button></div>`; box.querySelector('p')?.insertAdjacentElement('afterend',panel); const table=panel.querySelector('.v62-simple-table'); const menus=[...document.querySelectorAll('.menuCard')].map(c=>c.querySelector('b')?.textContent?.trim()).filter(Boolean); function row(data={}){const r=document.createElement('div'); r.className='v62-row'; r.innerHTML=`<input type="date" value="${data.date||today}"><input type="time" value="${data.orderTime||time}"><input type="time" value="${data.payTime||time}"><input type="number" inputmode="numeric" value="${data.table||'1'}"><select><option>식당식사</option><option>포장</option></select><select><option value="">메뉴선택</option>${menus.map(m=>`<option>${m}</option>`).join('')}</select><input type="number" inputmode="numeric" value="${data.qty||'1'}"><select><option>카드</option><option>현금</option><option>카드+현금</option><option>상품권</option><option>기타</option></select><button type="button">복사</button>`; r.querySelector('button').onclick=()=>{const vals=[...r.querySelectorAll('input,select')].map(x=>x.value); row({date:vals[0],orderTime:vals[1],payTime:vals[2],table:vals[3],qty:vals[6]}); toast('같은 테이블 행을 복사했습니다. 메뉴만 바꿔 입력하세요.');}; table.appendChild(r);} row(); panel.querySelector('.v62-add-row').onclick=()=>row(); panel.querySelector('.v62-close-simple').onclick=()=>panel.remove(); panel.querySelector('.v62-fill-detail').onclick=()=>{const r=table.querySelector('.v62-row:not(.v62-head-row)'); if(!r)return; const vals=[...r.querySelectorAll('input,select')].map(x=>x.value); const labels={'주문일':vals[0],'결제일':vals[0],'주문시간':vals[1],'결제시간':vals[2],'테이블/구분':vals[3],'식사구분':vals[4],'메뉴 선택':vals[5],'수량':vals[6],'결제수단':vals[7]}; Object.entries(labels).forEach(([txt,val])=>{const lab=[...box.querySelectorAll('label')].find(l=>(l.textContent||'').includes(txt)); const el=lab?.querySelector('input,select'); if(el){const proto=Object.getPrototypeOf(el); const desc=Object.getOwnPropertyDescriptor(proto,'value'); if(desc&&desc.set)desc.set.call(el,val); else el.value=val; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true}));}}); toast('선택행을 상세입력에 넣었습니다. 금액을 확인 후 반영하세요.');};}
   function patchStyle(){if(document.querySelector('#v62-extra-style'))return; const s=document.createElement('style'); s.id='v62-extra-style'; s.textContent=`.v62-admin-share{display:flex;gap:12px;justify-content:flex-end;margin:-42px 70px 16px 0}.v62-admin-share button{min-width:180px;height:48px;border-radius:14px;border:2px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-weight:1000;font-size:16px}.v62-qr-modal,.v62-dutch-modal{position:fixed;inset:0;background:rgba(15,23,42,.62);z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px}.v62-qr-box,.v62-dutch-box{background:#fff;border-radius:24px;box-shadow:0 24px 60px rgba(0,0,0,.28);padding:24px;position:relative}.v62-qr-box{width:min(520px,94vw);text-align:center}.v62-qr-box input{width:100%;height:44px;border:1px solid #cbd5e1;border-radius:10px;padding:0 10px}.v62-qr-img-wrap{padding:14px}.v62-qr-actions{display:flex;gap:10px;justify-content:center;margin-top:14px}.v62-qr-actions button,.v62-close{height:46px;border:0;border-radius:12px;padding:0 18px;font-weight:900}.v62-qr-actions .primary{background:#2563eb;color:#fff}.v62-x{position:absolute;right:14px;top:12px;width:48px;height:48px;border:0;border-radius:14px;background:#111827;color:white;font-size:26px;font-weight:900}.v62-dutch-box{width:min(760px,96vw);height:min(760px,94vh);display:flex;flex-direction:column;overflow:hidden}.v62-dutch-top{flex:0 0 auto}.v62-dutch-top b{display:block;font-size:24px;margin:8px 0}.v62-dutch-list{flex:1 1 auto;overflow:auto;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:10px 4px;margin:10px 0}.v62-dutch-list label{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;margin:8px 0;font-weight:900}.v62-dutch-box input{height:48px;border:2px solid #cbd5e1;border-radius:12px;padding:0 12px;font-size:20px;font-weight:800}.v62-dutch-bottom{flex:0 0 auto}.v62-dutch-bottom .remain{display:flex;justify-content:space-between;align-items:center;background:#dbeafe;border:2px solid #93c5fd;border-radius:16px;padding:14px;color:#1e3a8a}.v62-dutch-bottom strong{font-size:30px}.v62-simple-manual-btn{float:right;margin-top:-50px;margin-right:70px;height:44px;border-radius:12px;border:2px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-weight:900}.v62-simple-panel{background:#f8fafc;border:2px solid #bfdbfe;border-radius:16px;padding:14px;margin:12px 0}.v62-simple-head{display:flex;gap:10px;align-items:center;justify-content:space-between}.v62-simple-head button,.v62-simple-actions button{height:40px;border:0;border-radius:10px;padding:0 12px;font-weight:900}.v62-simple-table{overflow:auto;margin:10px 0}.v62-row{display:grid;grid-template-columns:130px 100px 100px 78px 100px 180px 70px 110px 70px;gap:6px;align-items:center;min-width:960px;margin:5px 0}.v62-row input,.v62-row select{height:38px;border:1px solid #cbd5e1;border-radius:8px;padding:0 8px}.v62-head-row{font-weight:900;color:#334155}.v62-row button{height:38px;border:0;border-radius:8px;background:#e0f2fe;font-weight:900}.v62-simple-actions{display:flex;gap:8px}.v62-simple-actions .green{background:#16a34a;color:#fff}@media(max-width:900px){.v62-admin-share{margin:8px 0 12px;justify-content:flex-start}.v62-admin-share button{min-width:140px;font-size:14px}}`; document.head.appendChild(s);}
   window.addEventListener('click',function(e){const d=e.target.closest('.v58-dutch,.v62-dutch-trigger'); if(d){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openDutchFixed();}},true);
-  ready(()=>{patchStyle(); setInterval(()=>{document.title='식당 POS V66'; enhanceAdminShare(); addSimpleManualButton();},500);});
+  ready(()=>{patchStyle(); setInterval(()=>{document.title='식당 POS V67'; enhanceAdminShare(); addSimpleManualButton();},500);});
 })();
 </script>
 
@@ -759,8 +759,8 @@
     const pay=e.target.closest('button.pay'); if(pay&&groupFor(activeTable())){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();completeGroupPayment();}
   }
   document.addEventListener('click',handleClick,true);
-  const tick=()=>{document.title='식당 POS V66';patchStyle();document.querySelectorAll('.v58-merge-summary').forEach(e=>e.remove());markTables();refreshTools();updateSummary();};
-  document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,1200);});
+  const tick=()=>{document.title='식당 POS V67';patchStyle();document.querySelectorAll('.v58-merge-summary').forEach(e=>e.remove());markTables();refreshTools();updateSummary();};
+  document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,500);});
 })();
 </script>
 
@@ -860,95 +860,122 @@
     `;
     document.head.appendChild(st);
   }
-  function tick(){document.title='식당 POS V66'; patchStyle(); normalizeOrderHeader(); markActiveMergedTables(); enableWholeSummaryClick();}
-  document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,1200);});
+  function tick(){document.title='식당 POS V67'; patchStyle(); normalizeOrderHeader(); markActiveMergedTables(); enableWholeSummaryClick();}
+  document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,350);});
   setTimeout(tick,100);
 })();
 </script>
 
 
 
-
-
 <script>
 (function(){
-  const VERSION='V66';
-  const ROOT_WIDTH=1280;
-  const ready=fn=>document.readyState==='loading'?document.addEventListener('DOMContentLoaded',fn):fn();
-  const all=(s,r=document)=>Array.from(r.querySelectorAll(s));
-  const text=el=>(el&&el.textContent||'').replace(/\s+/g,' ').trim();
-  function toast(msg){let t=document.querySelector('#v66-toast'); if(!t){t=document.createElement('div');t.id='v66-toast';t.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:100001;background:#111827;color:#fff;padding:12px 16px;border-radius:14px;font-weight:900;box-shadow:0 16px 40px rgba(0,0,0,.25);max-width:92%;';document.body.appendChild(t);} t.textContent=msg; t.style.display='block'; clearTimeout(t._tm); t._tm=setTimeout(()=>t.style.display='none',2600);}
-  function selectedTableNo(){
-    const sel=document.querySelector('.tableBtn.sel,.tableBtn.active,.tableBtn.v64-active-merged-table,.floorTable.sel,.floorTable.active,[aria-pressed="true"]');
-    let m=(sel?.textContent||'').match(/(\d+)\s*번/);
-    if(m) return m[1];
-    const h=document.querySelector('.order h2,.order h3');
-    m=(h?.textContent||'').match(/주문내역\s*\(?\s*(\d+)\s*번/);
-    return m?m[1]:'1';
+  /* POS V67 emergency stabilization: based on V64 stable UI. Do not trust V65/V66 header logic. */
+  const VERSION='V67';
+  const GROUP_NAME='tableMergeGroups', ORDERS_NAME='orders';
+  const SUMMARY_OPEN_KEY='pos_v67_merge_summary_open';
+  const money=n=>(Number(n)||0).toLocaleString('ko-KR')+'원';
+  const rid=()=>new URLSearchParams(location.search).get('restaurantId')||localStorage.getItem('restaurantId')||document.body?.dataset?.restaurantId||'mom-restaurant';
+  const pref=name=>rid()+':'+name;
+  const tryRead=k=>{try{const raw=localStorage.getItem(k);return raw?JSON.parse(raw):undefined}catch(e){return undefined}};
+  const readAny=(name,def)=>{const a=tryRead(pref(name)); if(a!==undefined) return a; const b=tryRead(name); return b!==undefined?b:def;};
+  const writeBoth=(name,val)=>{try{localStorage.setItem(pref(name),JSON.stringify(val));localStorage.setItem(name,JSON.stringify(val));}catch(e){console.error('[V67 write]',e)}};
+  const sortNums=a=>[...new Set((a||[]).map(Number).filter(Boolean))].sort((x,y)=>x-y);
+  const tableNoFromText=txt=>Number(String(txt||'').match(/(\d+)\s*번/)?.[1]||0);
+  const tableNo=el=>tableNoFromText(el?.textContent||'');
+  const tableButtons=()=>[...document.querySelectorAll('.tableBtn,.floorTable,button')].filter(el=>/^\s*\d+\s*번/.test((el.textContent||'').trim()));
+  const selectedTableFromButton=()=>{
+    const sel=document.querySelector('.tableBtn.sel,.tableBtn.active,.floorTable.sel,.floorTable.active,[aria-pressed="true"]');
+    return tableNo(sel)||0;
+  };
+  const titleTable=()=>{
+    const title=document.querySelector('.order h2')?.textContent||'';
+    const m=title.match(/주문내역\s*\((\d+)번\)/); if(m) return Number(m[1]);
+    return 0;
+  };
+  const activeTable=()=>selectedTableFromButton()||titleTable()||window.__V67_ACTIVE_TABLE__||1;
+  const groups=()=>{
+    const raw=[...(tryRead(pref(GROUP_NAME))||[]),...(tryRead(GROUP_NAME)||[])];
+    const map=new Map();
+    raw.forEach(g=>{const tables=sortNums(g?.tables); if(tables.length>1) map.set(tables.join('·'),{...g,tables,mode:'payment-only'});});
+    return [...map.values()];
+  };
+  const setGroups=g=>writeBoth(GROUP_NAME,g.map(x=>({...x,tables:sortNums(x.tables)})));
+  const groupFor=n=>groups().find(g=>g.tables.includes(Number(n)));
+  const orders=()=>readAny(ORDERS_NAME,{});
+  const getItems=t=>{const o=orders(); return (Array.isArray(o[t])?o[t]:Array.isArray(o[String(t)])?o[String(t)]:[]).filter(Boolean);};
+  const totalOf=items=>(items||[]).reduce((sum,it)=>sum+(Number(it.price)||0)*(Number(it.qty)||1),0);
+  const combinedItems=g=>g?g.tables.flatMap(t=>getItems(t).map(it=>({...it,_table:t}))):[];
+  let selecting=false, selected=[];
+  function toast(msg){let t=document.querySelector('#v67-toast'); if(!t){t=document.createElement('div'); t.id='v67-toast'; t.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:200000;background:#0f172a;color:#fff;padding:12px 16px;border-radius:14px;font-weight:900;box-shadow:0 10px 30px rgba(0,0,0,.22);max-width:92%;'; document.body.appendChild(t);} t.textContent=msg; t.style.display='block'; clearTimeout(t._timer); t._timer=setTimeout(()=>t.style.display='none',2600);}
+  function startMerge(){ selecting=true; selected=sortNums([activeTable()]); document.body.classList.add('v67-merge-selecting'); markTables(); renderHeader(); toast('테이블 선택중입니다. 합칠 테이블을 누른 뒤 선택완료를 눌러주세요.'); }
+  function finishMerge(){ if(selected.length<2){toast('합칠 테이블을 2개 이상 선택해주세요.'); return;} const tables=sortNums(selected); const current=groups().filter(g=>!g.tables.some(t=>tables.includes(t))); current.push({id:'grp_'+Date.now(),tables,createdAt:Date.now(),mode:'payment-only'}); setGroups(current); selecting=false; selected=[]; document.body.classList.remove('v67-merge-selecting'); markTables(); renderHeader(); renderSummary(); toast(tables.join('·')+'번 테이블을 통합결제로 묶었습니다. 주문은 각 테이블에 따로 유지됩니다.'); }
+  function splitCurrent(){ const n=activeTable(); const g=groupFor(n); if(!g){toast('현재 테이블은 통합된 테이블이 아닙니다.'); return;} setGroups(groups().filter(x=>x.id!==g.id && x.tables.join('·')!==g.tables.join('·'))); markTables(); renderHeader(); renderSummary(); toast(g.tables.join('·')+' 통합을 해제했습니다.'); }
+  function currentTitleText(){ const n=activeTable(); window.__V67_ACTIVE_TABLE__=n; return `주문내역 (${n}번)`; }
+  function renderHeader(){
+    const order=document.querySelector('.order'); if(!order) return;
+    let h=order.querySelector('h2'); if(!h) return;
+    const n=activeTable(), g=groupFor(n);
+    h.className=(h.className||'')+' v67-order-header';
+    h.innerHTML='';
+    const title=document.createElement('span'); title.className='v67-title'; title.textContent=currentTitleText();
+    const tools=document.createElement('span'); tools.className='v67-tools';
+    const main=document.createElement('button'); main.type='button'; main.className=g?'v67-split':'v67-merge'; main.textContent=selecting?`선택완료 ${selected.length?selected.join('·'):''}`:(g?'테이블 나누기':'테이블 합치기');
+    const dutch=document.createElement('button'); dutch.type='button'; dutch.className='v67-dutch'; dutch.textContent='더치페이';
+    tools.append(main,dutch); h.append(title,tools);
   }
-  function patchStyle(){
-    if(document.querySelector('#v66-stable-style')) return;
-    const st=document.createElement('style'); st.id='v66-stable-style'; st.textContent=`
-      .modalBox{position:relative!important;}
-      .modalBox .v62-admin-share{position:absolute!important;top:18px!important;right:74px!important;margin:0!important;display:flex!important;gap:12px!important;align-items:center!important;z-index:5!important;}
-      .modalBox .v62-admin-share button{height:46px!important;min-width:170px!important;border-radius:14px!important;border:2px solid #bfdbfe!important;background:#eff6ff!important;color:#1d4ed8!important;font-size:16px!important;font-weight:1000!important;}
-      @media(max-width:900px){.modalBox .v62-admin-share{position:static!important;margin:8px 0 12px!important;justify-content:flex-start!important}.modalBox .v62-admin-share button{min-width:138px!important;font-size:14px!important}}
-      .order.card,.order{display:flex!important;flex-direction:column!important;max-height:calc(100vh - 150px)!important;overflow:hidden!important;min-height:0!important;}
-      .order h2,.order h3{flex:0 0 auto!important;display:flex!important;align-items:center!important;gap:8px!important;white-space:nowrap!important;word-break:keep-all!important;overflow:hidden!important;line-height:1.15!important;min-height:48px!important;}
-      .order .v66-order-title-label{display:block!important;flex:1 1 auto!important;min-width:150px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:24px!important;font-weight:1000!important;color:#0f172a!important;}
-      .order .v64-order-tools,.order .v63-order-tools{margin-left:auto!important;flex:0 0 auto!important;display:flex!important;gap:8px!important;align-items:center!important;}
-      .order .v64-order-tools button,.order .v63-order-tools button{height:42px!important;min-width:96px!important;padding:0 10px!important;border-radius:12px!important;font-size:14px!important;font-weight:1000!important;white-space:nowrap!important;}
-      .v64-merge-summary,.v63-merge-summary{flex:0 0 auto!important;margin:4px 0 8px!important;cursor:pointer!important;}
-      .v64-merge-toggle,.v63-merge-toggle{width:100%!important;min-height:38px!important;cursor:pointer!important;}
-      .v66-order-list{flex:1 1 auto!important;min-height:74px!important;overflow-y:auto!important;padding-right:4px!important;}
-      .order .payGrid,.order .total,.order .pay,.order .ghost,.order .creditInput{flex:0 0 auto!important;}
-      .v66-scale-mode #root{transform-origin:top left!important;transform:scale(var(--v66-scale,1))!important;width:var(--v66-root-width,1280px)!important;}
-      .v66-scale-mode body{overflow:auto!important;}
-    `; document.head.appendChild(st);
+  function renderSummary(){
+    document.querySelectorAll('.v58-merge-summary,.v63-merge-summary,.v64-merge-summary,.v67-merge-summary').forEach(e=>e.remove());
+    const order=document.querySelector('.order'); const h=order?.querySelector('h2'); if(!order||!h) return;
+    const g=groupFor(activeTable()); if(!g) return;
+    const total=totalOf(combinedItems(g)); const open=localStorage.getItem(SUMMARY_OPEN_KEY)==='1';
+    const box=document.createElement('div'); box.className='v67-merge-summary '+(open?'open':'');
+    const rows=g.tables.map(t=>{ const its=getItems(t); const line=its.length?its.map(i=>`${i.name||'메뉴'} ${i.qty||1}개`).join(', '):'주문 없음'; return `<div><b>${t}번</b><span>${line}</span><strong>${money(totalOf(its))}</strong></div>`; }).join('');
+    box.innerHTML=`<div class="v67-merge-toggle"><span>통합결제: ${g.tables.join('·')} / 총 ${money(total)}</span></div><div class="v67-merge-list">${rows}</div>`;
+    box.onclick=e=>{ e.preventDefault(); e.stopPropagation(); localStorage.setItem(SUMMARY_OPEN_KEY,open?'0':'1'); renderSummary(); };
+    h.insertAdjacentElement('afterend',box);
   }
-  function fixVersion(){
-    document.title='식당 POS V66';
-    const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let n;
-    while(n=walker.nextNode()) if(/V(58|59|60|61|62|63|64|65)/.test(n.nodeValue)) n.nodeValue=n.nodeValue.replace(/V(58|59|60|61|62|63|64|65)/g,'V66');
+  function markTables(){
+    const gs=groups(); const active=activeTable(); const activeGroup=gs.find(g=>g.tables.includes(active));
+    tableButtons().forEach(btn=>{const n=tableNo(btn); if(!n) return; const inGroup=gs.find(g=>g.tables.includes(n)); btn.classList.toggle('v67-merged-table',!!inGroup); btn.classList.toggle('v67-active-merged-table',!!activeGroup&&activeGroup.tables.includes(n)); btn.classList.toggle('v67-selected-merge',selecting&&selected.includes(n)); if(inGroup) btn.setAttribute('data-merge-label',inGroup.tables.join('·')+' 통합중'); else btn.removeAttribute('data-merge-label');});
   }
-  function stabilizeOrderHeader(){
-    const panel=document.querySelector('.order.card,.order'); if(!panel) return;
-    const h=panel.querySelector('h2,h3'); if(!h) return;
-    const no=selectedTableNo();
-    h.classList.add('v66-order-header');
-    let label=h.querySelector('.v66-order-title-label');
-    if(!label){ label=document.createElement('span'); label.className='v66-order-title-label'; h.insertBefore(label,h.firstChild); }
-    label.textContent=`주문내역 (${no}번)`;
-    // Hide stray text nodes that duplicated/broke the title, without removing buttons.
-    Array.from(h.childNodes).forEach(node=>{ if(node.nodeType===3 && node.textContent.includes('주문내역')) node.textContent=''; });
-    const tools=h.querySelector('.v64-order-tools,.v63-order-tools,.v66-order-actions');
-    if(tools){ tools.classList.add('v66-order-actions'); h.appendChild(tools); }
-  }
-  function stabilizeOrderScroll(){
-    const panel=document.querySelector('.order.card,.order'); if(!panel) return;
-    let list=panel.querySelector('.v66-order-list');
-    const items=all('.orderItem',panel);
-    if(items.length){
-      if(!list){ list=document.createElement('div'); list.className='v66-order-list'; items[0].parentNode.insertBefore(list,items[0]); }
-      items.forEach(it=>{ if(it.parentElement!==list) list.appendChild(it); });
-    }
-  }
-  function applyScaleMode(){
-    let scaleMode=false;
-    try{ scaleMode=Object.keys(localStorage).some(k=>/displayMode$/.test(k) && localStorage.getItem(k)==='scale'); }catch(e){}
-    document.documentElement.classList.toggle('v66-scale-mode',scaleMode);
-    document.body.classList.toggle('v66-scale-mode',scaleMode);
-    if(scaleMode){
-      const scale=Math.min(window.innerWidth/ROOT_WIDTH,1);
-      document.documentElement.style.setProperty('--v66-scale',String(scale));
-      document.documentElement.style.setProperty('--v66-root-width',ROOT_WIDTH+'px');
-    }else{
-      document.documentElement.style.removeProperty('--v66-scale');
-      document.documentElement.style.removeProperty('--v66-root-width');
-    }
-  }
-  function tick(){try{patchStyle();fixVersion();applyScaleMode();stabilizeOrderHeader();stabilizeOrderScroll();}catch(e){console.error('V66 안정화 패치 오류',e);}}
-  ready(()=>{tick(); setInterval(tick,1200); window.addEventListener('resize',applyScaleMode); document.addEventListener('click',()=>setTimeout(tick,80),true);});
+  function patchVersion(){ document.title='식당 POS V67'; document.querySelectorAll('.top h1 span,h1 span').forEach(s=>{ if(/V\d+/.test(s.textContent||'')) s.textContent=(s.textContent||'').replace(/V\d+/,'V67'); }); }
+  function patchAdminShare(){ const box=[...document.querySelectorAll('.modalBox.admin,.modalBox')].find(x=>(x.textContent||'').includes('관리자모드')); const share=box?.querySelector('.v62-admin-share'); if(share){ share.classList.add('v67-admin-share'); }}
+  function tick(){ try{ patchVersion(); patchStyle(); patchAdminShare(); renderHeader(); markTables(); renderSummary(); }catch(e){ console.error('[POS V67 안정화 오류]',e); } }
+  function patchStyle(){ if(document.querySelector('#v67-stability-style')) return; const st=document.createElement('style'); st.id='v67-stability-style'; st.textContent=`
+    .order{max-height:calc(100vh - 154px)!important;overflow:auto!important;overscroll-behavior:contain!important;}
+    .order h2.v67-order-header{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;min-height:52px!important;margin:0 0 8px!important;white-space:nowrap!important;line-height:1.1!important;}
+    .v67-title{display:block!important;flex:1 1 auto!important;min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;word-break:keep-all!important;font-size:26px!important;font-weight:1000!important;}
+    .v67-tools{display:flex!important;gap:8px!important;align-items:center!important;flex:0 0 auto!important;margin-left:auto!important;}
+    .v67-tools button{height:44px!important;min-width:108px!important;border-radius:13px!important;border:2px solid #bfdbfe!important;background:#eff6ff!important;color:#1d4ed8!important;font-size:14px!important;font-weight:1000!important;padding:0 12px!important;white-space:nowrap!important;}
+    .v67-tools .v67-split,.v67-tools .v67-merge.selecting{border-color:#f59e0b!important;background:#fff7ed!important;color:#9a3412!important;}
+    .order .payGrid{position:sticky!important;bottom:218px!important;background:#fff!important;z-index:30!important;padding-top:8px!important;margin-top:10px!important;}
+    .order .total{position:sticky!important;bottom:120px!important;background:#f1f5f9!important;z-index:31!important;}
+    .order button.pay{position:sticky!important;bottom:54px!important;z-index:32!important;}
+    .order button.ghost{position:sticky!important;bottom:0!important;background:#f1f5f9!important;z-index:33!important;}
+    .v67-merge-summary{margin:4px 0 8px!important;border:1.5px solid #bfdbfe!important;border-radius:12px!important;background:#eff6ff!important;overflow:hidden!important;cursor:pointer!important;}
+    .v67-merge-toggle{min-height:40px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;padding:8px 10px!important;color:#1d4ed8!important;font-weight:1000!important;font-size:14px!important;}
+    .v67-merge-list{display:none!important;max-height:120px!important;overflow:auto!important;padding:8px!important;gap:5px!important;}
+    .v67-merge-summary.open .v67-merge-list{display:grid!important;}
+    .v67-merge-list div{display:grid!important;grid-template-columns:42px 1fr auto!important;gap:6px!important;align-items:center!important;padding:5px 7px!important;background:#fff!important;border-radius:9px!important;border:1px solid #dbeafe!important;}
+    .v67-merge-list span{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:#475569!important;font-size:12px!important;}
+    body.v67-merge-selecting .tableBtn,body.v67-merge-selecting .floorTable{outline:3px dashed #f97316!important;outline-offset:2px!important;cursor:pointer!important;}
+    .v67-merged-table{background:#fef3c7!important;border-color:#f59e0b!important;color:#111827!important;}
+    .v67-active-merged-table{background:#2563eb!important;border-color:#0f172a!important;color:#fff!important;box-shadow:0 0 0 4px rgba(37,99,235,.24)!important;outline:3px solid #0f172a!important;outline-offset:-3px!important;}
+    .v67-selected-merge{background:#fb923c!important;border-color:#ea580c!important;color:#111827!important;box-shadow:0 0 0 4px rgba(251,146,60,.22)!important;}
+    .modalBox{position:relative!important;}
+    .modalBox .v67-admin-share,.modalBox .v62-admin-share{position:absolute!important;top:28px!important;right:110px!important;margin:0!important;display:flex!important;gap:14px!important;align-items:center!important;z-index:2!important;}
+    .modalBox .v67-admin-share button,.modalBox .v62-admin-share button{height:48px!important;min-width:176px!important;border-radius:14px!important;border:2px solid #bfdbfe!important;background:#eff6ff!important;color:#1d4ed8!important;font-size:16px!important;font-weight:1000!important;}
+    @media(max-width:900px){.v67-title{font-size:22px!important}.v67-tools button{min-width:86px!important;font-size:12px!important;padding:0 8px!important}.order{max-height:none!important}.modalBox .v67-admin-share,.modalBox .v62-admin-share{position:static!important;margin:8px 0 12px!important;justify-content:flex-start!important}}
+  `; document.head.appendChild(st); }
+  document.addEventListener('click',function(e){
+    const merge=e.target.closest('.v67-merge'); const split=e.target.closest('.v67-split'); const dutch=e.target.closest('.v67-dutch');
+    if(merge||split||dutch){ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); if(merge){ selecting?finishMerge():startMerge(); } else if(split){ splitCurrent(); } else { const old=document.querySelector('.v64-dutch,.v62-dutch-trigger,.v58-dutch'); if(old) old.click(); else toast('더치페이 계산기를 준비중입니다.'); } return; }
+    if(selecting){ const btn=e.target.closest('.tableBtn,.floorTable,button'); const n=tableNo(btn); if(n){ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]); markTables(); renderHeader(); } }
+  },true);
+  window.addEventListener('error',e=>{console.error('[POS V67 runtime error]',e.error||e.message);});
+  document.addEventListener('DOMContentLoaded',()=>{tick(); setInterval(tick,250);});
+  setTimeout(()=>{tick(); setInterval(tick,500);},250);
 })();
 </script>
 
