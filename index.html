@@ -1,9 +1,9 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V61</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V61-pos.js"></script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V62</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V62-pos.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
 </head><body><div id="root"></div>
 <script>
 (function(){
-  const VERSION='V61';
+  const VERSION='V62';
   const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
   const LAST_MANUAL_KEY='pos_v53_last_manual_form';
   function toast(msg, undo){
@@ -184,7 +184,7 @@
     }
   }, true);
   ready(()=>{
-    document.title='식당 POS V61';
+    document.title='식당 POS V62';
     const style=document.createElement('style'); style.textContent=`
       .v53-top-utility-zone{display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;margin-top:8px!important;}
       .v53-top-utility-zone .v53-compact-top-btn{width:auto!important;min-width:0!important;padding:12px 18px!important;border-radius:14px!important;white-space:nowrap!important;box-shadow:none!important;}
@@ -251,7 +251,7 @@
       type:'테스트 주문',
       table:'1번',
       items:[{name:'생태탕',qty:1},{name:'공기밥',qty:1}],
-      memo:'V61 주방기기 연결 테스트 전송',
+      memo:'V62 주방기기 연결 테스트 전송',
       createdAt:new Date().toISOString(),
       restaurantId:currentRestaurantId(),
       restaurantName:getRestaurantName(),
@@ -292,7 +292,7 @@
       box.appendChild(copy);
       const note=document.createElement('p');
       note.className='muted v58-kitchen-help';
-      note.textContent='V61 임시 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
+      note.textContent='V62 임시 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
       box.insertAdjacentElement('afterend', note);
     });
   }
@@ -321,7 +321,7 @@
 
 <script>
 (function(){
-  /* POS V61 table-merge/payment UI override: compact header buttons + accurate grouped totals. */
+  /* POS V62 table-merge/payment UI override: compact header buttons + accurate grouped totals. */
   const GROUP_NAME='tableMergeGroups';
   const ORDERS_NAME='orders';
   const SALES_NAME='salesHistory';
@@ -506,7 +506,7 @@
     const table=e.target.closest('.tableBtn,.floorTable,button');
     if(table && selecting){ const n=tableNo(table); if(n){ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]); markTables(); updateSummary(); ensureToolLabels(); } }
   },true);
-  const tick=()=>{document.title='식당 POS V61';addStyle();applyFont();markTables();updateSummary();ensureToolLabels();injectFontSetting();};
+  const tick=()=>{document.title='식당 POS V62';addStyle();applyFont();markTables();updateSummary();ensureToolLabels();injectFontSetting();};
   document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,700);});
 })();
 </script>
@@ -515,7 +515,7 @@
 
 <script>
 (function(){
-  /* POS V61 final UI patch: bigger action buttons, stable merged-table selection, compact summary, enhanced dutch pay, sales detail layout. */
+  /* POS V62 final UI patch: bigger action buttons, stable merged-table selection, compact summary, enhanced dutch pay, sales detail layout. */
   const GROUP_NAME='tableMergeGroups', ORDERS_NAME='orders', SALES_NAME='salesHistory';
   const money=n=>(Number(n)||0).toLocaleString('ko-KR')+'원';
   const rid=()=>new URLSearchParams(location.search).get('restaurantId')||localStorage.getItem('restaurantId')||document.body?.dataset?.restaurantId||'mom-restaurant';
@@ -611,8 +611,30 @@
     const table=e.target.closest('.tableBtn,.floorTable,button'); if(table&&selecting){const n=tableNo(table); if(n){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]);markTables();refreshTools();}}
     const pay=e.target.closest('button.pay'); if(pay&&groupFor(activeTable())){e.preventDefault();e.stopImmediatePropagation();completeGroupPayment();}
   },true);
-  const tick=()=>{document.title='식당 POS V61';addStyle();markTables();refreshTools();updateSummary();improveSalesDetail();};
+  const tick=()=>{document.title='식당 POS V62';addStyle();markTables();refreshTools();updateSummary();improveSalesDetail();};
   document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,650);});
+})();
+</script>
+
+<script>
+(function(){
+  const VERSION='V62';
+  function ready(fn){document.readyState==='loading'?document.addEventListener('DOMContentLoaded',fn):fn();}
+  function toast(msg){let t=document.querySelector('#v62-toast'); if(!t){t=document.createElement('div');t.id='v62-toast';t.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:100001;background:#111827;color:#fff;padding:12px 16px;border-radius:14px;font-weight:900;box-shadow:0 16px 40px rgba(0,0,0,.25);max-width:92%;';document.body.appendChild(t);} t.textContent=msg; clearTimeout(t._tm); t._tm=setTimeout(()=>t.remove(),2600);}
+  function rid(){return new URLSearchParams(location.search).get('restaurantId')||localStorage.getItem('restaurantId')||'rest_000001';}
+  function posUrl(){const u=new URL(location.href); u.hash=''; u.searchParams.set('restaurantId', rid()); return u.toString();}
+  async function copyText(text,msg){try{await navigator.clipboard.writeText(text); toast(msg||'복사했습니다.');}catch(e){window.prompt('복사할 주소입니다.',text);}}
+  function qrModal(title,url){document.querySelectorAll('.v62-qr-modal').forEach(x=>x.remove());const m=document.createElement('div');m.className='v62-qr-modal';m.innerHTML=`<div class="v62-qr-box"><button class="v62-x">×</button><h2>${title}</h2><p class="muted">다른 태블릿/핸드폰 카메라로 촬영하면 이 POS가 열립니다.</p><div class="v62-qr-img-wrap"><img alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(url)}"></div><label>연결 주소<input readonly value="${url.replace(/"/g,'&quot;')}"></label><div class="v62-qr-actions"><button class="primary">주소 복사</button><button>닫기</button></div></div>`;document.body.appendChild(m);m.querySelector('.v62-x').onclick=()=>m.remove();m.querySelector('.v62-qr-actions .primary').onclick=()=>copyText(url,'POS 주소를 복사했습니다.');m.querySelector('.v62-qr-actions button:last-child').onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove();};}
+  function enhanceAdminShare(){const box=[...document.querySelectorAll('.modalBox')].find(b=>(b.querySelector('h2')?.textContent||'').includes('관리자모드')); if(!box || box.querySelector('.v62-admin-share')) return; const h=box.querySelector('h2'); const wrap=document.createElement('div'); wrap.className='v62-admin-share'; wrap.innerHTML='<button type="button" class="v62-copy-pos">POS기 주소복사</button><button type="button" class="v62-qr-pos">POS QR보기</button>'; h.insertAdjacentElement('afterend',wrap); wrap.querySelector('.v62-copy-pos').onclick=()=>copyText(posUrl(),'POS기 주소를 복사했습니다.'); wrap.querySelector('.v62-qr-pos').onclick=()=>qrModal('POS 접속 QR',posUrl());}
+  function parseMoney(txt){const n=Number(String(txt||'').replace(/[^0-9.-]/g,'')); return Number.isFinite(n)?n:0;}
+  function money(n){return (Number(n)||0).toLocaleString('ko-KR')+'원';}
+  function getCurrentTotal(){const merge=document.querySelector('.v58-merge-summary .v60-merge-toggle b'); if(merge) return parseMoney(merge.textContent); const total=[...document.querySelectorAll('.order .total b, .total b')].reverse().find(el=>/[0-9,]+원/.test(el.textContent||'')); if(total) return parseMoney(total.textContent); const order=document.querySelector('.order'); const m=(order?.textContent||'').match(/총\s*금액\s*([0-9,]+)원/); return m?parseMoney(m[1]):0;}
+  function openDutchFixed(){document.querySelectorAll('.v62-dutch-modal,.v58-dutch-modal').forEach(x=>x.remove()); const total=getCurrentTotal(); const modal=document.createElement('div'); modal.className='v62-dutch-modal'; modal.innerHTML=`<div class="v62-dutch-box"><button class="v62-x">×</button><h2>더치페이 계산기</h2><div class="v62-dutch-top"><span>현재 주문 총액</span><b>${money(total)}</b><label>결제인원 <input id="v62People" type="number" inputmode="numeric" min="1" value="2"> 명</label></div><div id="v62Inputs" class="v62-dutch-list"></div><div class="v62-dutch-bottom"><div class="remain"><span>남은금액</span><strong>${money(total)}</strong></div><div class="v62-recommend"></div><button class="v62-close">닫기</button></div></div>`; document.body.appendChild(modal); const people=modal.querySelector('#v62People'), list=modal.querySelector('#v62Inputs'), rec=modal.querySelector('.v62-recommend'), remainEl=modal.querySelector('.remain strong'); function render(){const count=Math.max(1,Number(people.value)||1); const old=[...list.querySelectorAll('input')].map(i=>i.value); list.innerHTML=''; for(let i=0;i<count;i++){list.insertAdjacentHTML('beforeend',`<label><span>${i+1}번 결제</span><input type="number" inputmode="numeric" placeholder="금액 입력" value="${old[i]||''}"></label>`)} list.querySelectorAll('input').forEach(i=>i.addEventListener('input',calc)); calc();} function calc(){const vals=[...list.querySelectorAll('input')].map(i=>parseMoney(i.value)); const paid=vals.reduce((a,b)=>a+b,0); const remain=Math.max(0,total-paid); const empty=vals.filter(v=>!v).length; remainEl.textContent=money(remain); let html=`<p>남은 인원: <b>${empty}명</b></p>`; if(empty){const base=Math.floor(remain/empty); const extra=remain-base*empty; let seen=0; vals.forEach((v,i)=>{if(!v){seen++; html+=`<p>${i+1}번 추천: <b>${money(base+(seen===empty?extra:0))}</b></p>`;}});} rec.innerHTML=html;} people.addEventListener('input',render); modal.querySelector('.v62-x').onclick=()=>modal.remove(); modal.querySelector('.v62-close').onclick=()=>modal.remove(); modal.onclick=e=>{if(e.target===modal)modal.remove();}; render();}
+  function addSimpleManualButton(){const box=[...document.querySelectorAll('.modalBox')].find(b=>(b.querySelector('h2')?.textContent||'').includes('수기 내역')); if(!box || box.querySelector('.v62-simple-manual-btn')) return; const h=box.querySelector('h2'); const btn=document.createElement('button'); btn.className='v62-simple-manual-btn'; btn.textContent='간편 입력'; h.insertAdjacentElement('afterend',btn); btn.onclick=()=>showSimpleManual(box);}
+  function showSimpleManual(box){let panel=box.querySelector('.v62-simple-panel'); if(panel){panel.remove(); return;} panel=document.createElement('div'); panel.className='v62-simple-panel'; const today=new Date().toISOString().slice(0,10); const time=new Date().toTimeString().slice(0,5); panel.innerHTML=`<div class="v62-simple-head"><b>간편 입력</b><span>외상 입력은 상세 수기입력에서만 가능합니다.</span><button type="button" class="v62-add-row">행 추가</button></div><div class="v62-simple-table"><div class="v62-row v62-head-row"><span>주문일</span><span>주문시간</span><span>결제시간</span><span>테이블</span><span>식사구분</span><span>메뉴선택</span><span>수량</span><span>결제수단</span><span>복사</span></div></div><div class="v62-simple-actions"><button type="button" class="green v62-fill-detail">선택행을 상세입력에 넣기</button><button type="button" class="v62-close-simple">수기 내역 입력으로 돌아가기</button></div>`; box.querySelector('p')?.insertAdjacentElement('afterend',panel); const table=panel.querySelector('.v62-simple-table'); const menus=[...document.querySelectorAll('.menuCard')].map(c=>c.querySelector('b')?.textContent?.trim()).filter(Boolean); function row(data={}){const r=document.createElement('div'); r.className='v62-row'; r.innerHTML=`<input type="date" value="${data.date||today}"><input type="time" value="${data.orderTime||time}"><input type="time" value="${data.payTime||time}"><input type="number" inputmode="numeric" value="${data.table||'1'}"><select><option>식당식사</option><option>포장</option></select><select><option value="">메뉴선택</option>${menus.map(m=>`<option>${m}</option>`).join('')}</select><input type="number" inputmode="numeric" value="${data.qty||'1'}"><select><option>카드</option><option>현금</option><option>카드+현금</option><option>상품권</option><option>기타</option></select><button type="button">복사</button>`; r.querySelector('button').onclick=()=>{const vals=[...r.querySelectorAll('input,select')].map(x=>x.value); row({date:vals[0],orderTime:vals[1],payTime:vals[2],table:vals[3],qty:vals[6]}); toast('같은 테이블 행을 복사했습니다. 메뉴만 바꿔 입력하세요.');}; table.appendChild(r);} row(); panel.querySelector('.v62-add-row').onclick=()=>row(); panel.querySelector('.v62-close-simple').onclick=()=>panel.remove(); panel.querySelector('.v62-fill-detail').onclick=()=>{const r=table.querySelector('.v62-row:not(.v62-head-row)'); if(!r)return; const vals=[...r.querySelectorAll('input,select')].map(x=>x.value); const labels={'주문일':vals[0],'결제일':vals[0],'주문시간':vals[1],'결제시간':vals[2],'테이블/구분':vals[3],'식사구분':vals[4],'메뉴 선택':vals[5],'수량':vals[6],'결제수단':vals[7]}; Object.entries(labels).forEach(([txt,val])=>{const lab=[...box.querySelectorAll('label')].find(l=>(l.textContent||'').includes(txt)); const el=lab?.querySelector('input,select'); if(el){const proto=Object.getPrototypeOf(el); const desc=Object.getOwnPropertyDescriptor(proto,'value'); if(desc&&desc.set)desc.set.call(el,val); else el.value=val; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true}));}}); toast('선택행을 상세입력에 넣었습니다. 금액을 확인 후 반영하세요.');};}
+  function patchStyle(){if(document.querySelector('#v62-extra-style'))return; const s=document.createElement('style'); s.id='v62-extra-style'; s.textContent=`.v62-admin-share{display:flex;gap:12px;justify-content:flex-end;margin:-42px 70px 16px 0}.v62-admin-share button{min-width:180px;height:48px;border-radius:14px;border:2px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-weight:1000;font-size:16px}.v62-qr-modal,.v62-dutch-modal{position:fixed;inset:0;background:rgba(15,23,42,.62);z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px}.v62-qr-box,.v62-dutch-box{background:#fff;border-radius:24px;box-shadow:0 24px 60px rgba(0,0,0,.28);padding:24px;position:relative}.v62-qr-box{width:min(520px,94vw);text-align:center}.v62-qr-box input{width:100%;height:44px;border:1px solid #cbd5e1;border-radius:10px;padding:0 10px}.v62-qr-img-wrap{padding:14px}.v62-qr-actions{display:flex;gap:10px;justify-content:center;margin-top:14px}.v62-qr-actions button,.v62-close{height:46px;border:0;border-radius:12px;padding:0 18px;font-weight:900}.v62-qr-actions .primary{background:#2563eb;color:#fff}.v62-x{position:absolute;right:14px;top:12px;width:48px;height:48px;border:0;border-radius:14px;background:#111827;color:white;font-size:26px;font-weight:900}.v62-dutch-box{width:min(760px,96vw);height:min(760px,94vh);display:flex;flex-direction:column;overflow:hidden}.v62-dutch-top{flex:0 0 auto}.v62-dutch-top b{display:block;font-size:24px;margin:8px 0}.v62-dutch-list{flex:1 1 auto;overflow:auto;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:10px 4px;margin:10px 0}.v62-dutch-list label{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;margin:8px 0;font-weight:900}.v62-dutch-box input{height:48px;border:2px solid #cbd5e1;border-radius:12px;padding:0 12px;font-size:20px;font-weight:800}.v62-dutch-bottom{flex:0 0 auto}.v62-dutch-bottom .remain{display:flex;justify-content:space-between;align-items:center;background:#dbeafe;border:2px solid #93c5fd;border-radius:16px;padding:14px;color:#1e3a8a}.v62-dutch-bottom strong{font-size:30px}.v62-simple-manual-btn{float:right;margin-top:-50px;margin-right:70px;height:44px;border-radius:12px;border:2px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-weight:900}.v62-simple-panel{background:#f8fafc;border:2px solid #bfdbfe;border-radius:16px;padding:14px;margin:12px 0}.v62-simple-head{display:flex;gap:10px;align-items:center;justify-content:space-between}.v62-simple-head button,.v62-simple-actions button{height:40px;border:0;border-radius:10px;padding:0 12px;font-weight:900}.v62-simple-table{overflow:auto;margin:10px 0}.v62-row{display:grid;grid-template-columns:130px 100px 100px 78px 100px 180px 70px 110px 70px;gap:6px;align-items:center;min-width:960px;margin:5px 0}.v62-row input,.v62-row select{height:38px;border:1px solid #cbd5e1;border-radius:8px;padding:0 8px}.v62-head-row{font-weight:900;color:#334155}.v62-row button{height:38px;border:0;border-radius:8px;background:#e0f2fe;font-weight:900}.v62-simple-actions{display:flex;gap:8px}.v62-simple-actions .green{background:#16a34a;color:#fff}@media(max-width:900px){.v62-admin-share{margin:8px 0 12px;justify-content:flex-start}.v62-admin-share button{min-width:140px;font-size:14px}}`; document.head.appendChild(s);}
+  window.addEventListener('click',function(e){const d=e.target.closest('.v58-dutch,.v62-dutch-trigger'); if(d){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openDutchFixed();}},true);
+  ready(()=>{patchStyle(); setInterval(()=>{document.title='식당 POS V62'; enhanceAdminShare(); addSimpleManualButton();},500);});
 })();
 </script>
 
