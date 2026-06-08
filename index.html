@@ -1,9 +1,9 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V59</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V59-pos.js"></script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V60</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V60-pos.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
 </head><body><div id="root"></div>
 <script>
 (function(){
-  const VERSION='V59';
+  const VERSION='V60';
   const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
   const LAST_MANUAL_KEY='pos_v53_last_manual_form';
   function toast(msg, undo){
@@ -20,7 +20,7 @@
     const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT); let n;
     while(n=walker.nextNode()){
       if(n.nodeValue && n.nodeValue.includes('\\n')) n.nodeValue=n.nodeValue.replace(/\\n/g,'\n');
-      if(n.nodeValue && /V4[789]/.test(n.nodeValue)) n.nodeValue=n.nodeValue.replace(/V4[789]/g,VERSION);
+      if(n.nodeValue && /(V4[789]|V5[0-9])/.test(n.nodeValue)) n.nodeValue=n.nodeValue.replace(/(V4[789]|V5[0-9])/g,VERSION);
       if(n.nodeValue && n.nodeValue.includes('관리자에게 카톡 남기기')) n.nodeValue=n.nodeValue.replace(/관리자에게 카톡 남기기/g,'관리자에게 쪽지 남기기');
     }
   }
@@ -184,7 +184,7 @@
     }
   }, true);
   ready(()=>{
-    document.title='식당 POS V58';
+    document.title='식당 POS V60';
     const style=document.createElement('style'); style.textContent=`
       .v53-top-utility-zone{display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;margin-top:8px!important;}
       .v53-top-utility-zone .v53-compact-top-btn{width:auto!important;min-width:0!important;padding:12px 18px!important;border-radius:14px!important;white-space:nowrap!important;box-shadow:none!important;}
@@ -251,7 +251,7 @@
       type:'테스트 주문',
       table:'1번',
       items:[{name:'생태탕',qty:1},{name:'공기밥',qty:1}],
-      memo:'V58 주방기기 연결 테스트 전송',
+      memo:'V60 주방기기 연결 테스트 전송',
       createdAt:new Date().toISOString(),
       restaurantId:currentRestaurantId(),
       restaurantName:getRestaurantName(),
@@ -292,7 +292,7 @@
       box.appendChild(copy);
       const note=document.createElement('p');
       note.className='muted v58-kitchen-help';
-      note.textContent='V58 임시 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
+      note.textContent='V60 임시 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
       box.insertAdjacentElement('afterend', note);
     });
   }
@@ -381,70 +381,77 @@
 
 <script>
 (function(){
-  /* POS V59 table-merge override: visible controls + robust table selection. */
-  const GROUP_KEY='tableMergeGroups';
-  const ORDERS_KEY='orders';
-  const SALES_KEY='salesHistory';
-  const CREDIT_KEY='creditLedger';
+  /* POS V60 table-merge/payment UI override: compact header buttons + accurate grouped totals. */
+  const GROUP_NAME='tableMergeGroups';
+  const ORDERS_NAME='orders';
+  const SALES_NAME='salesHistory';
+  const CREDIT_NAME='creditLedger';
   const FONT_KEY='tableNumberFontSize';
+  const SUMMARY_OPEN_KEY='pos_v60_merge_summary_open';
   const money=n=>(Number(n)||0).toLocaleString('ko-KR')+'원';
-  const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||'null')??d}catch(e){return d}};
-  const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const rid=()=>new URLSearchParams(location.search).get('restaurantId')||localStorage.getItem('restaurantId')||document.body?.dataset?.restaurantId||'mom-restaurant';
+  const pref=name=>rid()+':'+name;
+  const tryRead=(k)=>{try{const raw=localStorage.getItem(k);return raw?JSON.parse(raw):undefined}catch(e){return undefined}};
+  const readAny=(name,def)=>{const a=tryRead(pref(name)); if(a!==undefined) return a; const b=tryRead(name); return b!==undefined?b:def;};
+  const writeBoth=(name,val)=>{try{localStorage.setItem(pref(name),JSON.stringify(val));localStorage.setItem(name,JSON.stringify(val));}catch(e){console.error(e)}};
   const sortNums=a=>[...new Set((a||[]).map(Number).filter(Boolean))].sort((x,y)=>x-y);
   const tableNoFromText=txt=>Number(String(txt||'').match(/(\d+)\s*번/)?.[1]||0);
   const tableNo=el=>tableNoFromText(el?.textContent||'');
-  const allTableButtons=()=>[...document.querySelectorAll('.tableBtn,.floorTable,button')].filter(el=>tableNo(el)>0);
+  const allTableButtons=()=>[...document.querySelectorAll('.tableBtn,.floorTable,button')].filter(el=>/^\s*\d+\s*번/.test((el.textContent||'').trim()));
   const activeTable=()=>{
     const title=document.querySelector('.order h2')?.textContent||'';
+    const m=title.match(/주문내역\s*\((\d+)번\)/); if(m) return Number(m[1]);
     const n=tableNoFromText(title); if(n) return n;
     const selected=document.querySelector('.tableBtn.sel,.tableBtn.active,.floorTable.sel,.floorTable.active,[aria-pressed="true"]');
     return tableNo(selected)||1;
   };
-  const groups=()=>read(GROUP_KEY,[]).map(g=>({...g,tables:sortNums(g.tables)})).filter(g=>g.tables.length>1);
-  const setGroups=g=>write(GROUP_KEY,g);
+  const groups=()=>{
+    const merged=[...(tryRead(pref(GROUP_NAME))||[]),...(tryRead(GROUP_NAME)||[])];
+    const map=new Map();
+    merged.forEach(g=>{const tables=sortNums(g.tables); if(tables.length>1){const key=tables.join('·'); map.set(key,{...g,tables,mode:'payment-only'});}});
+    return [...map.values()];
+  };
+  const setGroups=g=>writeBoth(GROUP_NAME,g.map(x=>({...x,tables:sortNums(x.tables)})));
   const groupFor=n=>groups().find(g=>g.tables.includes(Number(n)));
-  const orders=()=>read(ORDERS_KEY,{});
-  const setOrders=o=>write(ORDERS_KEY,o);
+  const orders=()=>readAny(ORDERS_NAME,{});
+  const setOrders=o=>writeBoth(ORDERS_NAME,o);
   const getItems=(table)=>{
     const o=orders();
-    return Array.isArray(o[table])?o[table]:Array.isArray(o[String(table)])?o[String(table)]:[];
+    const direct=Array.isArray(o[table])?o[table]:Array.isArray(o[String(table)])?o[String(table)]:[];
+    return direct.filter(Boolean);
   };
-  const totalOf=items=>(items||[]).reduce((sum,it)=>sum+(Number(it.price)||0)*(Number(it.qty)||0),0);
+  const totalOf=items=>(items||[]).reduce((sum,it)=>sum+(Number(it.price)||0)*(Number(it.qty)||1),0);
+  const combinedItems=g=>g.tables.flatMap(t=>getItems(t).map(it=>({...it,_table:t})));
   let selecting=false, selected=[];
   function markTables(){
     const gs=groups();
     allTableButtons().forEach(btn=>{
       const n=tableNo(btn); const g=gs.find(x=>x.tables.includes(n));
       btn.classList.toggle('v58-merged-table',!!g);
-      if(g) btn.setAttribute('data-merge-label',g.tables.join('·')+' 통합중');
-      else btn.removeAttribute('data-merge-label');
+      if(g) btn.setAttribute('data-merge-label',g.tables.join('·')+' 통합중'); else btn.removeAttribute('data-merge-label');
       btn.classList.toggle('v58-selected-merge', selecting && selected.includes(n));
     });
   }
   function startOrFinishMerge(){
     if(!selecting){
       selecting=true; selected=sortNums([activeTable()]); document.body.classList.add('v58-merge-selecting');
-      alert('테이블 선택중입니다. 합칠 테이블을 눌러 선택/해제한 뒤 다시 버튼을 누르면 완료됩니다.\n※ 주문은 각 테이블에 그대로 두고 계산할 때만 통합됩니다.');
-      markTables(); updateSummary(); return;
+      toastV60('테이블 선택중입니다. 합칠 테이블을 누른 뒤 다시 완료 버튼을 눌러주세요.');
+      markTables(); updateSummary(); ensureToolLabels(); return;
     }
-    if(selected.length<2){ alert('합칠 테이블을 2개 이상 선택해주세요.'); return; }
+    if(selected.length<2){ toastV60('합칠 테이블을 2개 이상 선택해주세요.'); return; }
     const tables=sortNums(selected);
     const current=groups().filter(g=>!g.tables.some(t=>tables.includes(t)));
     current.push({id:'grp_'+Date.now(),tables,createdAt:Date.now(),mode:'payment-only'});
-    setGroups(current);
-    selecting=false; selected=[]; document.body.classList.remove('v58-merge-selecting');
-    markTables(); updateSummary();
-    alert(tables.join('·')+'번 테이블을 통합결제로 묶었습니다.\n각 테이블 주문은 따로 유지되고, 결제할 때만 함께 계산됩니다.');
+    setGroups(current); selecting=false; selected=[]; document.body.classList.remove('v58-merge-selecting');
+    markTables(); updateSummary(); ensureToolLabels();
+    toastV60(tables.join('·')+'번 테이블을 통합결제로 묶었습니다. 주문은 각 테이블에 따로 유지됩니다.');
   }
   function splitCurrent(){
     const n=activeTable(); const g=groupFor(n);
-    if(!g){ alert('현재 테이블은 통합된 테이블이 아닙니다.'); return; }
-    setGroups(groups().filter(x=>x.id!==g.id));
-    markTables(); updateSummary();
-    alert(g.tables.join('·')+' 통합을 해제했습니다. 각 테이블 주문내역은 그대로 유지됩니다.');
-  }
-  function combinedItems(g){
-    return g.tables.flatMap(t=>getItems(t).map(it=>({...it,_table:t})));
+    if(!g){ toastV60('현재 테이블은 통합된 테이블이 아닙니다.'); return; }
+    setGroups(groups().filter(x=>x.id!==g.id && x.tables.join('·')!==g.tables.join('·')));
+    markTables(); updateSummary(); ensureToolLabels();
+    toastV60(g.tables.join('·')+' 통합을 해제했습니다. 각 테이블 주문내역은 그대로 유지됩니다.');
   }
   function paymentLabel(){
     const panel=document.querySelector('.order')||document;
@@ -454,18 +461,18 @@
   function completeGroupPayment(printAfter){
     const g=groupFor(activeTable()); if(!g) return false;
     const all=combinedItems(g); const total=totalOf(all);
-    if(!all.length){ alert('통합된 테이블에 주문내역이 없습니다.'); return true; }
+    if(!all.length){ toastV60('통합된 테이블에 주문내역이 없습니다.'); return true; }
     if(!confirm(`통합결제 ${g.tables.join('·')}번\n총 ${money(total)}을(를) 결제완료 처리할까요?\n결제 후 통합된 모든 테이블 주문내역이 비워집니다.`)) return true;
     const payment=paymentLabel();
     const sale={id:'sale_group_'+Date.now(),createdAt:new Date().toISOString(),table:g.tables.join('·')+'번 통합',tableGroup:g.tables,items:all.map(({_table,...it})=>it),groupedItems:all,total,payment,serviceType:'식당식사',memo:'통합결제 '+g.tables.join('·')};
-    const sales=read(SALES_KEY,[]); sales.unshift(sale); write(SALES_KEY,sales);
+    const sales=readAny(SALES_NAME,[]); sales.unshift(sale); writeBoth(SALES_NAME,sales);
     if(payment.includes('외상')){
-      const credits=read(CREDIT_KEY,[]); credits.unshift({id:'credit_group_'+Date.now(),createdAt:sale.createdAt,table:sale.table,items:sale.items,total,remain:total,paid:false,group:'통합결제 '+g.tables.join('·'),memo:'통합결제 외상'}); write(CREDIT_KEY,credits);
+      const credits=readAny(CREDIT_NAME,[]); credits.unshift({id:'credit_group_'+Date.now(),createdAt:sale.createdAt,table:sale.table,items:sale.items,total,remain:total,paid:false,group:'통합결제 '+g.tables.join('·'),memo:'통합결제 외상'}); writeBoth(CREDIT_NAME,credits);
     }
     const o=orders(); g.tables.forEach(t=>{o[t]=[]; o[String(t)]=[]}); setOrders(o);
-    setGroups(groups().filter(x=>x.id!==g.id));
-    alert('통합결제가 완료되었습니다.');
-    location.reload();
+    setGroups(groups().filter(x=>x.id!==g.id && x.tables.join('·')!==g.tables.join('·')));
+    toastV60('통합결제가 완료되었습니다.');
+    setTimeout(()=>location.reload(),450);
     return true;
   }
   function updateSummary(){
@@ -473,35 +480,34 @@
     document.querySelectorAll('.v58-merge-summary').forEach(e=>e.remove());
     const h=document.querySelector('.order h2'); if(!h) return;
     const g=groupFor(activeTable()); if(!g) return;
-    const all=combinedItems(g), total=totalOf(all);
-    const box=document.createElement('div'); box.className='v58-merge-summary';
+    const total=totalOf(combinedItems(g));
+    const open=localStorage.getItem(SUMMARY_OPEN_KEY)==='1';
+    const box=document.createElement('div'); box.className='v58-merge-summary '+(open?'open':'');
     const rows=g.tables.map(t=>{
-      const its=getItems(t); const line=its.length?its.map(i=>`${i.name||'메뉴'} ${i.qty||1}개`).join(', '):'주문 없음';
+      const its=getItems(t);
+      const line=its.length?its.map(i=>`${i.name||'메뉴'} ${i.qty||1}개`).join(', '):'주문 없음';
       return `<div><b>${t}번</b><span>${line}</span><strong>${money(totalOf(its))}</strong></div>`;
     }).join('');
-    box.innerHTML=`<div class="v58-merge-title">통합결제: ${g.tables.join('·')} <b>${money(total)}</b></div><div class="v58-merge-list">${rows}</div>`;
+    box.innerHTML=`<button type="button" class="v60-merge-toggle"><span>통합결제: ${g.tables.join('·')}</span><b>${money(total)}</b><em>${open?'접기':'상세'}</em></button><div class="v58-merge-list">${rows}</div>`;
+    box.querySelector('.v60-merge-toggle').onclick=(e)=>{e.preventDefault();e.stopPropagation();localStorage.setItem(SUMMARY_OPEN_KEY,open?'0':'1');updateSummary();};
     const tools=document.querySelector('.v58-order-tools')||h;
     tools.insertAdjacentElement('afterend',box);
   }
   function ensureToolLabels(){
-    const tools=document.querySelector('.v58-order-tools'); if(!tools) return;
+    const h=document.querySelector('.order h2'); const tools=document.querySelector('.v58-order-tools'); if(!h||!tools) return;
+    if(tools.parentElement!==h){ h.appendChild(tools); }
+    h.classList.add('v60-order-title-with-tools');
     const g=groupFor(activeTable());
     const merge=tools.querySelector('.v58-merge');
-    if(merge){
-      merge.textContent=selecting ? `테이블 선택중 · 완료 (${selected.length?selected.join('·'):'선택 없음'})` : '테이블 합치기';
-      merge.classList.toggle('selecting', selecting);
-    }
     const split=tools.querySelector('.v58-split');
-    if(split){
-      split.textContent=g?'테이블 나누기':'테이블 나누기';
-      split.classList.toggle('activeSplit', !!g);
+    if(merge){
+      merge.textContent=selecting ? `선택완료 ${selected.length?selected.join('·'):''}` : '테이블 합치기';
+      merge.classList.toggle('selecting', selecting); merge.style.display=g?'none':'';
     }
-    const dutch=tools.querySelector('.v58-dutch'); if(dutch) dutch.textContent='더치페이 계산';
+    if(split){ split.textContent='테이블 나누기'; split.classList.toggle('activeSplit', !!g); split.style.display=g?'':'none'; }
+    const dutch=tools.querySelector('.v58-dutch'); if(dutch) dutch.textContent='더치페이';
   }
-  function applyFont(){
-    const size=localStorage.getItem(FONT_KEY)||'24';
-    document.documentElement.style.setProperty('--v58-table-font-size',size+'px');
-  }
+  function applyFont(){ const size=localStorage.getItem(FONT_KEY)||'24'; document.documentElement.style.setProperty('--v58-table-font-size',size+'px'); }
   function injectFontSetting(){
     const titles=[...document.querySelectorAll('h3,h4,b')];
     const sys=titles.find(x=>(x.textContent||'').includes('시스템 설정'));
@@ -513,27 +519,38 @@
     select.onchange=()=>{localStorage.setItem(FONT_KEY,select.value); applyFont();};
     container.appendChild(wrap);
   }
+  function toastV60(msg){
+    let t=document.querySelector('#v60-toast'); if(!t){t=document.createElement('div');t.id='v60-toast';t.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:100000;background:#0f172a;color:#fff;padding:12px 16px;border-radius:14px;font-weight:900;box-shadow:0 10px 30px rgba(0,0,0,.22);max-width:92%;';document.body.appendChild(t);}
+    t.textContent=msg; t.style.display='block'; clearTimeout(t._timer); t._timer=setTimeout(()=>t.style.display='none',3000);
+  }
   function addStyle(){
-    if(document.querySelector('#v58-override-style')) return;
-    const st=document.createElement('style'); st.id='v58-override-style';
+    if(document.querySelector('#v60-override-style')) return;
+    const st=document.createElement('style'); st.id='v60-override-style';
     st.textContent=`
       .tableBtn,.floorTable{font-size:var(--v58-table-font-size,24px)!important;}
-      .v58-order-tools{display:grid!important;grid-template-columns:1fr 1fr 1fr!important;gap:8px!important;margin:10px 0 12px!important;}
-      .v58-order-tools button{min-height:44px!important;border-radius:12px!important;border:2px solid #bfdbfe!important;background:#eff6ff!important;color:#1d4ed8!important;font-size:15px!important;font-weight:900!important;box-shadow:0 4px 10px rgba(37,99,235,.08)!important;}
-      .v58-order-tools .v58-merge.selecting{background:#f97316!important;border-color:#ea580c!important;color:white!important;animation:v59Pulse 1s infinite alternate!important;}
+      .v60-order-title-with-tools{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;flex-wrap:nowrap!important;margin-bottom:8px!important;}
+      .v60-order-title-with-tools .v58-order-tools{display:flex!important;align-items:center!important;gap:6px!important;margin:0!important;flex:0 0 auto!important;}
+      .v58-order-tools button{min-height:34px!important;border-radius:10px!important;border:1.5px solid #bfdbfe!important;background:#eff6ff!important;color:#1d4ed8!important;font-size:12px!important;font-weight:900!important;padding:6px 9px!important;white-space:nowrap!important;box-shadow:none!important;}
+      .v58-order-tools .v58-merge.selecting{background:#f97316!important;border-color:#ea580c!important;color:white!important;animation:v60Pulse 1s infinite alternate!important;}
       .v58-order-tools .activeSplit{background:#fef3c7!important;border-color:#f59e0b!important;color:#92400e!important;}
-      @keyframes v59Pulse{from{transform:scale(1)}to{transform:scale(1.025)}}
+      @keyframes v60Pulse{from{transform:scale(1)}to{transform:scale(1.025)}}
       body.v58-merge-selecting .tableBtn,body.v58-merge-selecting .floorTable{outline:3px dashed #f97316!important;outline-offset:2px!important;cursor:pointer!important;}
       .v58-selected-merge{background:#fde68a!important;border-color:#f97316!important;color:#111827!important;}
       .tableBtn::after,.floorTable::after{font-size:11px!important;}
-      .v58-merge-summary{margin:8px 0 12px;padding:10px;border:2px solid #bfdbfe;border-radius:14px;background:#eff6ff;color:#0f172a;}
-      .v58-merge-title{display:flex;justify-content:space-between;gap:12px;font-weight:900;color:#1d4ed8;margin-bottom:8px;}
-      .v58-merge-list{display:grid;gap:6px;max-height:150px;overflow:auto;}
-      .v58-merge-list div{display:grid;grid-template-columns:50px 1fr auto;gap:8px;align-items:center;padding:6px 8px;background:#fff;border-radius:10px;border:1px solid #dbeafe;}
-      .v58-merge-list span{font-size:13px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .v58-merge-summary{margin:4px 0 8px;padding:0;border:1.5px solid #bfdbfe;border-radius:12px;background:#eff6ff;color:#0f172a;overflow:hidden;}
+      .v60-merge-toggle{width:100%;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;border:0;background:#eff6ff;color:#1d4ed8;font-weight:900;padding:8px 10px;font-size:13px;text-align:left;}
+      .v60-merge-toggle em{font-style:normal;font-size:11px;background:#dbeafe;padding:3px 7px;border-radius:999px;color:#1e40af;}
+      .v58-merge-list{display:none;gap:5px;max-height:132px;overflow:auto;padding:8px;}
+      .v58-merge-summary.open .v58-merge-list{display:grid;}
+      .v58-merge-list div{display:grid;grid-template-columns:42px 1fr auto;gap:6px;align-items:center;padding:5px 7px;background:#fff;border-radius:9px;border:1px solid #dbeafe;}
+      .v58-merge-list span{font-size:12px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
       .v58-table-font-setting{margin-top:14px;padding:14px;border:1px solid #dbeafe;border-radius:14px;background:#f8fafc;}
-      .v58-table-font-setting label{font-weight:800;display:flex;align-items:center;gap:12px;}
-      .v58-table-font-setting select{padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-weight:800;}
+      .v58-table-font-setting label{font-weight:800;display:flex;align-items:center;gap:12px;}.v58-table-font-setting select{padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-weight:800;}
+      .v58-dutch-modal{position:fixed!important;inset:0!important;background:rgba(15,23,42,.62)!important;z-index:99999!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:20px!important;}
+      .v58-dutch-box{width:min(680px,96vw)!important;max-height:92vh!important;overflow:auto!important;background:#fff!important;border-radius:24px!important;padding:24px!important;box-shadow:0 24px 60px rgba(0,0,0,.28)!important;position:relative!important;}
+      .v58-dutch-box h2{font-size:28px!important;margin:0 0 12px!important;}.v58-x{position:absolute!important;right:16px!important;top:14px!important;width:44px!important;height:44px!important;border:0!important;border-radius:14px!important;background:#111827!important;color:#fff!important;font-size:24px!important;font-weight:900!important;}
+      .v58-dutch-box label{display:block!important;font-weight:900!important;margin:12px 0 8px!important;}.v58-dutch-box input{height:48px!important;border:2px solid #cbd5e1!important;border-radius:12px!important;padding:0 12px!important;font-size:20px!important;font-weight:800!important;}
+      .v58Result{background:#f8fafc!important;border:1px solid #e2e8f0!important;border-radius:16px!important;padding:14px!important;margin-top:14px!important;}.v58Result p{font-size:18px!important;margin:7px 0!important;}
     `;
     document.head.appendChild(st);
   }
@@ -542,13 +559,15 @@
     if(merge){ e.preventDefault(); e.stopImmediatePropagation(); startOrFinishMerge(); return; }
     const split=e.target.closest('.v58-split');
     if(split){ e.preventDefault(); e.stopImmediatePropagation(); splitCurrent(); return; }
+    const dutch=e.target.closest('.v58-dutch');
+    if(dutch){ /* old handler opens modal; keep but stop bubbling beyond tools */ }
     const pay=e.target.closest('button.pay');
     if(pay && groupFor(activeTable())){ e.preventDefault(); e.stopImmediatePropagation(); completeGroupPayment((pay.textContent||'').includes('영수증')); return; }
     const table=e.target.closest('.tableBtn,.floorTable,button');
     if(table && selecting){ const n=tableNo(table); if(n){ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]); markTables(); updateSummary(); ensureToolLabels(); } }
   },true);
-  const tick=()=>{addStyle();applyFont();markTables();updateSummary();ensureToolLabels();injectFontSetting();};
-  document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,900);});
+  const tick=()=>{document.title='식당 POS V60';addStyle();applyFont();markTables();updateSummary();ensureToolLabels();injectFontSetting();};
+  document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,700);});
 })();
 </script>
 
