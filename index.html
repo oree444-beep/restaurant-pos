@@ -1,9 +1,9 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V65</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V65-pos.js"></script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V66</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V66-pos.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
 </head><body><div id="root"></div>
 <script>
 (function(){
-  const VERSION='V65';
+  const VERSION='V66';
   const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
   const LAST_MANUAL_KEY='pos_v53_last_manual_form';
   function toast(msg, undo){
@@ -184,7 +184,7 @@
     }
   }, true);
   ready(()=>{
-    document.title='식당 POS V65';
+    document.title='식당 POS V66';
     const style=document.createElement('style'); style.textContent=`
       .v53-top-utility-zone{display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;margin-top:8px!important;}
       .v53-top-utility-zone .v53-compact-top-btn{width:auto!important;min-width:0!important;padding:12px 18px!important;border-radius:14px!important;white-space:nowrap!important;box-shadow:none!important;}
@@ -506,7 +506,7 @@
     const table=e.target.closest('.tableBtn,.floorTable,button');
     if(table && selecting){ const n=tableNo(table); if(n){ e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]); markTables(); updateSummary(); ensureToolLabels(); } }
   },true);
-  const tick=()=>{document.title='식당 POS V65';addStyle();applyFont();markTables();updateSummary();ensureToolLabels();injectFontSetting();};
+  const tick=()=>{document.title='식당 POS V66';addStyle();applyFont();markTables();updateSummary();ensureToolLabels();injectFontSetting();};
   document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,1200);});
 })();
 </script>
@@ -611,14 +611,14 @@
     const table=e.target.closest('.tableBtn,.floorTable,button'); if(table&&selecting){const n=tableNo(table); if(n){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]);markTables();refreshTools();}}
     const pay=e.target.closest('button.pay'); if(pay&&groupFor(activeTable())){e.preventDefault();e.stopImmediatePropagation();completeGroupPayment();}
   },true);
-  const tick=()=>{document.title='식당 POS V65';addStyle();markTables();refreshTools();updateSummary();improveSalesDetail();};
+  const tick=()=>{document.title='식당 POS V66';addStyle();markTables();refreshTools();updateSummary();improveSalesDetail();};
   document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,1200);});
 })();
 </script>
 
 <script>
 (function(){
-  const VERSION='V65';
+  const VERSION='V66';
   function ready(fn){document.readyState==='loading'?document.addEventListener('DOMContentLoaded',fn):fn();}
   function toast(msg){let t=document.querySelector('#v62-toast'); if(!t){t=document.createElement('div');t.id='v62-toast';t.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:100001;background:#111827;color:#fff;padding:12px 16px;border-radius:14px;font-weight:900;box-shadow:0 16px 40px rgba(0,0,0,.25);max-width:92%;';document.body.appendChild(t);} t.textContent=msg; clearTimeout(t._tm); t._tm=setTimeout(()=>t.remove(),2600);}
   function rid(){return new URLSearchParams(location.search).get('restaurantId')||localStorage.getItem('restaurantId')||'rest_000001';}
@@ -634,7 +634,7 @@
   function showSimpleManual(box){let panel=box.querySelector('.v62-simple-panel'); if(panel){panel.remove(); return;} panel=document.createElement('div'); panel.className='v62-simple-panel'; const today=new Date().toISOString().slice(0,10); const time=new Date().toTimeString().slice(0,5); panel.innerHTML=`<div class="v62-simple-head"><b>간편 입력</b><span>외상 입력은 상세 수기입력에서만 가능합니다.</span><button type="button" class="v62-add-row">행 추가</button></div><div class="v62-simple-table"><div class="v62-row v62-head-row"><span>주문일</span><span>주문시간</span><span>결제시간</span><span>테이블</span><span>식사구분</span><span>메뉴선택</span><span>수량</span><span>결제수단</span><span>복사</span></div></div><div class="v62-simple-actions"><button type="button" class="green v62-fill-detail">선택행을 상세입력에 넣기</button><button type="button" class="v62-close-simple">수기 내역 입력으로 돌아가기</button></div>`; box.querySelector('p')?.insertAdjacentElement('afterend',panel); const table=panel.querySelector('.v62-simple-table'); const menus=[...document.querySelectorAll('.menuCard')].map(c=>c.querySelector('b')?.textContent?.trim()).filter(Boolean); function row(data={}){const r=document.createElement('div'); r.className='v62-row'; r.innerHTML=`<input type="date" value="${data.date||today}"><input type="time" value="${data.orderTime||time}"><input type="time" value="${data.payTime||time}"><input type="number" inputmode="numeric" value="${data.table||'1'}"><select><option>식당식사</option><option>포장</option></select><select><option value="">메뉴선택</option>${menus.map(m=>`<option>${m}</option>`).join('')}</select><input type="number" inputmode="numeric" value="${data.qty||'1'}"><select><option>카드</option><option>현금</option><option>카드+현금</option><option>상품권</option><option>기타</option></select><button type="button">복사</button>`; r.querySelector('button').onclick=()=>{const vals=[...r.querySelectorAll('input,select')].map(x=>x.value); row({date:vals[0],orderTime:vals[1],payTime:vals[2],table:vals[3],qty:vals[6]}); toast('같은 테이블 행을 복사했습니다. 메뉴만 바꿔 입력하세요.');}; table.appendChild(r);} row(); panel.querySelector('.v62-add-row').onclick=()=>row(); panel.querySelector('.v62-close-simple').onclick=()=>panel.remove(); panel.querySelector('.v62-fill-detail').onclick=()=>{const r=table.querySelector('.v62-row:not(.v62-head-row)'); if(!r)return; const vals=[...r.querySelectorAll('input,select')].map(x=>x.value); const labels={'주문일':vals[0],'결제일':vals[0],'주문시간':vals[1],'결제시간':vals[2],'테이블/구분':vals[3],'식사구분':vals[4],'메뉴 선택':vals[5],'수량':vals[6],'결제수단':vals[7]}; Object.entries(labels).forEach(([txt,val])=>{const lab=[...box.querySelectorAll('label')].find(l=>(l.textContent||'').includes(txt)); const el=lab?.querySelector('input,select'); if(el){const proto=Object.getPrototypeOf(el); const desc=Object.getOwnPropertyDescriptor(proto,'value'); if(desc&&desc.set)desc.set.call(el,val); else el.value=val; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true}));}}); toast('선택행을 상세입력에 넣었습니다. 금액을 확인 후 반영하세요.');};}
   function patchStyle(){if(document.querySelector('#v62-extra-style'))return; const s=document.createElement('style'); s.id='v62-extra-style'; s.textContent=`.v62-admin-share{display:flex;gap:12px;justify-content:flex-end;margin:-42px 70px 16px 0}.v62-admin-share button{min-width:180px;height:48px;border-radius:14px;border:2px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-weight:1000;font-size:16px}.v62-qr-modal,.v62-dutch-modal{position:fixed;inset:0;background:rgba(15,23,42,.62);z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px}.v62-qr-box,.v62-dutch-box{background:#fff;border-radius:24px;box-shadow:0 24px 60px rgba(0,0,0,.28);padding:24px;position:relative}.v62-qr-box{width:min(520px,94vw);text-align:center}.v62-qr-box input{width:100%;height:44px;border:1px solid #cbd5e1;border-radius:10px;padding:0 10px}.v62-qr-img-wrap{padding:14px}.v62-qr-actions{display:flex;gap:10px;justify-content:center;margin-top:14px}.v62-qr-actions button,.v62-close{height:46px;border:0;border-radius:12px;padding:0 18px;font-weight:900}.v62-qr-actions .primary{background:#2563eb;color:#fff}.v62-x{position:absolute;right:14px;top:12px;width:48px;height:48px;border:0;border-radius:14px;background:#111827;color:white;font-size:26px;font-weight:900}.v62-dutch-box{width:min(760px,96vw);height:min(760px,94vh);display:flex;flex-direction:column;overflow:hidden}.v62-dutch-top{flex:0 0 auto}.v62-dutch-top b{display:block;font-size:24px;margin:8px 0}.v62-dutch-list{flex:1 1 auto;overflow:auto;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:10px 4px;margin:10px 0}.v62-dutch-list label{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;margin:8px 0;font-weight:900}.v62-dutch-box input{height:48px;border:2px solid #cbd5e1;border-radius:12px;padding:0 12px;font-size:20px;font-weight:800}.v62-dutch-bottom{flex:0 0 auto}.v62-dutch-bottom .remain{display:flex;justify-content:space-between;align-items:center;background:#dbeafe;border:2px solid #93c5fd;border-radius:16px;padding:14px;color:#1e3a8a}.v62-dutch-bottom strong{font-size:30px}.v62-simple-manual-btn{float:right;margin-top:-50px;margin-right:70px;height:44px;border-radius:12px;border:2px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-weight:900}.v62-simple-panel{background:#f8fafc;border:2px solid #bfdbfe;border-radius:16px;padding:14px;margin:12px 0}.v62-simple-head{display:flex;gap:10px;align-items:center;justify-content:space-between}.v62-simple-head button,.v62-simple-actions button{height:40px;border:0;border-radius:10px;padding:0 12px;font-weight:900}.v62-simple-table{overflow:auto;margin:10px 0}.v62-row{display:grid;grid-template-columns:130px 100px 100px 78px 100px 180px 70px 110px 70px;gap:6px;align-items:center;min-width:960px;margin:5px 0}.v62-row input,.v62-row select{height:38px;border:1px solid #cbd5e1;border-radius:8px;padding:0 8px}.v62-head-row{font-weight:900;color:#334155}.v62-row button{height:38px;border:0;border-radius:8px;background:#e0f2fe;font-weight:900}.v62-simple-actions{display:flex;gap:8px}.v62-simple-actions .green{background:#16a34a;color:#fff}@media(max-width:900px){.v62-admin-share{margin:8px 0 12px;justify-content:flex-start}.v62-admin-share button{min-width:140px;font-size:14px}}`; document.head.appendChild(s);}
   window.addEventListener('click',function(e){const d=e.target.closest('.v58-dutch,.v62-dutch-trigger'); if(d){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openDutchFixed();}},true);
-  ready(()=>{patchStyle(); setInterval(()=>{document.title='식당 POS V65'; enhanceAdminShare(); addSimpleManualButton();},500);});
+  ready(()=>{patchStyle(); setInterval(()=>{document.title='식당 POS V66'; enhanceAdminShare(); addSimpleManualButton();},500);});
 })();
 </script>
 
@@ -759,7 +759,7 @@
     const pay=e.target.closest('button.pay'); if(pay&&groupFor(activeTable())){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();completeGroupPayment();}
   }
   document.addEventListener('click',handleClick,true);
-  const tick=()=>{document.title='식당 POS V65';patchStyle();document.querySelectorAll('.v58-merge-summary').forEach(e=>e.remove());markTables();refreshTools();updateSummary();};
+  const tick=()=>{document.title='식당 POS V66';patchStyle();document.querySelectorAll('.v58-merge-summary').forEach(e=>e.remove());markTables();refreshTools();updateSummary();};
   document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,1200);});
 })();
 </script>
@@ -860,137 +860,95 @@
     `;
     document.head.appendChild(st);
   }
-  function tick(){document.title='식당 POS V65'; patchStyle(); normalizeOrderHeader(); markActiveMergedTables(); enableWholeSummaryClick();}
+  function tick(){document.title='식당 POS V66'; patchStyle(); normalizeOrderHeader(); markActiveMergedTables(); enableWholeSummaryClick();}
   document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,1200);});
   setTimeout(tick,100);
 })();
 </script>
 
 
+
+
+
 <script>
 (function(){
-  const VERSION='V65';
+  const VERSION='V66';
   const ROOT_WIDTH=1280;
   const ready=fn=>document.readyState==='loading'?document.addEventListener('DOMContentLoaded',fn):fn();
-  function all(sel,root=document){return Array.from(root.querySelectorAll(sel));}
-  function btnText(b){return (b&&b.textContent||'').replace(/\s+/g,' ').trim();}
+  const all=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const text=el=>(el&&el.textContent||'').replace(/\s+/g,' ').trim();
+  function toast(msg){let t=document.querySelector('#v66-toast'); if(!t){t=document.createElement('div');t.id='v66-toast';t.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:100001;background:#111827;color:#fff;padding:12px 16px;border-radius:14px;font-weight:900;box-shadow:0 16px 40px rgba(0,0,0,.25);max-width:92%;';document.body.appendChild(t);} t.textContent=msg; t.style.display='block'; clearTimeout(t._tm); t._tm=setTimeout(()=>t.style.display='none',2600);}
   function selectedTableNo(){
-    const sel=document.querySelector('.tableBtn.sel,.tableBtn.v64-active-merged-table,.tableBtn.v65-active-merged-table');
-    const m=(sel?.textContent||'').match(/\d+/);
-    return m?m[0]:'';
+    const sel=document.querySelector('.tableBtn.sel,.tableBtn.active,.tableBtn.v64-active-merged-table,.floorTable.sel,.floorTable.active,[aria-pressed="true"]');
+    let m=(sel?.textContent||'').match(/(\d+)\s*번/);
+    if(m) return m[1];
+    const h=document.querySelector('.order h2,.order h3');
+    m=(h?.textContent||'').match(/주문내역\s*\(?\s*(\d+)\s*번/);
+    return m?m[1]:'1';
   }
-  function isScaleMode(){
-    try{ return Object.keys(localStorage).some(k=>/displayMode$/.test(k) && localStorage.getItem(k)==='"scale"') || Object.keys(localStorage).some(k=>/displayMode$/.test(k) && localStorage.getItem(k)==='scale'); }catch(e){return false;}
-  }
-  function applyScaleMode(){
-    const scaleMode=isScaleMode();
-    document.body.classList.toggle('v65-scale-mode',scaleMode);
-    if(scaleMode){
-      const scale=Math.min(window.innerWidth/ROOT_WIDTH,1);
-      document.documentElement.style.setProperty('--v65-scale', String(scale));
-      document.documentElement.style.setProperty('--v65-root-width', ROOT_WIDTH+'px');
-      const root=document.getElementById('root');
-      if(root){root.style.width=(ROOT_WIDTH*scale)+'px';root.style.minHeight=(document.body.scrollHeight*scale)+'px';}
-    }else{
-      const root=document.getElementById('root'); if(root){root.style.width='';root.style.minHeight='';}
-    }
+  function patchStyle(){
+    if(document.querySelector('#v66-stable-style')) return;
+    const st=document.createElement('style'); st.id='v66-stable-style'; st.textContent=`
+      .modalBox{position:relative!important;}
+      .modalBox .v62-admin-share{position:absolute!important;top:18px!important;right:74px!important;margin:0!important;display:flex!important;gap:12px!important;align-items:center!important;z-index:5!important;}
+      .modalBox .v62-admin-share button{height:46px!important;min-width:170px!important;border-radius:14px!important;border:2px solid #bfdbfe!important;background:#eff6ff!important;color:#1d4ed8!important;font-size:16px!important;font-weight:1000!important;}
+      @media(max-width:900px){.modalBox .v62-admin-share{position:static!important;margin:8px 0 12px!important;justify-content:flex-start!important}.modalBox .v62-admin-share button{min-width:138px!important;font-size:14px!important}}
+      .order.card,.order{display:flex!important;flex-direction:column!important;max-height:calc(100vh - 150px)!important;overflow:hidden!important;min-height:0!important;}
+      .order h2,.order h3{flex:0 0 auto!important;display:flex!important;align-items:center!important;gap:8px!important;white-space:nowrap!important;word-break:keep-all!important;overflow:hidden!important;line-height:1.15!important;min-height:48px!important;}
+      .order .v66-order-title-label{display:block!important;flex:1 1 auto!important;min-width:150px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:24px!important;font-weight:1000!important;color:#0f172a!important;}
+      .order .v64-order-tools,.order .v63-order-tools{margin-left:auto!important;flex:0 0 auto!important;display:flex!important;gap:8px!important;align-items:center!important;}
+      .order .v64-order-tools button,.order .v63-order-tools button{height:42px!important;min-width:96px!important;padding:0 10px!important;border-radius:12px!important;font-size:14px!important;font-weight:1000!important;white-space:nowrap!important;}
+      .v64-merge-summary,.v63-merge-summary{flex:0 0 auto!important;margin:4px 0 8px!important;cursor:pointer!important;}
+      .v64-merge-toggle,.v63-merge-toggle{width:100%!important;min-height:38px!important;cursor:pointer!important;}
+      .v66-order-list{flex:1 1 auto!important;min-height:74px!important;overflow-y:auto!important;padding-right:4px!important;}
+      .order .payGrid,.order .total,.order .pay,.order .ghost,.order .creditInput{flex:0 0 auto!important;}
+      .v66-scale-mode #root{transform-origin:top left!important;transform:scale(var(--v66-scale,1))!important;width:var(--v66-root-width,1280px)!important;}
+      .v66-scale-mode body{overflow:auto!important;}
+    `; document.head.appendChild(st);
   }
   function fixVersion(){
-    document.title='식당 POS V65';
+    document.title='식당 POS V66';
     const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let n;
-    while(n=walker.nextNode()){
-      if(/V(58|59|60|61|62|63|64)/.test(n.nodeValue)) n.nodeValue=n.nodeValue.replace(/V(58|59|60|61|62|63|64)/g,'V65');
-    }
+    while(n=walker.nextNode()) if(/V(58|59|60|61|62|63|64|65)/.test(n.nodeValue)) n.nodeValue=n.nodeValue.replace(/V(58|59|60|61|62|63|64|65)/g,'V66');
   }
-  function alignAdminShareButtons(){
-    const boxes=all('.modalBox.admin,.modalBox').filter(m=>(m.querySelector('h2,h3')?.textContent||'').includes('관리자모드'));
-    boxes.forEach(box=>{
-      const title=box.querySelector('h2,h3'); if(!title) return;
-      let row=box.querySelector('.v65-admin-title-row');
-      if(!row){
-        row=document.createElement('div'); row.className='v65-admin-title-row';
-        title.parentNode.insertBefore(row,title);
-        row.appendChild(title);
-      }
-      let actions=row.querySelector('.v65-admin-share-actions');
-      if(!actions){ actions=document.createElement('div'); actions.className='v65-admin-share-actions'; row.appendChild(actions); }
-      const buttons=all('button',box).filter(b=>/POS.?기? 주소복사|POS.?QR보기|POS QR보기|POS기 주소/.test(btnText(b)));
-      buttons.forEach(b=>{ b.classList.add('v65-admin-share-btn'); if(b.parentElement!==actions) actions.appendChild(b); });
-    });
-  }
-  function normalizeOrderPanel(){
+  function stabilizeOrderHeader(){
     const panel=document.querySelector('.order.card,.order'); if(!panel) return;
-    panel.classList.add('v65-order-panel');
-    const h=panel.querySelector('h2');
-    if(h){
-      h.classList.add('v65-order-title');
-      // Keep title as one line and repair missing table number.
-      const tableNo=selectedTableNo();
-      const raw=btnText(h);
-      if(raw.includes('주문내역') && (!/\(\s*\d+번\s*\)/.test(raw)) && tableNo){
-        const tools=all('button',h);
-        h.childNodes.forEach(node=>{ if(node.nodeType===3 || (node.nodeType===1 && node.tagName!=='BUTTON' && !node.classList.contains('v65-order-title-label'))) node.remove?.(); });
-        let label=h.querySelector('.v65-order-title-label');
-        if(!label){ label=document.createElement('span'); label.className='v65-order-title-label'; h.insertBefore(label,h.firstChild); }
-        label.textContent=`주문내역 (${tableNo}번)`;
-      }
-      // Move table merge/dutch buttons into right side of header, but don't let title wrap.
-      let actions=h.querySelector('.v65-order-actions');
-      if(!actions){ actions=document.createElement('span'); actions.className='v65-order-actions'; h.appendChild(actions); }
-      all('button',panel).filter(b=>/테이블 합치기|테이블 나누기|더치페이/.test(btnText(b))).slice(0,3).forEach(b=>{ b.classList.add('v65-order-tool-btn'); if(b.parentElement!==actions) actions.appendChild(b); });
-    }
-    // Put merge summary right under title, compact and full clickable.
-    all('div,button',panel).forEach(el=>{
-      if((el.textContent||'').includes('통합결제:')){
-        el.classList.add('v65-merge-summary');
-        if(!el.dataset.v65click){
-          el.dataset.v65click='1';
-          el.addEventListener('click',e=>{
-            const oldBtn=el.querySelector('button');
-            if(oldBtn && e.target!==oldBtn) oldBtn.click();
-          });
-        }
-      }
-    });
-    // Keep order items scrollable and payment controls fixed.
-    let list=panel.querySelector('.v65-order-scroll');
-    if(!list){
-      list=document.createElement('div'); list.className='v65-order-scroll';
-      const firstPay=panel.querySelector('.payGrid,.total,.pay,.ghost');
-      panel.insertBefore(list, firstPay||null);
-    }
+    const h=panel.querySelector('h2,h3'); if(!h) return;
+    const no=selectedTableNo();
+    h.classList.add('v66-order-header');
+    let label=h.querySelector('.v66-order-title-label');
+    if(!label){ label=document.createElement('span'); label.className='v66-order-title-label'; h.insertBefore(label,h.firstChild); }
+    label.textContent=`주문내역 (${no}번)`;
+    // Hide stray text nodes that duplicated/broke the title, without removing buttons.
+    Array.from(h.childNodes).forEach(node=>{ if(node.nodeType===3 && node.textContent.includes('주문내역')) node.textContent=''; });
+    const tools=h.querySelector('.v64-order-tools,.v63-order-tools,.v66-order-actions');
+    if(tools){ tools.classList.add('v66-order-actions'); h.appendChild(tools); }
+  }
+  function stabilizeOrderScroll(){
+    const panel=document.querySelector('.order.card,.order'); if(!panel) return;
+    let list=panel.querySelector('.v66-order-list');
     const items=all('.orderItem',panel);
-    items.forEach(it=>{ if(it.parentElement!==list) list.appendChild(it); });
-    let bottom=panel.querySelector('.v65-order-bottom');
-    if(!bottom){ bottom=document.createElement('div'); bottom.className='v65-order-bottom'; panel.appendChild(bottom); }
-    all('.payGrid,.total,.pay,.ghost,.creditInput',panel).forEach(el=>{ if(el.parentElement!==bottom) bottom.appendChild(el); });
-  }
-  function improveMergedTableVisibility(){
-    all('.tableBtn').forEach(btn=>{
-      const text=btnText(btn);
-      const isMerged=/통합중/.test(text) || btn.classList.contains('v64-merged-table') || btn.classList.contains('v57-merged-table');
-      const isSel=btn.classList.contains('sel') || btn.classList.contains('v64-active-merged-table') || btn.classList.contains('v57-selected-merge');
-      btn.classList.toggle('v65-merged-table',isMerged);
-      btn.classList.toggle('v65-active-merged-table',isMerged&&isSel);
-    });
-  }
-  function patchDutchModal(){
-    const modal=all('.modalBox,.v57-dutch-box').find(m=>(m.textContent||'').includes('더치페이 계산기'));
-    if(!modal) return;
-    modal.classList.add('v65-dutch-box');
-    all('div,p,section',modal).forEach(el=>{ if((el.textContent||'').includes('남은금액')) el.classList.add('v65-dutch-remaining'); });
-    // Wrap many payment inputs and recommendation lines into separate scroll zones if not already.
-    const labels=all('label',modal).filter(l=>/\d+번 결제/.test(l.textContent||''));
-    if(labels.length>3 && !modal.querySelector('.v65-dutch-input-scroll')){
-      const wrap=document.createElement('div'); wrap.className='v65-dutch-input-scroll'; labels[0].parentNode.insertBefore(wrap,labels[0]); labels.forEach(l=>wrap.appendChild(l));
-    }
-    const recs=all('p,div',modal).filter(el=>/\d+번 추천/.test(el.textContent||''));
-    if(recs.length>3 && !modal.querySelector('.v65-dutch-recommend-scroll')){
-      const wrap=document.createElement('div'); wrap.className='v65-dutch-recommend-scroll'; recs[0].parentNode.insertBefore(wrap,recs[0]); recs.forEach(r=>wrap.appendChild(r));
+    if(items.length){
+      if(!list){ list=document.createElement('div'); list.className='v66-order-list'; items[0].parentNode.insertBefore(list,items[0]); }
+      items.forEach(it=>{ if(it.parentElement!==list) list.appendChild(it); });
     }
   }
-  function tick(){fixVersion();applyScaleMode();alignAdminShareButtons();normalizeOrderPanel();improveMergedTableVisibility();patchDutchModal();}
-  ready(()=>{tick(); setInterval(tick,1000); window.addEventListener('resize',applyScaleMode); document.addEventListener('change',e=>{ if((e.target?.closest?.('label')?.textContent||'').includes('화면 표시 방식')) setTimeout(applyScaleMode,80); });});
+  function applyScaleMode(){
+    let scaleMode=false;
+    try{ scaleMode=Object.keys(localStorage).some(k=>/displayMode$/.test(k) && localStorage.getItem(k)==='scale'); }catch(e){}
+    document.documentElement.classList.toggle('v66-scale-mode',scaleMode);
+    document.body.classList.toggle('v66-scale-mode',scaleMode);
+    if(scaleMode){
+      const scale=Math.min(window.innerWidth/ROOT_WIDTH,1);
+      document.documentElement.style.setProperty('--v66-scale',String(scale));
+      document.documentElement.style.setProperty('--v66-root-width',ROOT_WIDTH+'px');
+    }else{
+      document.documentElement.style.removeProperty('--v66-scale');
+      document.documentElement.style.removeProperty('--v66-root-width');
+    }
+  }
+  function tick(){try{patchStyle();fixVersion();applyScaleMode();stabilizeOrderHeader();stabilizeOrderScroll();}catch(e){console.error('V66 안정화 패치 오류',e);}}
+  ready(()=>{tick(); setInterval(tick,1200); window.addEventListener('resize',applyScaleMode); document.addEventListener('click',()=>setTimeout(tick,80),true);});
 })();
 </script>
 
