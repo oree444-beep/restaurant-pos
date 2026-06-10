@@ -1,9 +1,9 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V72</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V72-pos.js"></script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V73</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script type="module" crossorigin src="/assets/index-V73-pos.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
 </head><body><div id="root"></div>
 <script>
 (function(){
-  const VERSION='V72';
+  const VERSION='V73';
   const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
   const LAST_MANUAL_KEY='pos_v53_last_manual_form';
   function toast(msg, undo){
@@ -184,7 +184,7 @@
     }
   }, true);
   ready(()=>{
-    document.title='식당 POS V72';
+    document.title='식당 POS V73';
     const style=document.createElement('style'); style.textContent=`
       .v53-top-utility-zone{display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;margin-top:8px!important;}
       .v53-top-utility-zone .v53-compact-top-btn{width:auto!important;min-width:0!important;padding:12px 18px!important;border-radius:14px!important;white-space:nowrap!important;box-shadow:none!important;}
@@ -251,7 +251,7 @@
       type:'테스트 주문',
       table:'1번',
       items:[{name:'생태탕',qty:1},{name:'공기밥',qty:1}],
-      memo:'V72 주방기기 연결 테스트 전송',
+      memo:'V73 주방기기 연결 테스트 전송',
       createdAt:new Date().toISOString(),
       restaurantId:currentRestaurantId(),
       restaurantName:getRestaurantName(),
@@ -292,7 +292,7 @@
       box.appendChild(copy);
       const note=document.createElement('p');
       note.className='muted v57-kitchen-help';
-      note.textContent='V72 임시 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
+      note.textContent='V73 임시 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
       box.insertAdjacentElement('afterend', note);
     });
   }
@@ -321,11 +321,11 @@
 
 <script>
 (function(){
-  const VERSION='V72';
+  const VERSION='V73';
   const rid = () => new URLSearchParams(location.search).get('restaurantId') || localStorage.getItem('restaurantId') || 'mom-restaurant';
   const k = (name)=> rid() + ':' + name;
-  const getJSON=(key,def)=>{try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):def}catch(e){console.warn('POS V72 JSON read fail',key,e);return def}};
-  const setJSON=(key,val)=>{try{localStorage.setItem(key,JSON.stringify(val));}catch(e){console.warn('POS V72 JSON write fail',key,e)}};
+  const getJSON=(key,def)=>{try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):def}catch(e){console.warn('POS V73 JSON read fail',key,e);return def}};
+  const setJSON=(key,val)=>{try{localStorage.setItem(key,JSON.stringify(val));}catch(e){console.warn('POS V73 JSON write fail',key,e)}};
   const money=(n)=> (Number(n)||0).toLocaleString('ko-KR')+'원';
   const sortNums=a=>[...new Set((a||[]).map(Number).filter(Boolean))].sort((x,y)=>x-y);
   const tableButtons=()=>[...document.querySelectorAll('.tableBtn,.floorTable,button')].filter(el=>/^\s*\d+\s*번/.test((el.textContent||'').trim()));
@@ -360,20 +360,20 @@
   function showQR(url){ document.querySelectorAll('.v70-qr-modal').forEach(x=>x.remove()); const m=document.createElement('div');m.className='v70-qr-modal'; m.innerHTML=`<div class="v70-qr-box"><button type="button" class="v70-x">×</button><h2>POS 접속 QR</h2><img alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(url)}"><label>연결 주소<input readonly value="${url.replace(/"/g,'&quot;')}"></label><button type="button" class="v70-copy">주소 복사</button></div>`; document.body.appendChild(m); m.querySelector('.v70-x').onclick=()=>m.remove(); m.querySelector('.v70-copy').onclick=async()=>{try{await navigator.clipboard.writeText(url);toast('주소를 복사했습니다.');}catch(e){}}; }
   function addStyle(){ if(document.querySelector('#v70-style')) return; const st=document.createElement('style'); st.id='v70-style'; st.textContent=`.v70-order-tools{display:flex!important;gap:8px!important;justify-content:flex-end!important;align-items:center!important;margin:6px 0 8px!important;min-height:42px!important}.v70-order-tools button{height:38px!important;border-radius:12px!important;border:2px solid #bfdbfe!important;background:#eff6ff!important;color:#1d4ed8!important;font-weight:900!important;padding:0 12px!important;white-space:nowrap!important}.v70-order-tools .selecting{background:#f97316!important;border-color:#ea580c!important;color:white!important}body.v70-merge-selecting .tableBtn,body.v70-merge-selecting .floorTable{outline:3px dashed #f97316!important;outline-offset:2px!important;cursor:pointer!important}.v70-selected-merge{background:#fed7aa!important;border-color:#ea580c!important;color:#111827!important}.v70-merged-table{border-color:#f59e0b!important;background:#fef3c7!important;color:#111827!important}.v70-active-merged-table{background:#2563eb!important;border-color:#0f172a!important;color:white!important;box-shadow:0 0 0 3px rgba(15,23,42,.3) inset!important}.tableBtn::after,.floorTable::after{content:attr(data-merge-label);display:block;font-size:11px;line-height:1.1;margin-top:2px;color:#b45309;font-weight:900}.v70-active-merged-table::after{color:#e0f2fe!important}.v70-merge-summary{margin:4px 0 8px!important;border:1.5px solid #bfdbfe!important;border-radius:12px!important;background:#eff6ff!important;color:#1d4ed8!important;overflow:hidden!important;cursor:pointer!important}.v70-merge-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;padding:9px 11px!important;font-weight:1000!important;font-size:14px!important}.v70-merge-list{display:none!important;max-height:130px!important;overflow:auto!important;padding:8px!important;background:#f8fbff!important}.v70-merge-summary.open .v70-merge-list{display:grid!important;gap:5px!important}.v70-merge-list div{display:grid!important;grid-template-columns:44px minmax(0,1fr) auto!important;gap:6px!important;align-items:center!important;padding:6px 8px!important;background:white!important;border:1px solid #dbeafe!important;border-radius:9px!important}.v70-merge-list span{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:#475569!important;font-size:12px!important}@media(min-width:900px){.order{position:sticky!important;top:12px!important;max-height:calc(100vh - 24px)!important;overflow:auto!important;align-self:start!important}.order .payGrid{position:sticky!important;bottom:176px!important;background:#fff!important;z-index:4!important;padding-top:8px!important;border-radius:14px!important}.order .total{position:sticky!important;bottom:96px!important;z-index:4!important}.order .pay{position:sticky!important;bottom:44px!important;z-index:5!important}.order .ghost{position:sticky!important;bottom:0!important;z-index:5!important}}.v70-dutch-modal,.v70-qr-modal{position:fixed!important;inset:0!important;background:rgba(15,23,42,.62)!important;z-index:100000!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:18px!important}.v70-dutch-box{width:min(760px,96vw)!important;height:min(760px,94vh)!important;background:white!important;border-radius:24px!important;padding:24px!important;box-shadow:0 24px 60px rgba(0,0,0,.28)!important;position:relative!important;display:flex!important;flex-direction:column!important;gap:10px!important;overflow:hidden!important}.v70-x{position:absolute!important;right:16px!important;top:14px!important;width:48px!important;height:48px!important;border:0!important;border-radius:14px!important;background:#111827!important;color:white!important;font-size:26px!important;font-weight:900!important}.v70-dutch-box h2{font-size:28px!important;margin:0 0 6px!important}.v70-dutch-top{flex:0 0 auto!important}.v70-dutch-top b{display:block!important;font-size:24px!important;margin:6px 0 10px!important}.v70-dutch-box input{height:48px!important;border:2px solid #cbd5e1!important;border-radius:12px!important;padding:0 12px!important;font-size:20px!important;font-weight:800!important}.v70-dutch-inputs{flex:1.3 1 0!important;min-height:120px!important;overflow:auto!important;border-top:1px solid #e2e8f0!important;border-bottom:1px solid #e2e8f0!important;padding:8px 4px!important}.v70-dutch-inputs label{display:grid!important;grid-template-columns:110px 1fr!important;gap:10px!important;align-items:center!important;margin:8px 0!important;font-weight:900!important}.v70-remain-card{flex:0 0 auto!important;display:flex!important;align-items:center!important;justify-content:space-between!important;background:#dbeafe!important;border:2px solid #93c5fd!important;border-radius:16px!important;padding:12px 14px!important;color:#1e3a8a!important}.v70-remain-card span{font-size:18px!important;font-weight:900!important}.v70-remain-card strong{font-size:30px!important;font-weight:1000!important}.v70-recommend{flex:.75 1 0!important;min-height:80px!important;overflow:auto!important;background:#f8fafc!important;border:1px solid #e2e8f0!important;border-radius:16px!important;padding:10px 14px!important}.v70-recommend p{margin:7px 0!important;font-size:16px!important}.v70-close{height:46px!important;border:0!important;border-radius:12px!important;padding:0 18px!important;font-weight:900!important;align-self:flex-start!important;background:#eef2f7!important}.v70-admin-share{position:absolute!important;right:110px!important;top:30px!important;display:flex!important;gap:12px!important;align-items:center!important;z-index:2!important}.v70-admin-share button{height:48px!important;min-width:170px!important;border:2px solid #bfdbfe!important;border-radius:14px!important;background:#eff6ff!important;color:#1d4ed8!important;font-weight:1000!important;font-size:16px!important}.v70-qr-box{width:min(520px,94vw)!important;background:#fff!important;border-radius:22px!important;padding:24px!important;position:relative!important;box-shadow:0 24px 60px rgba(0,0,0,.28)!important;text-align:center!important}.v70-qr-box img{width:260px;height:260px;max-width:80vw}.v70-qr-box label{display:block;text-align:left;margin-top:14px;font-weight:900}.v70-qr-box input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:12px;margin-top:6px}.v70-copy{margin-top:12px;border:0;border-radius:12px;padding:12px 18px;font-weight:900;background:#2563eb;color:#fff}`; document.head.appendChild(st); }
   document.addEventListener('click',function(e){ const merge=e.target.closest('.v70-merge'); if(merge){e.preventDefault();e.stopPropagation(); selecting?finishMerge():beginMerge(); return;} const split=e.target.closest('.v70-split'); if(split){e.preventDefault();e.stopPropagation(); splitCurrent(); return;} const dutch=e.target.closest('.v70-dutch'); if(dutch){e.preventDefault();e.stopPropagation(); openDutch(); return;} const tbl=e.target.closest('.tableBtn,.floorTable,button'); if(selecting && tbl){const n=tableNo(tbl); if(n){e.preventDefault(); e.stopPropagation(); selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]); markTables(); refreshTools();}} },true);
-  function tick(){ try{document.title='식당 POS V72';addStyle();ensureTools();markTables();refreshTools();updateSummary();ensureAdminShare();} catch(e){console.warn('POS V72 helper tick failed',e);} }
+  function tick(){ try{document.title='식당 POS V73';addStyle();ensureTools();markTables();refreshTools();updateSummary();ensureAdminShare();} catch(e){console.warn('POS V73 helper tick failed',e);} }
   document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,900);});
 })();
 </script>
 
 <script>
 (function(){
-  const VERSION='V72';
+  const VERSION='V73';
   const ready=(fn)=>document.readyState==='loading'?document.addEventListener('DOMContentLoaded',fn):fn();
-  function addV72Style(){
+  function addV73Style(){
     if(document.querySelector('#v72-final-style')) return;
     const st=document.createElement('style'); st.id='v72-final-style';
     st.textContent=`
-      /* V72: 주문내역 헤더를 V70 안정 기준에서 한 줄로 고정 */
+      /* V73: 주문내역 헤더를 V70 안정 기준에서 한 줄로 고정 */
       .order.card{position:sticky!important;top:12px!important;display:flex!important;flex-direction:column!important;max-height:calc(100vh - 24px)!important;overflow:hidden!important;}
       .order.card>h2{display:block!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;line-height:44px!important;min-height:44px!important;margin:0 0 8px!important;padding-right:230px!important;font-size:26px!important;}
       .order.card .v70-order-tools{position:absolute!important;top:18px!important;right:18px!important;margin:0!important;display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;min-height:0!important;z-index:10!important;}
@@ -476,7 +476,40 @@
     if(h){ h.style.whiteSpace='nowrap'; h.style.overflow='visible'; h.style.textOverflow='clip'; }
     if(tools && tools.parentElement===order){ tools.style.position='absolute'; tools.style.right='18px'; tools.style.top='18px'; }
   }
-  ready(()=>{ addV72Style(); setInterval(()=>{ try{document.title='식당 POS V72'; addV72Style(); fixOrderHeader(); enhanceManualSimple();}catch(e){console.warn('V72 final helper error',e);} },500); });
+  ready(()=>{ addV73Style(); setInterval(()=>{ try{document.title='식당 POS V73'; addV73Style(); fixOrderHeader(); enhanceManualSimple();}catch(e){console.warn('V73 final helper error',e);} },500); });
+})();
+</script>
+
+<script>
+(function(){
+  const VERSION='V73';
+  function getRid(){
+    try{
+      const s=new URLSearchParams(location.search);
+      const h=new URLSearchParams((location.hash||'').split('?')[1]||'');
+      return s.get('restaurantId')||s.get('restaurant')||s.get('rid')||h.get('restaurantId')||h.get('restaurant')||h.get('rid')||localStorage.getItem('restaurantId')||'mom-restaurant';
+    }catch(e){return 'mom-restaurant'}
+  }
+  function showError(title, detail){
+    const root=document.getElementById('root');
+    if(!root) return;
+    if(root.children.length && !document.querySelector('.v73-error-panel')) return;
+    root.innerHTML='<div class="v73-error-panel" style="max-width:760px;margin:40px auto;padding:22px;border:2px solid #fecaca;border-radius:18px;background:#fff7f7;color:#111827;font-family:system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.55"><h2 style="margin:0 0 10px">POS를 불러오지 못했습니다</h2><p style="margin:6px 0"><b>버전:</b> '+VERSION+'</p><p style="margin:6px 0"><b>감지된 식당 ID:</b> '+getRid()+'</p><p style="margin:6px 0"><b>원인:</b> '+title+'</p><pre style="white-space:pre-wrap;background:white;border:1px solid #fee2e2;border-radius:12px;padding:12px;max-height:220px;overflow:auto">'+String(detail||'').replace(/[<>&]/g,m=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[m]))+'</pre><p style="font-size:13px;color:#6b7280">데이터가 없는 문제가 아니라 POS 화면 로딩 중 오류일 수 있습니다. 이 문구가 보이면 화면 캡처해서 관리자에게 전달해주세요.</p></div>';
+  }
+  window.addEventListener('error', e=>showError(e.message||'스크립트 오류', e.error?.stack||e.filename||''));
+  window.addEventListener('unhandledrejection', e=>showError('비동기 로딩 오류', e.reason?.stack||e.reason?.message||e.reason||''));
+  function addBadge(){
+    try{
+      if(document.querySelector('.v73-rid-badge')) return;
+      const b=document.createElement('div');
+      b.className='v73-rid-badge';
+      b.textContent='POS '+VERSION+' · ID '+getRid();
+      b.style.cssText='position:fixed;right:10px;bottom:10px;z-index:99998;background:#111827;color:#fff;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.18);opacity:.82';
+      document.body.appendChild(b);
+    }catch(e){}
+  }
+  setTimeout(()=>{addBadge(); const root=document.getElementById('root'); if(root && !root.children.length) showError('화면이 빈 상태로 멈춤','React 화면이 4초 안에 렌더링되지 않았습니다. restaurantId 또는 Firebase 데이터 구조를 확인하세요.');},4000);
+  setInterval(()=>{try{document.title='식당 POS '+VERSION; addBadge();}catch(e){}},1000);
 })();
 </script>
 </body></html>
