@@ -1,15 +1,6 @@
-# 식당 POS V75
+# 식당 POS V76
 
-V70 안정 기준을 유지하면서 버전 표시, 주문내역 헤더 배치, 수기입력 간편 입력 UI를 보강한 버전입니다.
+V75 정상 접속 버전을 기준으로 주문내역 상단 버튼 글씨 잘림을 수정한 버전입니다.
 
-## 업로드 파일
-- index.html
-- kitchen-display.html
-- owner-inbox.html
-- manifest.webmanifest
-- sw.js
-- vercel.json
-- assets/
-- CHANGELOG.md
-- README.md
-- 배포메모.md
+확인 주소 예시:
+`https://배포주소.vercel.app/?restaurantId=rest_000001`
