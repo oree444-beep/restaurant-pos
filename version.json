@@ -1,24 +1,20 @@
 {
-  "programName": "식당 POS 기본판",
+  "programName": "식당 POS 고객용",
   "programId": "restaurant-pos",
-  "version": "V82",
-  "stableVersion": "V82",
-  "previousVersion": "V81",
-  "fileName": "260701_식당POS_POS_V82_restaurant_pos_v82.zip",
+  "version": "V83",
+  "stableVersion": "V83",
+  "previousVersion": "V82",
   "updatedAt": "2026-07-01",
-  "templateMode": true,
-  "defaultRestaurantId": "restaurant-template",
-  "commonInbox": {
-    "customerBaseUrl": "https://teamhr-common-inbox.vercel.app",
-    "defaultInboxId": "pos_rest_000001",
-    "defaultToken": "demo_pos_token"
+  "security": {
+    "addressMode": "restaurantId + posToken",
+    "legacyNoTokenAllowed": true,
+    "templateRestaurantId": "restaurant-template"
   },
   "changes": [
-    "기본 배포판에서 특정 매장명 생태한마리 제거",
-    "기존 샘플 메뉴/카테고리/옵션 기본값 초기화",
-    "기본 restaurantId를 restaurant-template로 분리",
-    "기존 localStorage 전역 데이터 자동 이관 중지",
-    "화면 상단 버전 표시를 V82로 통일",
-    "공통쪽지함 고객용 링크 연결 유지"
+    "URL restaurantId 끝 슬래시 자동 오염 방지",
+    "posToken 파라미터 읽기 추가",
+    "Firestore 설정에 posToken이 있는 식당은 토큰 일치 시에만 데이터 로드",
+    "기존 posToken 미설정 식당은 레거시 보호를 위해 임시 허용",
+    "화면/문서 버전 V83 통일"
   ]
 }

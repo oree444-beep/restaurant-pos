@@ -1,5 +1,5 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V82</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script>
-/* V82 template safety boot: restaurantId 감지 + localStorage 용량 초과 방지 + 빈 화면 오류 안내 */
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V83</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script>
+/* V83 template safety boot: restaurantId 감지 + localStorage 용량 초과 방지 + 빈 화면 오류 안내 */
 (function(){
   var POS_VERSION='V81';
   function detectRestaurantId(){
@@ -57,7 +57,7 @@
 })();
 </script>
 <script>
-/* V82 template notice: 신규 식당 기본 세팅 안내 */
+/* V83 template notice: 신규 식당 기본 세팅 안내 */
 (function(){
   function addTemplateNotice(){
     try{
@@ -66,14 +66,14 @@
       var box=document.createElement('div');
       box.id='pos-v82-template-notice';
       box.style.cssText='position:fixed;left:16px;bottom:16px;z-index:9999;background:#111827;color:#fff;border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.45;box-shadow:0 8px 24px rgba(0,0,0,.18);max-width:360px';
-      box.innerHTML='<b>POS 기본 배포판 V82</b><br>관리자모드에서 매장명, 메뉴, 옵션, 테이블을 먼저 설정해주세요.<button style="margin-left:10px;border:0;border-radius:8px;padding:4px 8px;cursor:pointer" onclick="this.parentNode.remove()">닫기</button>';
+      box.innerHTML='<b>POS 기본 배포판 V83</b><br>관리자모드에서 매장명, 메뉴, 옵션, 테이블을 먼저 설정해주세요.<button style="margin-left:10px;border:0;border-radius:8px;padding:4px 8px;cursor:pointer" onclick="this.parentNode.remove()">닫기</button>';
       document.body.appendChild(box);
     }catch(e){}
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',addTemplateNotice); else addTemplateNotice();
 })();
 </script>
-  <script type="module" crossorigin src="/assets/index-V82-pos.js"></script>
+  <script type="module" crossorigin src="/assets/index-V83-pos.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-YAKR3MuQ.css">
 </head><body><div id="root"></div>
 <script>
@@ -259,7 +259,7 @@
     }
   }, true);
   ready(()=>{
-    document.title='식당 POS V82';
+    document.title='식당 POS V83';
     const style=document.createElement('style'); style.textContent=`
       .v53-top-utility-zone{display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;margin-top:8px!important;}
       .v53-top-utility-zone .v53-compact-top-btn{width:auto!important;min-width:0!important;padding:12px 18px!important;border-radius:14px!important;white-space:nowrap!important;box-shadow:none!important;}
@@ -326,7 +326,7 @@
       type:'테스트 주문',
       table:'1번',
       items:[],
-      memo:'V82 기본 배포판 주방 테스트 전송',
+      memo:'V83 기본 배포판 주방 테스트 전송',
       createdAt:new Date().toISOString(),
       restaurantId:currentRestaurantId(),
       restaurantName:getRestaurantName(),
@@ -367,7 +367,7 @@
       box.appendChild(copy);
       const note=document.createElement('p');
       note.className='muted v57-kitchen-help';
-      note.textContent='V82 기본 배포판 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
+      note.textContent='V83 기본 배포판 테스트: 같은 기기/브라우저에서는 주방 테스트 전송 내역을 바로 확인할 수 있습니다. 실제 여러 기기 동기화는 이후 Firebase 연동으로 보강합니다.';
       box.insertAdjacentElement('afterend', note);
     });
   }
@@ -399,8 +399,8 @@
   const VERSION='V81';
   const rid = () => new URLSearchParams(location.search).get('restaurantId') || localStorage.getItem('restaurantId') || 'mom-restaurant';
   const k = (name)=> rid() + ':' + name;
-  const getJSON=(key,def)=>{try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):def}catch(e){console.warn('POS V82 JSON read fail',key,e);return def}};
-  const setJSON=(key,val)=>{try{localStorage.setItem(key,JSON.stringify(val));}catch(e){console.warn('POS V82 JSON write fail',key,e)}};
+  const getJSON=(key,def)=>{try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):def}catch(e){console.warn('POS V83 JSON read fail',key,e);return def}};
+  const setJSON=(key,val)=>{try{localStorage.setItem(key,JSON.stringify(val));}catch(e){console.warn('POS V83 JSON write fail',key,e)}};
   const money=(n)=> (Number(n)||0).toLocaleString('ko-KR')+'원';
   const sortNums=a=>[...new Set((a||[]).map(Number).filter(Boolean))].sort((x,y)=>x-y);
   const tableButtons=()=>[...document.querySelectorAll('.tableBtn,.floorTable,button')].filter(el=>/^\s*\d+\s*번/.test((el.textContent||'').trim()));
@@ -435,7 +435,7 @@
   function showQR(url){ document.querySelectorAll('.v70-qr-modal').forEach(x=>x.remove()); const m=document.createElement('div');m.className='v70-qr-modal'; m.innerHTML=`<div class="v70-qr-box"><button type="button" class="v70-x">×</button><h2>POS 접속 QR</h2><img alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(url)}"><label>연결 주소<input readonly value="${url.replace(/"/g,'&quot;')}"></label><button type="button" class="v70-copy">주소 복사</button></div>`; document.body.appendChild(m); m.querySelector('.v70-x').onclick=()=>m.remove(); m.querySelector('.v70-copy').onclick=async()=>{try{await navigator.clipboard.writeText(url);toast('주소를 복사했습니다.');}catch(e){}}; }
   function addStyle(){ if(document.querySelector('#v70-style')) return; const st=document.createElement('style'); st.id='v70-style'; st.textContent=`.v70-order-tools{display:flex!important;gap:8px!important;justify-content:flex-end!important;align-items:center!important;margin:6px 0 8px!important;min-height:42px!important}.v70-order-tools button{height:38px!important;border-radius:12px!important;border:2px solid #bfdbfe!important;background:#eff6ff!important;color:#1d4ed8!important;font-weight:900!important;padding:0 12px!important;white-space:nowrap!important}.v70-order-tools .selecting{background:#f97316!important;border-color:#ea580c!important;color:white!important}body.v70-merge-selecting .tableBtn,body.v70-merge-selecting .floorTable{outline:3px dashed #f97316!important;outline-offset:2px!important;cursor:pointer!important}.v70-selected-merge{background:#fed7aa!important;border-color:#ea580c!important;color:#111827!important}.v70-merged-table{border-color:#f59e0b!important;background:#fef3c7!important;color:#111827!important}.v70-active-merged-table{background:#2563eb!important;border-color:#0f172a!important;color:white!important;box-shadow:0 0 0 3px rgba(15,23,42,.3) inset!important}.tableBtn::after,.floorTable::after{content:attr(data-merge-label);display:block;font-size:11px;line-height:1.1;margin-top:2px;color:#b45309;font-weight:900}.v70-active-merged-table::after{color:#e0f2fe!important}.v70-merge-summary{margin:4px 0 8px!important;border:1.5px solid #bfdbfe!important;border-radius:12px!important;background:#eff6ff!important;color:#1d4ed8!important;overflow:hidden!important;cursor:pointer!important}.v70-merge-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;padding:9px 11px!important;font-weight:1000!important;font-size:14px!important}.v70-merge-list{display:none!important;max-height:130px!important;overflow:auto!important;padding:8px!important;background:#f8fbff!important}.v70-merge-summary.open .v70-merge-list{display:grid!important;gap:5px!important}.v70-merge-list div{display:grid!important;grid-template-columns:44px minmax(0,1fr) auto!important;gap:6px!important;align-items:center!important;padding:6px 8px!important;background:white!important;border:1px solid #dbeafe!important;border-radius:9px!important}.v70-merge-list span{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:#475569!important;font-size:12px!important}@media(min-width:900px){.order{position:sticky!important;top:12px!important;max-height:calc(100vh - 24px)!important;overflow:auto!important;align-self:start!important}.order .payGrid{position:sticky!important;bottom:176px!important;background:#fff!important;z-index:4!important;padding-top:8px!important;border-radius:14px!important}.order .total{position:sticky!important;bottom:96px!important;z-index:4!important}.order .pay{position:sticky!important;bottom:44px!important;z-index:5!important}.order .ghost{position:sticky!important;bottom:0!important;z-index:5!important}}.v70-dutch-modal,.v70-qr-modal{position:fixed!important;inset:0!important;background:rgba(15,23,42,.62)!important;z-index:100000!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:18px!important}.v70-dutch-box{width:min(760px,96vw)!important;height:min(760px,94vh)!important;background:white!important;border-radius:24px!important;padding:24px!important;box-shadow:0 24px 60px rgba(0,0,0,.28)!important;position:relative!important;display:flex!important;flex-direction:column!important;gap:10px!important;overflow:hidden!important}.v70-x{position:absolute!important;right:16px!important;top:14px!important;width:48px!important;height:48px!important;border:0!important;border-radius:14px!important;background:#111827!important;color:white!important;font-size:26px!important;font-weight:900!important}.v70-dutch-box h2{font-size:28px!important;margin:0 0 6px!important}.v70-dutch-top{flex:0 0 auto!important}.v70-dutch-top b{display:block!important;font-size:24px!important;margin:6px 0 10px!important}.v70-dutch-box input{height:48px!important;border:2px solid #cbd5e1!important;border-radius:12px!important;padding:0 12px!important;font-size:20px!important;font-weight:800!important}.v70-dutch-inputs{flex:1.3 1 0!important;min-height:120px!important;overflow:auto!important;border-top:1px solid #e2e8f0!important;border-bottom:1px solid #e2e8f0!important;padding:8px 4px!important}.v70-dutch-inputs label{display:grid!important;grid-template-columns:110px 1fr!important;gap:10px!important;align-items:center!important;margin:8px 0!important;font-weight:900!important}.v70-remain-card{flex:0 0 auto!important;display:flex!important;align-items:center!important;justify-content:space-between!important;background:#dbeafe!important;border:2px solid #93c5fd!important;border-radius:16px!important;padding:12px 14px!important;color:#1e3a8a!important}.v70-remain-card span{font-size:18px!important;font-weight:900!important}.v70-remain-card strong{font-size:30px!important;font-weight:1000!important}.v70-recommend{flex:.75 1 0!important;min-height:80px!important;overflow:auto!important;background:#f8fafc!important;border:1px solid #e2e8f0!important;border-radius:16px!important;padding:10px 14px!important}.v70-recommend p{margin:7px 0!important;font-size:16px!important}.v70-close{height:46px!important;border:0!important;border-radius:12px!important;padding:0 18px!important;font-weight:900!important;align-self:flex-start!important;background:#eef2f7!important}.v70-admin-share{position:absolute!important;right:110px!important;top:30px!important;display:flex!important;gap:12px!important;align-items:center!important;z-index:2!important}.v70-admin-share button{height:48px!important;min-width:170px!important;border:2px solid #bfdbfe!important;border-radius:14px!important;background:#eff6ff!important;color:#1d4ed8!important;font-weight:1000!important;font-size:16px!important}.v70-qr-box{width:min(520px,94vw)!important;background:#fff!important;border-radius:22px!important;padding:24px!important;position:relative!important;box-shadow:0 24px 60px rgba(0,0,0,.28)!important;text-align:center!important}.v70-qr-box img{width:260px;height:260px;max-width:80vw}.v70-qr-box label{display:block;text-align:left;margin-top:14px;font-weight:900}.v70-qr-box input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:12px;margin-top:6px}.v70-copy{margin-top:12px;border:0;border-radius:12px;padding:12px 18px;font-weight:900;background:#2563eb;color:#fff}`; document.head.appendChild(st); }
   document.addEventListener('click',function(e){ const merge=e.target.closest('.v70-merge'); if(merge){e.preventDefault();e.stopPropagation(); selecting?finishMerge():beginMerge(); return;} const split=e.target.closest('.v70-split'); if(split){e.preventDefault();e.stopPropagation(); splitCurrent(); return;} const dutch=e.target.closest('.v70-dutch'); if(dutch){e.preventDefault();e.stopPropagation(); openDutch(); return;} const tbl=e.target.closest('.tableBtn,.floorTable,button'); if(selecting && tbl){const n=tableNo(tbl); if(n){e.preventDefault(); e.stopPropagation(); selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]); markTables(); refreshTools();}} },true);
-  function tick(){ try{document.title='식당 POS V82';addStyle();ensureTools();markTables();refreshTools();updateSummary();ensureAdminShare();} catch(e){console.warn('POS V82 helper tick failed',e);} }
+  function tick(){ try{document.title='식당 POS V83';addStyle();ensureTools();markTables();refreshTools();updateSummary();ensureAdminShare();} catch(e){console.warn('POS V83 helper tick failed',e);} }
   document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,900);});
 })();
 </script>
@@ -448,7 +448,7 @@
     if(document.querySelector('#v72-final-style')) return;
     const st=document.createElement('style'); st.id='v72-final-style';
     st.textContent=`
-      /* V82: 주문내역 헤더를 V70 안정 기준에서 한 줄로 고정 */
+      /* V83: 주문내역 헤더를 V70 안정 기준에서 한 줄로 고정 */
       .order.card{position:sticky!important;top:12px!important;display:flex!important;flex-direction:column!important;max-height:calc(100vh - 24px)!important;overflow:hidden!important;}
       .order.card>h2{display:block!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;line-height:44px!important;min-height:44px!important;margin:0 0 8px!important;padding-right:230px!important;font-size:26px!important;}
       .order.card .v70-order-tools{position:absolute!important;top:18px!important;right:18px!important;margin:0!important;display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;min-height:0!important;z-index:10!important;}
@@ -463,7 +463,7 @@
         .order.card .orderItem{max-height:none!important;}
       }
 
-      /* V82: 통합결제 요약은 버튼그룹 안이 아니라 헤더 아래 별도 한 줄 */
+      /* V83: 통합결제 요약은 버튼그룹 안이 아니라 헤더 아래 별도 한 줄 */
       .order.card .v80-order-header + .v70-merge-summary,
       .order.card .v77-order-header + .v70-merge-summary{display:block!important;width:100%!important;box-sizing:border-box!important;clear:both!important;margin:2px 0 9px!important;position:relative!important;z-index:1!important;}
       .order.card .v70-merge-summary .v70-merge-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;white-space:nowrap!important;}
@@ -557,7 +557,7 @@
     if(h){ h.style.whiteSpace='nowrap'; h.style.overflow='visible'; h.style.textOverflow='clip'; }
     if(tools && tools.parentElement===order){ tools.style.position='absolute'; tools.style.right='18px'; tools.style.top='18px'; }
   }
-  ready(()=>{ addV80Style(); setInterval(()=>{ try{document.title='식당 POS V82'; addV80Style(); fixOrderHeader(); enhanceManualSimple();}catch(e){console.warn('V82 final helper error',e);} },500); });
+  ready(()=>{ addV80Style(); setInterval(()=>{ try{document.title='식당 POS V83'; addV80Style(); fixOrderHeader(); enhanceManualSimple();}catch(e){console.warn('V83 final helper error',e);} },500); });
 })();
 </script>
 
@@ -571,7 +571,7 @@
     const st=document.createElement('style');
     st.id='v80-order-header-style';
     st.textContent=`
-      /* V82: 주문내역 제목과 버튼그룹을 좌/우 분리 */
+      /* V83: 주문내역 제목과 버튼그룹을 좌/우 분리 */
       .order.card{position:sticky!important;top:12px!important;display:flex!important;flex-direction:column!important;max-height:calc(100vh - 24px)!important;overflow:hidden!important;}
       .order.card .v80-order-header{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;width:100%!important;margin:0 0 8px!important;min-height:46px!important;box-sizing:border-box!important;}
       .order.card .v80-order-header>h2{display:block!important;flex:1 1 auto!important;min-width:0!important;margin:0!important;padding:0!important;line-height:46px!important;min-height:46px!important;font-size:26px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;}
@@ -616,7 +616,7 @@
   }
   ready(()=>{
     addV80OrderHeaderStyle();
-    setInterval(()=>{try{document.title='식당 POS V82';addV80OrderHeaderStyle();ensureV80OrderHeader();}catch(e){console.warn('V82 order header fix failed',e);}},300);
+    setInterval(()=>{try{document.title='식당 POS V83';addV80OrderHeaderStyle();ensureV80OrderHeader();}catch(e){console.warn('V83 order header fix failed',e);}},300);
   });
 })();
 </script>
@@ -624,7 +624,7 @@
 
 
 <script>
-/* V82 기본 배포판 보강 보강: V78 안정 기준 유지 + 결제버튼 표시 + 수기 간편입력 표시/가격/직접반영 수정 */
+/* V83 기본 배포판 보강 보강: V78 안정 기준 유지 + 결제버튼 표시 + 수기 간편입력 표시/가격/직접반영 수정 */
 (function(){
   const VERSION='V81';
   const ready=(fn)=>document.readyState==='loading'?document.addEventListener('DOMContentLoaded',fn):fn();
@@ -633,7 +633,7 @@
     if(document.querySelector('#v80-stability-style')) return;
     const st=document.createElement('style'); st.id='v80-stability-style';
     st.textContent=`
-      /* V82: 주문 영역은 내용이 길어져도 결제완료 버튼을 화면 안에서 찾을 수 있게 내부 스크롤 + 결제버튼 sticky */
+      /* V83: 주문 영역은 내용이 길어져도 결제완료 버튼을 화면 안에서 찾을 수 있게 내부 스크롤 + 결제버튼 sticky */
       .order.card{max-height:calc(100vh - 24px)!important;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-width:thin!important;}
       .order.card button.pay{position:sticky!important;z-index:50!important;box-shadow:0 8px 18px rgba(15,23,42,.18)!important;}
       .order.card button.pay:not(.print){bottom:62px!important;}
@@ -641,7 +641,7 @@
       .order.card .ghost{position:relative!important;z-index:1!important;}
       @media (max-height:720px){.order.card button.pay:not(.print){bottom:54px!important}.order.card button.pay.print{bottom:6px!important}.order.card button.pay{padding:14px!important;font-size:19px!important}}
 
-      /* V82: 수기 간편입력은 가로형으로 조금 더 넓고, 화면보다 크면 모달 내부 스크롤 */
+      /* V83: 수기 간편입력은 가로형으로 조금 더 넓고, 화면보다 크면 모달 내부 스크롤 */
       .modalBox.manualModal.v72-simple-on,.modalBox.manualModal.v80-simple-on{width:min(1180px,96vw)!important;max-width:96vw!important;}
       .modalBox.manualModal.v72-simple-on .v72-simple-panel,.modalBox.manualModal.v80-simple-on .v72-simple-panel{display:block!important;max-height:62vh!important;overflow:auto!important;}
       .v72-simple-row{grid-template-columns:125px 105px 105px 72px 105px minmax(250px,1.35fr) 68px 116px 70px!important;min-width:1030px!important;}
@@ -757,8 +757,8 @@
     if(detailBtn && !detailBtn.dataset.v80){ detailBtn.dataset.v80='1'; detailBtn.addEventListener('click',()=>box.classList.remove('v80-simple-on')); }
   }
   function tick(){
-    try{ document.title='식당 POS V82'; addStyle(); enhanceSimplePanel(); }
-    catch(e){ console.warn('V82 helper error',e); }
+    try{ document.title='식당 POS V83'; addStyle(); enhanceSimplePanel(); }
+    catch(e){ console.warn('V83 helper error',e); }
   }
   ready(()=>{ addStyle(); setInterval(tick,400); });
 })();
