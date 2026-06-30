@@ -1,7 +1,9 @@
-# 식당 POS V80
+# 식당 POS V81
 
-V76 기준에서 주문내역 헤더 버튼 배치를 수정한 버전입니다.
+이번 버전은 POS 안에 임시 쪽지함을 중복 구현하지 않고 공통쪽지함 고객용 링크로 연결하는 버전입니다.
 
-- restaurantId 접속 정상화 유지
-- localStorage 용량 초과 방지 유지
-- 주문내역 버튼 우측정렬 배치 수정
+- 고객용 대표주소: `https://teamhr-common-inbox.vercel.app`
+- 기본 테스트 링크: `https://teamhr-common-inbox.vercel.app?inboxId=pos_rest_000001&token=demo_pos_token`
+- 실제 운영에서는 식당별 `inboxId`와 랜덤 `token`을 부여합니다.
+
+쪽지 응대, 답변, 설문 관리는 공통쪽지함 관리자에서만 진행합니다.

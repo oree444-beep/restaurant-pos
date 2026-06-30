@@ -1,7 +1,7 @@
-<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V80</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script>
+<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>식당 POS V81</title><link rel="manifest" href="/manifest.webmanifest"/><meta name="theme-color" content="#2563eb"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>  <script>
 /* V80 safety boot: restaurantId 감지 + localStorage 용량 초과 방지 + 빈 화면 오류 안내 */
 (function(){
-  var POS_VERSION='V80';
+  var POS_VERSION='V81';
   function detectRestaurantId(){
     try{
       var search = new URLSearchParams(window.location.search || '');
@@ -60,7 +60,7 @@
 </head><body><div id="root"></div>
 <script>
 (function(){
-  const VERSION='V80';
+  const VERSION='V81';
   const ready = (fn)=> document.readyState==='loading' ? document.addEventListener('DOMContentLoaded', fn) : fn();
   const LAST_MANUAL_KEY='pos_v53_last_manual_form';
   function toast(msg, undo){
@@ -241,7 +241,7 @@
     }
   }, true);
   ready(()=>{
-    document.title='식당 POS V80';
+    document.title='식당 POS V81';
     const style=document.createElement('style'); style.textContent=`
       .v53-top-utility-zone{display:flex!important;gap:10px!important;align-items:center!important;justify-content:flex-end!important;margin-top:8px!important;}
       .v53-top-utility-zone .v53-compact-top-btn{width:auto!important;min-width:0!important;padding:12px 18px!important;border-radius:14px!important;white-space:nowrap!important;box-shadow:none!important;}
@@ -378,7 +378,7 @@
 
 <script>
 (function(){
-  const VERSION='V80';
+  const VERSION='V81';
   const rid = () => new URLSearchParams(location.search).get('restaurantId') || localStorage.getItem('restaurantId') || 'mom-restaurant';
   const k = (name)=> rid() + ':' + name;
   const getJSON=(key,def)=>{try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):def}catch(e){console.warn('POS V80 JSON read fail',key,e);return def}};
@@ -417,14 +417,14 @@
   function showQR(url){ document.querySelectorAll('.v70-qr-modal').forEach(x=>x.remove()); const m=document.createElement('div');m.className='v70-qr-modal'; m.innerHTML=`<div class="v70-qr-box"><button type="button" class="v70-x">×</button><h2>POS 접속 QR</h2><img alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(url)}"><label>연결 주소<input readonly value="${url.replace(/"/g,'&quot;')}"></label><button type="button" class="v70-copy">주소 복사</button></div>`; document.body.appendChild(m); m.querySelector('.v70-x').onclick=()=>m.remove(); m.querySelector('.v70-copy').onclick=async()=>{try{await navigator.clipboard.writeText(url);toast('주소를 복사했습니다.');}catch(e){}}; }
   function addStyle(){ if(document.querySelector('#v70-style')) return; const st=document.createElement('style'); st.id='v70-style'; st.textContent=`.v70-order-tools{display:flex!important;gap:8px!important;justify-content:flex-end!important;align-items:center!important;margin:6px 0 8px!important;min-height:42px!important}.v70-order-tools button{height:38px!important;border-radius:12px!important;border:2px solid #bfdbfe!important;background:#eff6ff!important;color:#1d4ed8!important;font-weight:900!important;padding:0 12px!important;white-space:nowrap!important}.v70-order-tools .selecting{background:#f97316!important;border-color:#ea580c!important;color:white!important}body.v70-merge-selecting .tableBtn,body.v70-merge-selecting .floorTable{outline:3px dashed #f97316!important;outline-offset:2px!important;cursor:pointer!important}.v70-selected-merge{background:#fed7aa!important;border-color:#ea580c!important;color:#111827!important}.v70-merged-table{border-color:#f59e0b!important;background:#fef3c7!important;color:#111827!important}.v70-active-merged-table{background:#2563eb!important;border-color:#0f172a!important;color:white!important;box-shadow:0 0 0 3px rgba(15,23,42,.3) inset!important}.tableBtn::after,.floorTable::after{content:attr(data-merge-label);display:block;font-size:11px;line-height:1.1;margin-top:2px;color:#b45309;font-weight:900}.v70-active-merged-table::after{color:#e0f2fe!important}.v70-merge-summary{margin:4px 0 8px!important;border:1.5px solid #bfdbfe!important;border-radius:12px!important;background:#eff6ff!important;color:#1d4ed8!important;overflow:hidden!important;cursor:pointer!important}.v70-merge-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;padding:9px 11px!important;font-weight:1000!important;font-size:14px!important}.v70-merge-list{display:none!important;max-height:130px!important;overflow:auto!important;padding:8px!important;background:#f8fbff!important}.v70-merge-summary.open .v70-merge-list{display:grid!important;gap:5px!important}.v70-merge-list div{display:grid!important;grid-template-columns:44px minmax(0,1fr) auto!important;gap:6px!important;align-items:center!important;padding:6px 8px!important;background:white!important;border:1px solid #dbeafe!important;border-radius:9px!important}.v70-merge-list span{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:#475569!important;font-size:12px!important}@media(min-width:900px){.order{position:sticky!important;top:12px!important;max-height:calc(100vh - 24px)!important;overflow:auto!important;align-self:start!important}.order .payGrid{position:sticky!important;bottom:176px!important;background:#fff!important;z-index:4!important;padding-top:8px!important;border-radius:14px!important}.order .total{position:sticky!important;bottom:96px!important;z-index:4!important}.order .pay{position:sticky!important;bottom:44px!important;z-index:5!important}.order .ghost{position:sticky!important;bottom:0!important;z-index:5!important}}.v70-dutch-modal,.v70-qr-modal{position:fixed!important;inset:0!important;background:rgba(15,23,42,.62)!important;z-index:100000!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:18px!important}.v70-dutch-box{width:min(760px,96vw)!important;height:min(760px,94vh)!important;background:white!important;border-radius:24px!important;padding:24px!important;box-shadow:0 24px 60px rgba(0,0,0,.28)!important;position:relative!important;display:flex!important;flex-direction:column!important;gap:10px!important;overflow:hidden!important}.v70-x{position:absolute!important;right:16px!important;top:14px!important;width:48px!important;height:48px!important;border:0!important;border-radius:14px!important;background:#111827!important;color:white!important;font-size:26px!important;font-weight:900!important}.v70-dutch-box h2{font-size:28px!important;margin:0 0 6px!important}.v70-dutch-top{flex:0 0 auto!important}.v70-dutch-top b{display:block!important;font-size:24px!important;margin:6px 0 10px!important}.v70-dutch-box input{height:48px!important;border:2px solid #cbd5e1!important;border-radius:12px!important;padding:0 12px!important;font-size:20px!important;font-weight:800!important}.v70-dutch-inputs{flex:1.3 1 0!important;min-height:120px!important;overflow:auto!important;border-top:1px solid #e2e8f0!important;border-bottom:1px solid #e2e8f0!important;padding:8px 4px!important}.v70-dutch-inputs label{display:grid!important;grid-template-columns:110px 1fr!important;gap:10px!important;align-items:center!important;margin:8px 0!important;font-weight:900!important}.v70-remain-card{flex:0 0 auto!important;display:flex!important;align-items:center!important;justify-content:space-between!important;background:#dbeafe!important;border:2px solid #93c5fd!important;border-radius:16px!important;padding:12px 14px!important;color:#1e3a8a!important}.v70-remain-card span{font-size:18px!important;font-weight:900!important}.v70-remain-card strong{font-size:30px!important;font-weight:1000!important}.v70-recommend{flex:.75 1 0!important;min-height:80px!important;overflow:auto!important;background:#f8fafc!important;border:1px solid #e2e8f0!important;border-radius:16px!important;padding:10px 14px!important}.v70-recommend p{margin:7px 0!important;font-size:16px!important}.v70-close{height:46px!important;border:0!important;border-radius:12px!important;padding:0 18px!important;font-weight:900!important;align-self:flex-start!important;background:#eef2f7!important}.v70-admin-share{position:absolute!important;right:110px!important;top:30px!important;display:flex!important;gap:12px!important;align-items:center!important;z-index:2!important}.v70-admin-share button{height:48px!important;min-width:170px!important;border:2px solid #bfdbfe!important;border-radius:14px!important;background:#eff6ff!important;color:#1d4ed8!important;font-weight:1000!important;font-size:16px!important}.v70-qr-box{width:min(520px,94vw)!important;background:#fff!important;border-radius:22px!important;padding:24px!important;position:relative!important;box-shadow:0 24px 60px rgba(0,0,0,.28)!important;text-align:center!important}.v70-qr-box img{width:260px;height:260px;max-width:80vw}.v70-qr-box label{display:block;text-align:left;margin-top:14px;font-weight:900}.v70-qr-box input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:12px;margin-top:6px}.v70-copy{margin-top:12px;border:0;border-radius:12px;padding:12px 18px;font-weight:900;background:#2563eb;color:#fff}`; document.head.appendChild(st); }
   document.addEventListener('click',function(e){ const merge=e.target.closest('.v70-merge'); if(merge){e.preventDefault();e.stopPropagation(); selecting?finishMerge():beginMerge(); return;} const split=e.target.closest('.v70-split'); if(split){e.preventDefault();e.stopPropagation(); splitCurrent(); return;} const dutch=e.target.closest('.v70-dutch'); if(dutch){e.preventDefault();e.stopPropagation(); openDutch(); return;} const tbl=e.target.closest('.tableBtn,.floorTable,button'); if(selecting && tbl){const n=tableNo(tbl); if(n){e.preventDefault(); e.stopPropagation(); selected=selected.includes(n)?selected.filter(x=>x!==n):sortNums([...selected,n]); markTables(); refreshTools();}} },true);
-  function tick(){ try{document.title='식당 POS V80';addStyle();ensureTools();markTables();refreshTools();updateSummary();ensureAdminShare();} catch(e){console.warn('POS V80 helper tick failed',e);} }
+  function tick(){ try{document.title='식당 POS V81';addStyle();ensureTools();markTables();refreshTools();updateSummary();ensureAdminShare();} catch(e){console.warn('POS V80 helper tick failed',e);} }
   document.addEventListener('DOMContentLoaded',()=>{tick();setInterval(tick,900);});
 })();
 </script>
 
 <script>
 (function(){
-  const VERSION='V80';
+  const VERSION='V81';
   const ready=(fn)=>document.readyState==='loading'?document.addEventListener('DOMContentLoaded',fn):fn();
   function addV80Style(){
     if(document.querySelector('#v72-final-style')) return;
@@ -539,14 +539,14 @@
     if(h){ h.style.whiteSpace='nowrap'; h.style.overflow='visible'; h.style.textOverflow='clip'; }
     if(tools && tools.parentElement===order){ tools.style.position='absolute'; tools.style.right='18px'; tools.style.top='18px'; }
   }
-  ready(()=>{ addV80Style(); setInterval(()=>{ try{document.title='식당 POS V80'; addV80Style(); fixOrderHeader(); enhanceManualSimple();}catch(e){console.warn('V80 final helper error',e);} },500); });
+  ready(()=>{ addV80Style(); setInterval(()=>{ try{document.title='식당 POS V81'; addV80Style(); fixOrderHeader(); enhanceManualSimple();}catch(e){console.warn('V80 final helper error',e);} },500); });
 })();
 </script>
 
 
 <script>
 (function(){
-  const VERSION='V80';
+  const VERSION='V81';
   const ready=(fn)=>document.readyState==='loading'?document.addEventListener('DOMContentLoaded',fn):fn();
   function addV80OrderHeaderStyle(){
     if(document.querySelector('#v80-order-header-style')) return;
@@ -598,7 +598,7 @@
   }
   ready(()=>{
     addV80OrderHeaderStyle();
-    setInterval(()=>{try{document.title='식당 POS V80';addV80OrderHeaderStyle();ensureV80OrderHeader();}catch(e){console.warn('V80 order header fix failed',e);}},300);
+    setInterval(()=>{try{document.title='식당 POS V81';addV80OrderHeaderStyle();ensureV80OrderHeader();}catch(e){console.warn('V80 order header fix failed',e);}},300);
   });
 })();
 </script>
@@ -608,7 +608,7 @@
 <script>
 /* V80 최소수정 보강: V78 안정 기준 유지 + 결제버튼 표시 + 수기 간편입력 표시/가격/직접반영 수정 */
 (function(){
-  const VERSION='V80';
+  const VERSION='V81';
   const ready=(fn)=>document.readyState==='loading'?document.addEventListener('DOMContentLoaded',fn):fn();
   const money=(n)=>{ const x=Number(String(n||'').replace(/[^0-9.-]/g,''))||0; return x.toLocaleString('ko-KR')+'원'; };
   function addStyle(){
@@ -739,11 +739,88 @@
     if(detailBtn && !detailBtn.dataset.v80){ detailBtn.dataset.v80='1'; detailBtn.addEventListener('click',()=>box.classList.remove('v80-simple-on')); }
   }
   function tick(){
-    try{ document.title='식당 POS V80'; addStyle(); enhanceSimplePanel(); }
+    try{ document.title='식당 POS V81'; addStyle(); enhanceSimplePanel(); }
     catch(e){ console.warn('V80 helper error',e); }
   }
   ready(()=>{ addStyle(); setInterval(tick,400); });
 })();
 </script>
 
+
+<script>
+/* V81 common inbox bridge: POS 안의 임시 쪽지함을 키우지 않고 공통쪽지함 고객용 링크로 연결 */
+(function(){
+  const COMMON_INBOX_BASE='https://teamhr-common-inbox.vercel.app';
+  const DEFAULT_INBOX_ID='pos_rest_000001';
+  const DEFAULT_TOKEN='demo_pos_token';
+  function restaurantId(){
+    try{
+      const q=new URLSearchParams(location.search||'');
+      return q.get('restaurantId')||q.get('restaurant')||q.get('rid')||window.__TEAMHR_RESTAURANT_ID__||localStorage.getItem('restaurantId')||'rest_000001';
+    }catch(e){ return 'rest_000001'; }
+  }
+  function six(id){
+    const m=String(id||'').match(/(\d{6})$/);
+    return m?m[1]:'000001';
+  }
+  function inboxId(){
+    try{
+      return localStorage.getItem('teamhr-pos-common-inbox-id') || DEFAULT_INBOX_ID || ('pos_rest_'+six(restaurantId()));
+    }catch(e){ return DEFAULT_INBOX_ID; }
+  }
+  function token(){
+    try{ return localStorage.getItem('teamhr-pos-common-inbox-token') || DEFAULT_TOKEN; }catch(e){ return DEFAULT_TOKEN; }
+  }
+  function commonInboxUrl(){
+    const u=new URL(COMMON_INBOX_BASE);
+    u.searchParams.set('inboxId', inboxId());
+    u.searchParams.set('token', token());
+    return u.toString();
+  }
+  window.__TEAMHR_POS_COMMON_INBOX_URL__=commonInboxUrl;
+  function toast(msg){
+    let t=document.getElementById('v81-common-inbox-toast');
+    if(!t){ t=document.createElement('div'); t.id='v81-common-inbox-toast'; t.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:2147483647;background:#111827;color:white;padding:12px 16px;border-radius:14px;font-weight:900;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:92vw;'; document.body.appendChild(t); }
+    t.textContent=msg; clearTimeout(t._timer); t._timer=setTimeout(()=>t.remove(),3000);
+  }
+  async function copyUrl(){
+    const url=commonInboxUrl();
+    try{ await navigator.clipboard.writeText(url); toast('우리매장 쪽지함 주소가 복사되었습니다.'); }
+    catch(e){ prompt('우리매장 쪽지함 주소', url); }
+  }
+  function showQr(){
+    const url=commonInboxUrl();
+    let m=document.getElementById('v81-common-inbox-qr-modal');
+    if(m) m.remove();
+    m=document.createElement('div'); m.id='v81-common-inbox-qr-modal';
+    m.style.cssText='position:fixed;inset:0;z-index:2147483646;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:18px;';
+    m.innerHTML='<div style="width:min(420px,94vw);background:white;border-radius:22px;padding:22px;text-align:center;font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;box-shadow:0 24px 70px rgba(0,0,0,.28)"><h2 style="margin:0 0 8px">우리매장 쪽지함 QR</h2><p style="color:#64748b;margin:0 0 14px">휴대폰 카메라로 찍으면 공통쪽지함 고객용 화면으로 연결됩니다.</p><img alt="우리매장 쪽지함 QR" src="https://quickchart.io/qr?size=360&margin=2&text='+encodeURIComponent(url)+'" style="width:280px;max-width:82vw;border:1px solid #e5e7eb;border-radius:16px;padding:10px;background:white"/><input readonly value="'+url.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')+'" style="box-sizing:border-box;width:100%;margin:14px 0 10px;padding:11px;border:1px solid #cbd5e1;border-radius:12px"/><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button data-copy style="border:0;border-radius:12px;padding:11px 14px;font-weight:900;background:#2563eb;color:white">주소 복사</button><button data-open style="border:0;border-radius:12px;padding:11px 14px;font-weight:900;background:#16a34a;color:white">새창 열기</button><button data-close style="border:0;border-radius:12px;padding:11px 14px;font-weight:900;background:#e5e7eb;color:#111827">닫기</button></div></div>';
+    document.body.appendChild(m);
+    m.querySelector('[data-copy]').onclick=copyUrl;
+    m.querySelector('[data-open]').onclick=()=>window.open(url,'_blank','noopener,noreferrer');
+    m.querySelector('[data-close]').onclick=()=>m.remove();
+    m.addEventListener('click',e=>{ if(e.target===m) m.remove(); });
+  }
+  function enhanceButtons(){
+    document.querySelectorAll('button').forEach(btn=>{
+      const txt=(btn.textContent||'').trim();
+      if(txt==='우리매장 쪽지함' || txt.includes('우리매장 쪽지함 열기')) btn.dataset.commonInboxOpen='1';
+      if((txt==='링크 복사' || txt==='쪽지함 주소 복사') && btn.closest('.ownerInboxSettingsBox')){ btn.textContent='쪽지함 주소 복사'; btn.dataset.commonInboxCopy='1'; }
+    });
+    const box=document.querySelector('.ownerInboxSettingsBox .ownerInboxActions');
+    if(box && !box.querySelector('[data-common-inbox-qr]')){
+      const b=document.createElement('button'); b.type='button'; b.textContent='쪽지함 QR 보기'; b.dataset.commonInboxQr='1'; box.appendChild(b);
+    }
+    document.querySelectorAll('.ownerInboxSettingsBox input[readonly]').forEach(inp=>{ if((inp.value||'').includes('owner-inbox.html')) inp.value=commonInboxUrl(); });
+  }
+  document.addEventListener('click',function(e){
+    const btn=e.target.closest && e.target.closest('button'); if(!btn) return;
+    if(btn.dataset.commonInboxOpen==='1'){ e.preventDefault(); e.stopImmediatePropagation(); window.open(commonInboxUrl(),'_blank','noopener,noreferrer'); }
+    if(btn.dataset.commonInboxCopy==='1'){ e.preventDefault(); e.stopImmediatePropagation(); copyUrl(); }
+    if(btn.dataset.commonInboxQr==='1'){ e.preventDefault(); e.stopImmediatePropagation(); showQr(); }
+  },true);
+  const ready=fn=>document.readyState==='loading'?document.addEventListener('DOMContentLoaded',fn):fn();
+  ready(()=>{ enhanceButtons(); setInterval(enhanceButtons,1200); });
+})();
+</script>
 </body></html>

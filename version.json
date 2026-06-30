@@ -1,0 +1,21 @@
+{
+  "programName": "식당 POS",
+  "programId": "restaurant-pos",
+  "version": "V81",
+  "stableVersion": "V81",
+  "previousVersion": "V80",
+  "fileName": "260701_식당POS_POS_V81_restaurant_pos_v81.zip",
+  "updatedAt": "2026-07-01",
+  "commonInbox": {
+    "customerBaseUrl": "https://teamhr-common-inbox.vercel.app",
+    "defaultInboxId": "pos_rest_000001",
+    "defaultToken": "demo_pos_token"
+  },
+  "changes": [
+    "우리매장 쪽지함 버튼을 공통쪽지함 고객용 링크로 연결",
+    "쪽지함 주소 복사 안내 문구 정리",
+    "쪽지함 QR 보기 추가",
+    "기존 owner-inbox.html은 공통쪽지함으로 리다이렉트",
+    "POS 내부 문의/답변/설문 관리 중복 구현 중단"
+  ]
+}
