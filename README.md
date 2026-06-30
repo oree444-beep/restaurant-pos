@@ -1,23 +1,7 @@
-# 식당 POS 고객용 V83
+# 식당 POS V80
 
-## 변경사항
-- restaurantId + posToken 접속 구조를 준비했습니다.
-- posToken이 저장된 식당은 토큰이 맞아야 데이터가 로드됩니다.
-- restaurantId 뒤에 자동으로 /가 붙어도 값이 오염되지 않게 정리했습니다.
-- 기존 레거시 식당은 종합관리 V45에서 posToken 저장 전까지 임시 허용됩니다.
+V76 기준에서 주문내역 헤더 버튼 배치를 수정한 버전입니다.
 
----
-
-# 식당 POS 기본판 V82
-
-신규 식당 배포용 초기세팅 버전입니다. 특정 매장명, 샘플 메뉴, 카테고리 기본값을 제거하고 관리자모드에서 새 식당 정보를 입력하기 쉽도록 정리했습니다.
-
-# 식당 POS V82
-
-이번 버전은 POS 안에 임시 쪽지함을 중복 구현하지 않고 공통쪽지함 고객용 링크로 연결하는 버전입니다.
-
-- 고객용 대표주소: `https://teamhr-common-inbox.vercel.app`
-- 기본 테스트 링크: `https://teamhr-common-inbox.vercel.app?inboxId=pos_rest_000001&token=demo_pos_token`
-- 실제 운영에서는 식당별 `inboxId`와 랜덤 `token`을 부여합니다.
-
-쪽지 응대, 답변, 설문 관리는 공통쪽지함 관리자에서만 진행합니다.
+- restaurantId 접속 정상화 유지
+- localStorage 용량 초과 방지 유지
+- 주문내역 버튼 우측정렬 배치 수정
