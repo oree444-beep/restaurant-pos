@@ -1,21 +1,24 @@
 {
-  "programName": "식당 POS",
+  "programName": "식당 POS 기본판",
   "programId": "restaurant-pos",
-  "version": "V81",
-  "stableVersion": "V81",
-  "previousVersion": "V80",
-  "fileName": "260701_식당POS_POS_V81_restaurant_pos_v81.zip",
+  "version": "V82",
+  "stableVersion": "V82",
+  "previousVersion": "V81",
+  "fileName": "260701_식당POS_POS_V82_restaurant_pos_v82.zip",
   "updatedAt": "2026-07-01",
+  "templateMode": true,
+  "defaultRestaurantId": "restaurant-template",
   "commonInbox": {
     "customerBaseUrl": "https://teamhr-common-inbox.vercel.app",
     "defaultInboxId": "pos_rest_000001",
     "defaultToken": "demo_pos_token"
   },
   "changes": [
-    "우리매장 쪽지함 버튼을 공통쪽지함 고객용 링크로 연결",
-    "쪽지함 주소 복사 안내 문구 정리",
-    "쪽지함 QR 보기 추가",
-    "기존 owner-inbox.html은 공통쪽지함으로 리다이렉트",
-    "POS 내부 문의/답변/설문 관리 중복 구현 중단"
+    "기본 배포판에서 특정 매장명 생태한마리 제거",
+    "기존 샘플 메뉴/카테고리/옵션 기본값 초기화",
+    "기본 restaurantId를 restaurant-template로 분리",
+    "기존 localStorage 전역 데이터 자동 이관 중지",
+    "화면 상단 버전 표시를 V82로 통일",
+    "공통쪽지함 고객용 링크 연결 유지"
   ]
 }

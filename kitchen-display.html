@@ -18,7 +18,7 @@
 <script>
 const params=new URLSearchParams(location.search);
 const restaurantId=params.get('restaurantId')||'rest_000001';
-const name=params.get('name')||'생태한마리';
+const name=params.get('name')||'우리매장';
 const key='pos_v57_kitchen_orders_'+restaurantId;
 document.getElementById('title').textContent=name+' 주방 주문현황판 V57';
 document.getElementById('rid').textContent='식당ID: '+restaurantId;

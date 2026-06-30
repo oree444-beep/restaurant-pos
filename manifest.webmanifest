@@ -1,6 +1,6 @@
 {
-  "name": "식당 POS V55",
-  "short_name": "식당 POS",
+  "name": "식당 POS 기본판 V55",
+  "short_name": "식당 POS 기본판",
   "start_url": "/",
   "display": "fullscreen",
   "background_color": "#f3f4f6",
