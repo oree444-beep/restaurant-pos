@@ -1,9 +1,9 @@
 {
   "programName": "식당 POS 고객용",
   "programId": "restaurant-pos",
-  "version": "V83",
-  "stableVersion": "V83",
-  "previousVersion": "V82",
+  "version": "V80",
+  "stableVersion": "V80",
+  "previousVersion": "V79",
   "updatedAt": "2026-07-01",
   "security": {
     "addressMode": "restaurantId + posToken",
@@ -11,10 +11,9 @@
     "templateRestaurantId": "restaurant-template"
   },
   "changes": [
-    "URL restaurantId 끝 슬래시 자동 오염 방지",
-    "posToken 파라미터 읽기 추가",
-    "Firestore 설정에 posToken이 있는 식당은 토큰 일치 시에만 데이터 로드",
-    "기존 posToken 미설정 식당은 레거시 보호를 위해 임시 허용",
-    "화면/문서 버전 V83 통일"
+   "V83 기본판 작업 후 생태한마리 운영 POS 복구",
+    "결제버튼 고정",
+    "수기 간편입력 수정",
+    "생태한마리 운영 데이터 보호"
   ]
 }
